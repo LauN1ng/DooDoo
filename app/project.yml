@@ -1,0 +1,68 @@
+name: DooDoo
+
+options:
+  bundleIdPrefix: com.doodoo
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+  generateEmptyDirectories: true
+  xcodeVersion: "26.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEAD_CODE_STRIPPING: YES
+
+targets:
+  DooDoo:
+    type: application
+    platform: iOS
+    sources:
+      - path: DooDoo
+    settings:
+      base:
+        PRODUCT_NAME: DooDoo
+        PRODUCT_BUNDLE_IDENTIFIER: com.doodoo.app
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1"          # 仅 iPhone
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: DooDoo
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        # 仅竖屏（PRD：iPhone 竖屏）
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        SWIFT_EMIT_LOC_STRINGS: YES
+
+  DooDooTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: DooDooTests
+    dependencies:
+      - target: DooDoo
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.doodoo.app.tests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  DooDoo:
+    build:
+      targets:
+        DooDoo: all
+        DooDooTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      gatherCoverageData: false
+      targets:
+        - DooDooTests
+    archive:
+      config: Release
