@@ -36,6 +36,11 @@ jobs:
       - name: 生成工程
         run: xcodegen generate
 
+      - name: 工程自检
+        run: |
+          xcodebuild -list -project DooDoo.xcodeproj
+          xcrun simctl list runtimes | grep -i ios || true
+
       - name: 构建（模拟器，未签名）
         run: |
           set -o pipefail
@@ -44,7 +49,14 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
-            build
+            build 2>&1 | tee build.log
+          STATUS=${PIPESTATUS[0]}
+          if [ "$STATUS" -ne 0 ]; then
+            echo "=== 失败摘要 ==="
+            grep -iE "error:|BUILD FAILED|does not contain a scheme|Unable to find a destination|is not supported|requires a development team" build.log | head -40 || true
+            grep -iE "error:" build.log | head -15 | while IFS= read -r line; do echo "::error::$line"; done
+            exit "$STATUS"
+          fi
 
       - name: 单测（自动挑一台可用 iPhone 模拟器）
         run: |
@@ -62,6 +74,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: DooDoo-unsigned-app
-          path: app/build/Build/Products/Debug-iphonesimulator/DooDoo.app
+          path: app/build/Build/Products/Debug-iphonesimulator/*.app
           if-no-files-found: warn
           retention-days: 7
