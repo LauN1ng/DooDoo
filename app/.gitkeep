@@ -1,0 +1,8 @@
+# DooDoo · iOS 工程占位
+#
+# 仓库只提交代码。M0 动工时把 XcodeGen 工程建在此目录：
+#   app/project.yml
+#   app/DooDoo/{App,Models,Services,Math,ViewModels,Views,Resources}
+#   app/DooDooTests/
+#
+# 本文件只为保留空目录，M0 建好工程后删除。
