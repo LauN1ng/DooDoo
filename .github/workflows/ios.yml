@@ -43,18 +43,21 @@ jobs:
 
       - name: 构建（模拟器，未签名）
         run: |
-          set -o pipefail
+          set +e
+          set +o pipefail
           xcodebuild -project DooDoo.xcodeproj -scheme DooDoo \
             -configuration Debug \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
-            build 2>&1 | tee build.log
-          STATUS=${PIPESTATUS[0]}
+            build > build.log 2>&1
+          STATUS=$?
+          set -e
           if [ "$STATUS" -ne 0 ]; then
-            echo "=== 失败摘要 ==="
-            grep -iE "error:|BUILD FAILED|does not contain a scheme|Unable to find a destination|is not supported|requires a development team" build.log | head -40 || true
-            grep -iE "error:" build.log | head -15 | while IFS= read -r line; do echo "::error::$line"; done
+            echo "=== 构建失败，日志最后 40 行 ==="
+            tail -40 build.log || true
+            BODY=$(tail -40 build.log | tr '\n' '\r' | sed 's/\r/%0A/g' | cut -c1-6000)
+            echo "::error title=xcodebuild failed::$BODY"
             exit "$STATUS"
           fi
 
