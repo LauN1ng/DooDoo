@@ -21,7 +21,11 @@ targets:
     type: application
     platform: iOS
     sources:
+      # README.md 只是文档，不能被当资源拷进 .app（6 个同名文件会撞车：
+      # "Multiple commands produce .../DooDoo.app/README.md"）
       - path: DooDoo
+        excludes:
+          - "**/*.md"
     settings:
       base:
         PRODUCT_NAME: DooDoo
