@@ -8,12 +8,15 @@
 !/.gitignore
 !/.gitattributes
 !/app/
+!/.github/
 
-# app/ 内的说明文档留工作区，不入库
-/app/README.md
+# app/README.md、各模块 README 与 assets 一起入库（工程的一部分）
+# .xcodeproj 由 project.yml 生成，不入库
+/app/*.xcodeproj
+/app/build/
 
 # ------------------------------------------------------------
-# M0 需要提交工程配置时，在此显式追加放行（每加一行都是一次决策）
-# !/app/project.yml        # 已在 !/app/ 内，无需再加
-# !/.github/               # CI workflow
+# 放行记录（每加一行都是一次决策）
+# 2026-11-07 !/app/          首推，只含 app/
+# 2026-11-08 !/.github/      进 M0，CI workflow 入库
 # ------------------------------------------------------------

@@ -1,0 +1,67 @@
+name: iOS
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: 未签名构建 + 单测
+    runs-on: macos-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 选择最新的 Xcode
+        run: |
+          ls -d /Applications/Xcode*.app || true
+          XCODE_APP=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE_APP"
+          xcodebuild -version
+          xcodebuild -showsdks | grep -i simulator || true
+
+      - name: 安装 XcodeGen
+        run: brew install xcodegen
+
+      - name: 生成工程
+        run: xcodegen generate
+
+      - name: 构建（模拟器，未签名）
+        run: |
+          set -o pipefail
+          xcodebuild -project DooDoo.xcodeproj -scheme DooDoo \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            build
+
+      - name: 单测（自动挑一台可用 iPhone 模拟器）
+        run: |
+          set -o pipefail
+          UDID=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k in sorted(d) for x in d[k] if x['name'].startswith('iPhone')))")
+          echo "使用模拟器：$UDID"
+          xcodebuild -project DooDoo.xcodeproj -scheme DooDoo \
+            -destination "platform=iOS Simulator,id=$UDID" \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            test
+
+      - name: 上传未签名产物
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DooDoo-unsigned-app
+          path: app/build/Build/Products/Debug-iphonesimulator/DooDoo.app
+          if-no-files-found: warn
+          retention-days: 7
