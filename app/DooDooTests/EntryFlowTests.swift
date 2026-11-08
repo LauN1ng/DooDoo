@@ -157,15 +157,17 @@ struct EntryFlowTests {
     func categoryHierarchy() throws {
         let context = try makeContext()
 
-        let top = Category(key: "food", parentKey: nil, name: "吃", iconName: "Croissant",
-                           emoji: "🍰", sortOrder: 0, isIncome: false, tintHex: "#FFF1E6")
-        let sub = Category(key: "food.coffee", parentKey: "food", name: "咖啡", iconName: "HotBeverage",
-                           emoji: "☕️", sortOrder: 8, isIncome: false, tintHex: "#FFF1E6")
+        // 类型名必须写全 `DooDoo.Category`：测试模块里同时导入了别的同名类型，
+        // 只在泛型参数位置（`FetchDescriptor<Category>`）才会暴露二义性。
+        let top = DooDoo.Category(key: "food", parentKey: nil, name: "吃", iconName: "Croissant",
+                                  emoji: "🍰", sortOrder: 0, isIncome: false, tintHex: "#FFF1E6")
+        let sub = DooDoo.Category(key: "food.coffee", parentKey: "food", name: "咖啡", iconName: "HotBeverage",
+                                  emoji: "☕️", sortOrder: 8, isIncome: false, tintHex: "#FFF1E6")
         context.insert(top)
         context.insert(sub)
         try context.save()
 
-        let all = try context.fetch(FetchDescriptor<Category>())
+        let all = try context.fetch(FetchDescriptor<DooDoo.Category>())
         #expect(all.filter { $0.isTopLevel }.count == 1)
         #expect(all.filter { $0.parentKey == "food" }.count == 1)
         #expect(sub.isTopLevel == false)
@@ -173,8 +175,8 @@ struct EntryFlowTests {
 
     @Test("内置分类够用：一级 10 个、二级 48 个")
     func builtInCount() {
-        let tops = Category.builtIn.filter { $0.parentKey == nil }
-        let subs = Category.builtIn.filter { $0.parentKey != nil }
+        let tops = DooDoo.Category.builtIn.filter { $0.parentKey == nil }
+        let subs = DooDoo.Category.builtIn.filter { $0.parentKey != nil }
         #expect(tops.count == 10)
         #expect(subs.count == 48)
         #expect(tops.filter { !$0.isIncome }.count == 8)
