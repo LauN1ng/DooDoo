@@ -63,6 +63,11 @@ final class Transaction {
 
     var category: Category?
 
+    /// 这一笔自己的 Fluent3D 图标（bundle 资源名，如 `"HotBeverage"`）。
+    /// 流水行的图标是按「这一笔是什么」选的，不是按分类——同一类里咖啡和正餐不该是同一张图。
+    /// 为空时退回分类的默认图标。
+    var iconName: String?
+
     var kind: TransactionKind {
         get { TransactionKind(rawValue: kindRaw) ?? .expense }
         set { kindRaw = newValue.rawValue }
@@ -78,6 +83,7 @@ final class Transaction {
         note: String? = nil,
         account: Account? = nil,
         category: Category? = nil,
+        iconName: String? = nil,
         createdAt: Date = .now,
         deletedAt: Date? = nil
     ) {
@@ -87,6 +93,7 @@ final class Transaction {
         self.note = note
         self.account = account
         self.category = category
+        self.iconName = iconName
         self.createdAt = createdAt
         self.deletedAt = deletedAt
     }

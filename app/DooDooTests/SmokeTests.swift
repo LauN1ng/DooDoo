@@ -31,7 +31,10 @@ struct SmokeTests {
         let context = ModelContext(container)
 
         let account = Account(name: "花呗", kind: .credit)
-        let category = Category(name: "吃", emoji: "🍰", sortOrder: 0, isIncome: false, tintHex: "#FFF1E6")
+        let category = Category(
+            name: "吃", iconName: "Croissant", emoji: "🍰",
+            sortOrder: 0, isIncome: false, tintHex: "#FFF1E6"
+        )
         context.insert(account)
         context.insert(category)
         context.insert(

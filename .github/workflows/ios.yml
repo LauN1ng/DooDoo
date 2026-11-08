@@ -87,6 +87,19 @@ jobs:
             exit "$STATUS"
           fi
 
+      - name: 检查 Fluent3D 图标是否进包
+        run: |
+          APP=build/Build/Products/Debug-iphonesimulator/DooDoo.app
+          MISSING=0
+          for n in Croissant TShirt House LightRail GameDie Pill Cat Package MoneyBag Bank HotBeverage Taxi BentoBox ShoppingBags; do
+            if [ ! -f "$APP/$n.png" ]; then
+              echo "::error::图标没进包：$n.png"
+              MISSING=1
+            fi
+          done
+          echo "包内 png 数量：$(ls "$APP" | grep -c '\.png$' || true)"
+          exit $MISSING
+
       - name: 上传未签名产物
         if: always()
         uses: actions/upload-artifact@v4

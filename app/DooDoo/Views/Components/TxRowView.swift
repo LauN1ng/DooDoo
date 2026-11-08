@@ -1,6 +1,8 @@
 import SwiftUI
+import UIKit
 
 /// 一条流水。尺寸取自 `home-v1.0.html`：42×42 图标、14pt 标题、11.5pt 副标题。
+/// 图标是 Fluent3D PNG（`assets/emoji/picked`），不是系统 emoji。
 struct TxRowView: View {
     let transaction: Transaction
 
@@ -28,10 +30,30 @@ struct TxRowView: View {
         }
     }
 
-    var body: some View {
-        HStack(spacing: 12) {
+    /// 这一笔自己的图标优先，没有就用分类默认图标；图片缺失才退回 emoji 字符。
+    private var iconName: String? {
+        if let own = transaction.iconName, UIImage(named: own) != nil { return own }
+        if let category = transaction.category?.iconName, UIImage(named: category) != nil { return category }
+        return nil
+    }
+
+    /// Fluent3D 图标 27×27（原型尺寸），落在 42×42 的分类色槽里。
+    @ViewBuilder
+    private var slot: some View {
+        if let name = iconName {
+            Image(name)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 27, height: 27)
+        } else {
             Text(transaction.category?.emoji ?? "•")
                 .font(.system(size: 20))
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            slot
                 .frame(width: 42, height: 42)
                 .background(
                     RoundedRectangle(cornerRadius: 13, style: .continuous)

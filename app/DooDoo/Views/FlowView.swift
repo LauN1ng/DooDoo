@@ -28,8 +28,8 @@ struct FlowView: View {
             .padding(.bottom, 8)
             .background(Palette.page)
             .task {
-                // 首次启动铺演示数据；已有分类就跳过，不会重复写
-                try? SeedService.seedIfNeeded(context: context)
+                // 首次启动铺演示数据（已有分类就跳过），并给老数据补 Fluent3D 图标
+                try? SeedService.prepare(context: context)
             }
     }
 

@@ -16,6 +16,7 @@ enum LedgerService {
         note: String? = nil,
         account: Account? = nil,
         category: Category? = nil,
+        iconName: String? = nil,
         in context: ModelContext
     ) throws -> Transaction {
         let tx = Transaction(
@@ -24,7 +25,8 @@ enum LedgerService {
             date: date,
             note: note,
             account: account,
-            category: category
+            category: category,
+            iconName: iconName
         )
         context.insert(tx)
         try context.save()
