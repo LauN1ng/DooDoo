@@ -1,6 +1,8 @@
 # Views · SwiftUI 视图
 
-> 状态：**M1 的首页已可用**（`FlowView` + `Components/DeckView` / `DayCardView` / `TxRowView` / `Palette`）；`AssetsView` 仍是占位。
+> 状态：**M2a 首页与资产页都可用**。
+> 首页：`FlowView` + `DeckView` / `DayCardView` / `TxRowView`；
+> 资产页：`AssetsView` + `NetWorthCard` / `AccountGroupView` / `AccountDeck` / `CardFace` / `GroupOverlay` / `AccountEditor`。设置页仍是最简版本。
 
 | 视图 | 里程碑 | 对应规格 |
 |---|---|---|

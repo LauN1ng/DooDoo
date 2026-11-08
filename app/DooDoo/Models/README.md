@@ -1,6 +1,13 @@
 # Models · SwiftData 模型
 
-> 状态：**M1 已落四个模型**——`AppSettings` / `Account` / `Category` / `Transaction`。分期与账单等 M3 再加。
+> 状态：**M2a 已落四个模型**——`AppSettings` / `Account` / `Category` / `Transaction`，外加 `BrandPalette`（卡面配色，不是模型）。分期与账单等 M3 再加。
+
+## 三条踩过的坑
+
+1. **不能自己声明 `id`**：`@Model` 已通过 `persistentModelID` 提供 `Identifiable`，再写 `var id: UUID` 会抢名字。
+2. **后加字段必须带默认值**：SwiftData 只认「可选」或「有默认值」，否则迁移抛错、App 启动闪退。
+3. **默认值必须完全限定**：`var createdAt: Date = Date.now`，写成 `.now` 会报
+   `A default value requires a fully qualified domain named value (from macro 'Model')`。
 
 | 模型 | 里程碑 | 说明 |
 |---|---|---|
