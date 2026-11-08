@@ -16,6 +16,34 @@ enum AmountColor: String, Codable, CaseIterable, Sendable {
     }
 }
 
+/// 主色（M1b 新增，记一笔规格第九节未锁定项 1）。
+/// 只影响强调色：分类选中、主按钮、转账手续费差额等；不改数据。
+enum AccentStyle: String, Codable, CaseIterable, Sendable {
+    case ink
+    case green
+    case blue
+    case orange
+
+    var title: String {
+        switch self {
+        case .ink: "墨"
+        case .green: "绿"
+        case .blue: "蓝"
+        case .orange: "橙"
+        }
+    }
+
+    /// 与该主色配套的浅底（选中态的 12% 透明度底），用十六进制直写。
+    var hex: UInt32 {
+        switch self {
+        case .ink: 0x1D1C1A
+        case .green: 0x2FB344
+        case .blue: 0x4A6CF7
+        case .orange: 0xE09B2D
+        }
+    }
+}
+
 /// 全局设置。v1 字段以 PRD 第八节为准。
 @Model
 final class AppSettings {
@@ -42,6 +70,9 @@ final class AppSettings {
     /// 0 = M1 之前写的旧种子。
     var seedVersion: Int = 0
 
+    /// 主色 id（`AccentStyle` 的 rawValue）。后加字段，必须有默认值。
+    var accentId: String = AccentStyle.ink.rawValue
+
     var updatedAt: Date
 
     var incomeColor: AmountColor {
@@ -52,6 +83,12 @@ final class AppSettings {
     var expenseColor: AmountColor {
         get { AmountColor(rawValue: expenseColorRaw) ?? .red }
         set { expenseColorRaw = newValue.rawValue }
+    }
+
+    /// 主色。默认墨黑。
+    var accent: AccentStyle {
+        get { AccentStyle(rawValue: accentId) ?? .ink }
+        set { accentId = newValue.rawValue }
     }
 
     init(

@@ -16,7 +16,7 @@
 | `Transaction` | M1 | 流水，软删除（`deletedAt`），金额一律 `Decimal` |
 | `DebtPlan` | M3 | 分期计划：剩余期数 + 每期金额 + 首期还款日；利率是反算只读 |
 | `Installment` / `BillStatement` | M3 | 期数与账单期，用于「本月要还」口径 |
-| `Category` | M1 | 8 类支出 + 2 类收入，v1 不支持自定义 |
+| `Category` | M1 | 一级 8 类支出 + 2 类收入，各带二级子类（共 39 个内置）；`key`/`parentKey` 存层级，统计按一级 |
 
 ## 硬规则（`AGENTS.md` 7.1）
 

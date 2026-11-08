@@ -10,14 +10,15 @@ import SwiftData
 /// 老库会在启动时清空重建（M1 期间用户没有任何录入入口，重建是安全的）。
 @MainActor
 enum SeedService {
-    static let currentSeedVersion = 2
+    /// v3：分类改两级（一级 10 + 二级 48），流水挂到二级。
+    static let currentSeedVersion = 3
 
     /// 首页与资产页启动时调这一个：版本迁移 → 补图标 → 重算余额。
     static func prepare(context: ModelContext, calendar: Calendar = .current) throws {
         let settings = try ensureSettings(context)
         if settings.seedVersion < currentSeedVersion {
             try wipeDemoData(context)
-            try seedV2(context, calendar: calendar)
+            try seedV3(context, calendar: calendar)
             settings.seedVersion = currentSeedVersion
             settings.updatedAt = .now
             try context.save()
@@ -91,29 +92,30 @@ enum SeedService {
 
     // MARK: - 流水
 
-    /// (天数偏移, 时, 分, 商户, 分类, 账户短名对应的账户名, 金额, 图标)
+    /// (天数偏移, 时, 分, 商户, 分类 key, 账户短名对应的账户名, 金额, 图标)
+    /// 分类 key 是**二级**（`food.coffee`）——流水挂二级，一级由 `parentKey` 反查。
     private typealias SeedTx = (Int, Int, Int, String, String, String, String, String)
 
     private static let seedTransactions: [SeedTx] = [
-        (0, 12, 10, "好利来", "吃", "花呗", "32.00", "Croissant"),
-        (0, 12, 40, "地铁", "行", "建设银行储蓄卡 5044", "4.00", "LightRail"),
-        (0, 13, 5, "麦富迪猫粮", "情", "京东白条", "129.00", "Cat"),
-        (0, 8, 20, "星巴克", "吃", "花呗", "28.00", "HotBeverage"),
-        (0, 18, 30, "滴滴", "行", "招商银行信用卡 8857", "19.50", "Taxi"),
-        (0, 12, 0, "工作午餐", "吃", "微信余额", "26.00", "BentoBox"),
-        (0, 20, 15, "日用补货", "穿", "余额宝", "63.00", "ShoppingBags"),
-        (0, 21, 40, "手游充值", "乐", "花呗", "30.00", "GameDie"),
-        (1, 9, 5, "星巴克", "吃", "花呗", "28.00", "HotBeverage"),
-        (1, 19, 20, "滴滴", "行", "招商银行信用卡 8857", "19.50", "Taxi"),
-        (2, 15, 45, "麦富迪猫粮", "情", "京东白条", "129.00", "Cat"),
-        (3, 10, 30, "好利来", "吃", "花呗", "26.00", "Croissant"),
-        (3, 8, 50, "地铁", "行", "建设银行储蓄卡 5044", "4.00", "LightRail"),
-        (5, 18, 0, "朋友聚餐", "吃", "微信余额", "186.00", "BentoBox"),
-        (5, 20, 30, "电影票", "乐", "花呗", "76.00", "GameDie"),
-        (6, 22, 10, "打车回家", "行", "支付宝余额", "33.00", "Taxi"),
+        (0, 12, 10, "好利来", "food.snack", "花呗", "32.00", "Croissant"),
+        (0, 12, 40, "地铁", "transport.metro", "建设银行储蓄卡 5044", "4.00", "LightRail"),
+        (0, 13, 5, "麦富迪猫粮", "social.pet", "京东白条", "129.00", "Cat"),
+        (0, 8, 20, "星巴克", "food.coffee", "花呗", "28.00", "HotBeverage"),
+        (0, 18, 30, "滴滴", "transport.taxi", "招商银行信用卡 8857", "19.50", "Taxi"),
+        (0, 12, 0, "工作午餐", "food.lunch", "微信余额", "26.00", "BentoBox"),
+        (0, 20, 15, "日用补货", "wear.top", "余额宝", "63.00", "ShoppingBags"),
+        (0, 21, 40, "手游充值", "fun.game", "花呗", "30.00", "GameDie"),
+        (1, 9, 5, "星巴克", "food.coffee", "花呗", "28.00", "HotBeverage"),
+        (1, 19, 20, "滴滴", "transport.taxi", "招商银行信用卡 8857", "19.50", "Taxi"),
+        (2, 15, 45, "麦富迪猫粮", "social.pet", "京东白条", "129.00", "Cat"),
+        (3, 10, 30, "好利来", "food.breakfast", "花呗", "26.00", "Croissant"),
+        (3, 8, 50, "地铁", "transport.metro", "建设银行储蓄卡 5044", "4.00", "LightRail"),
+        (5, 18, 0, "朋友聚餐", "food.dinner", "微信余额", "186.00", "BentoBox"),
+        (5, 20, 30, "电影票", "fun.movie", "花呗", "76.00", "GameDie"),
+        (6, 22, 10, "打车回家", "transport.taxi", "支付宝余额", "33.00", "Taxi"),
     ]
 
-    private static func seedV2(_ context: ModelContext, calendar: Calendar) throws {
+    private static func seedV3(_ context: ModelContext, calendar: Calendar) throws {
         let categories = makeCategories(context: context)
 
         var accounts: [String: Account] = [:]
@@ -171,34 +173,49 @@ enum SeedService {
         Decimal(string: text, locale: Locale(identifier: "en_US_POSIX")) ?? 0
     }
 
+    /// 建内置分类，返回 `key → Category`（父与子一次建完，顺序即 `builtIn` 数组顺序）。
     private static func makeCategories(context: ModelContext) -> [String: Category] {
         var map: [String: Category] = [:]
         for (index, item) in Category.builtIn.enumerated() {
-            let isIncome = item.name == "工资" || item.name == "其他收入"
             let category = Category(
+                key: item.key,
+                parentKey: item.parentKey,
                 name: item.name,
                 iconName: item.icon,
                 emoji: item.emoji,
                 sortOrder: index,
-                isIncome: isIncome,
+                isIncome: item.isIncome,
                 tintHex: item.tint
             )
             context.insert(category)
-            map[item.name] = category
+            map[item.key] = category
         }
         return map
     }
 
-    /// 老版本装过的库没有 Fluent3D 图标名，这里按分类与商户名补齐。
+    /// 老库补齐：分类缺 key / 图标时按内置规格回填；流水缺图标时按商户名或分类回填。
+    ///
+    /// M1 时期建的分类没有 `key`，这里按名字找回（优先匹配一级，避免「红包」这类同名二级误配）。
     static func backfillIcons(context: ModelContext) throws {
         var dirty = false
 
         let categories = try context.fetch(FetchDescriptor<Category>())
-        for category in categories where category.iconName.isEmpty {
-            if let spec = Category.builtIn.first(where: { $0.name == category.name }) {
-                category.iconName = spec.icon
-                dirty = true
+        for category in categories {
+            let needsKey = category.key.isEmpty
+            let needsIcon = category.iconName.isEmpty
+            guard needsKey || needsIcon else { continue }
+
+            let spec = Category.builtIn.first { $0.parentKey == nil && $0.name == category.name }
+                ?? Category.builtIn.first { $0.name == category.name }
+
+            if needsKey, let spec {
+                category.key = spec.key
+                category.parentKey = spec.parentKey
             }
+            if needsIcon, let spec {
+                category.iconName = spec.icon
+            }
+            dirty = true
         }
 
         let transactions = try context.fetch(FetchDescriptor<Transaction>())

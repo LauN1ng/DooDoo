@@ -55,11 +55,24 @@ final class Transaction {
     /// 软删除时间。非空即视为已删，**任何查询都要排除**（AGENTS 7.2）。
     var deletedAt: Date?
 
-    /// 付款方 / 转出方。
+    /// 付款方 / 转出方 / 还款的扣款账户。
     var account: Account?
 
-    // 还款目标 `toAccount` 属于 M2（还款/转账），M1 不声明，
-    // 免得 SwiftData 自动推断出错误的反向关系。
+    /// 收款方 / 转入方 / 被还的信用卡（M2b 新增）。
+    /// 只有 `.repayment` / `.transfer` 有值；其余类型为 nil。
+    var toAccount: Account?
+
+    /// 单位：元。转账的**实际到账金额**（M2b 新增）。
+    /// `nil` 表示没有到账差额（转账且无手续费时等于 `amount`）。
+    var receivedAmount: Decimal?
+
+    /// 单位：元。手续费，`amount − receivedAmount` 的结果（M2b 新增）。
+    /// 冗余存一份是为了统计时能直接求和，不必逐笔相减；写入一律由 `LedgerService` 计算。
+    var fee: Decimal?
+
+    /// 消费评分（M1b 新增，PRD 9.13）。存 raw 值，`nil` = 未评分。
+    /// 只有 `kind == .expense` 允许非 nil。
+    var gradeRaw: String?
 
     var category: Category?
 
@@ -73,6 +86,15 @@ final class Transaction {
         set { kindRaw = newValue.rawValue }
     }
 
+    /// 消费评分。`nil` = 未评分（不是 `.npc`）。
+    var grade: SpendGrade? {
+        get { gradeRaw.flatMap { SpendGrade(rawValue: $0) } }
+        set { gradeRaw = newValue?.rawValue }
+    }
+
+    /// 是否允许评分：只有支出（PRD 9.13 规则 2）。
+    var canBeGraded: Bool { kind == .expense }
+
     /// 是否已被软删除。
     var isDeleted: Bool { deletedAt != nil }
 
@@ -82,8 +104,12 @@ final class Transaction {
         date: Date,
         note: String? = nil,
         account: Account? = nil,
+        toAccount: Account? = nil,
+        receivedAmount: Decimal? = nil,
+        fee: Decimal? = nil,
         category: Category? = nil,
         iconName: String? = nil,
+        grade: SpendGrade? = nil,
         createdAt: Date = .now,
         deletedAt: Date? = nil
     ) {
@@ -92,8 +118,12 @@ final class Transaction {
         self.date = date
         self.note = note
         self.account = account
+        self.toAccount = toAccount
+        self.receivedAmount = receivedAmount
+        self.fee = fee
         self.category = category
         self.iconName = iconName
+        self.gradeRaw = grade?.rawValue
         self.createdAt = createdAt
         self.deletedAt = deletedAt
     }

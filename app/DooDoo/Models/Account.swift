@@ -85,9 +85,13 @@ final class Account {
     /// "A default value requires a fully qualified domain named value"。
     var createdAt: Date = Date.now
 
-    /// 该账户名下的流水（反向关系）。
+    /// 该账户作为付款方 / 转出方的流水（反向关系）。
     @Relationship(deleteRule: .nullify, inverse: \Transaction.account)
     var transactions: [Transaction] = []
+
+    /// 该账户作为收款方 / 转入方 / 被还信用卡的流水（M2b 新增）。
+    @Relationship(deleteRule: .nullify, inverse: \Transaction.toAccount)
+    var incomingTransactions: [Transaction] = []
 
     var kind: AccountKind {
         get { AccountKind(rawValue: kindRaw) ?? .savings }
