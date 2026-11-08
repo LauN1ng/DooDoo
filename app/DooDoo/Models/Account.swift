@@ -81,7 +81,9 @@ final class Account {
     /// 组内手工顺序，小的在前（规格第八节未锁定项）。
     var sortOrder: Int = 0
 
-    var createdAt: Date = .now
+    /// SwiftData 的 @Model 要求默认值完全限定，`.now` 会报
+    /// "A default value requires a fully qualified domain named value"。
+    var createdAt: Date = Date.now
 
     /// 该账户名下的流水（反向关系）。
     @Relationship(deleteRule: .nullify, inverse: \Transaction.account)
