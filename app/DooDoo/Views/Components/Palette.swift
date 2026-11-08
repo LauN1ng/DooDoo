@@ -12,6 +12,15 @@ enum Palette {
     static let expense = Color(hex: 0xC0392B)
     static let income = Color(hex: 0x2E9E6B)
     static let tabBed = Color(hex: 0xEBE7E0)
+
+    // 资产页
+    static let pillOn = Color(hex: 0xF3F0EA)
+    static let mine = Color(hex: 0x4C8DF6)   // 「我有」曲线
+    static let owe = Color(hex: 0xE8734A)    // 「我欠」曲线
+    static let mineDot = Color(hex: 0x3A9E6B)
+    static let oweDot = Color(hex: 0xE8734A)
+    static let overdraft = Color(hex: 0xA32D2D)
+    static let overdraftBed = Color(hex: 0xFDECEC)
 }
 
 extension Color {

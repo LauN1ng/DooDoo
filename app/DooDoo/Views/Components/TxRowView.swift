@@ -13,7 +13,7 @@ struct TxRowView: View {
 
     private var subtitle: String {
         let category = transaction.category?.name
-        let account = transaction.account?.name
+        let account = transaction.account?.displayShortName
         switch (category, account) {
         case let (c?, a?): return "\(c) · \(a)"
         case let (c?, nil): return c

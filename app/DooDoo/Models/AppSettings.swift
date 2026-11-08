@@ -38,6 +38,10 @@ final class AppSettings {
     /// 支出着色，默认红。
     var expenseColorRaw: String
 
+    /// 种子数据版本。改动种子结构时 +1，启动时据此重建演示数据。
+    /// 0 = M1 之前写的旧种子。
+    var seedVersion: Int = 0
+
     var updatedAt: Date
 
     var incomeColor: AmountColor {
@@ -57,8 +61,10 @@ final class AppSettings {
         overdueAlertEnabled: Bool = true,
         incomeColor: AmountColor = .green,
         expenseColor: AmountColor = .red,
+        seedVersion: Int = 0,
         updatedAt: Date = .now
     ) {
+        self.seedVersion = seedVersion
         self.monthlyIncome = monthlyIncome
         self.payday = payday
         self.currencyCode = currencyCode
