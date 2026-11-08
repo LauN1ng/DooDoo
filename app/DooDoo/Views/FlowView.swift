@@ -1,28 +1,50 @@
 import SwiftUI
+import SwiftData
 
 /// 流水（首页）。
 ///
-/// M0：空状态占位。M1 才做「今天一张日卡 + 按天左滑回看 + 记账行」，
-/// 视觉依据 `docs/design/spec/首页规格冻结-v1.0.md`。
+/// M1 只做「看」：最近 7 天、一天一张日卡、左右滑回看。
+/// **没有记账行**——记一笔的页面还没设计，按用户 2026-11-08 的决定先不做入口。
 struct FlowView: View {
+    @Environment(\.modelContext) private var context
+
+    /// 只取最近 7 天、未软删的流水。冷启动不会扫全表（AGENTS 7.5）。
+    @Query private var transactions: [Transaction]
+
+    @State private var index = 0
+
+    init() {
+        let start = DayMath.recentDayStarts(7).last
+            ?? Calendar.current.startOfDay(for: .now)
+        _transactions = Query(
+            filter: #Predicate<Transaction> { $0.deletedAt == nil && $0.date >= start },
+            sort: \Transaction.date,
+            order: .reverse
+        )
+    }
+
     var body: some View {
-        VStack {
-            Spacer()
-            VStack(spacing: 10) {
-                Text("还没有记账")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(.secondary)
-                Text("M1 会在这里出现今天那张日卡，\n卡片最后一行就是「记一笔」。")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.tertiary)
-                    .multilineTextAlignment(.center)
+        DeckView(days: cards, index: $index)
+            .padding(.bottom, 8)
+            .background(Palette.page)
+            .task {
+                // 首次启动铺演示数据；已有分类就跳过，不会重复写
+                try? SeedService.seedIfNeeded(context: context)
             }
-            Spacer()
+    }
+
+    /// 窗口内的天（新的在前）。空账本时只留今天一张空卡（规格 3.1「首用只有 1 张」）。
+    private var cards: [(day: Date, items: [Transaction])] {
+        let window = DayMath.windowed(transactions, days: 7, dateOf: { $0.date })
+        guard !window.isEmpty else { return [] }
+        if window.contains(where: { !$0.items.isEmpty }) {
+            return window
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        return Array(window.prefix(1))
     }
 }
 
 #Preview {
     FlowView()
+        .modelContainer(for: [Account.self, Category.self, Transaction.self, AppSettings.self], inMemory: true)
 }
