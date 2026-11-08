@@ -51,7 +51,10 @@ struct DeckView: View {
                     day: entry.day,
                     items: entry.items,
                     isToday: Calendar.current.isDateInToday(entry.day),
-                    onAdd: { onAdd(entry.day) }
+                    // 外层 onAdd 收的是「哪一天」，日卡自己的 onAdd 也带 Date，
+                    // 这里用 `_ in` 显式忽略它——闭包参数不能省略，否则编译报
+                    // "closure argument list expects 1 argument"。
+                    onAdd: { _ in onAdd(entry.day) }
                 )
                 .frame(height: cardHeight)
                 .padding(.horizontal, DeckView.sideInset)
