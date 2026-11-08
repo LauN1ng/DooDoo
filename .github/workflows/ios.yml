@@ -93,8 +93,10 @@ jobs:
             grep -nE "✘|TEST FAILED|BUILD FAILED|Test run with .* failures|Expectation failed" test.log | head -40 || true
             echo "=== 单测失败，日志最后 60 行 ==="
             tail -60 test.log || true
-            BODY=$(tail -60 test.log | tr '\n' '\r' | sed 's/\r/%0A/g' | cut -c1-6000)
-            echo "::error title=test failed::$BODY"
+            # 注解只带「错误行」：tail 里往往全是同一条超长 swiftc 命令行，
+            # 6000 字符上限会被一条命令占满，真正的 error: 反而进不来（已踩过）。
+            BRIEF=$(grep -E ":[0-9]+:[0-9]+: (error|warning):|✘|TEST FAILED|BUILD FAILED|Expectation failed" test.log | head -12 | cut -c1-500 | tr '\n' '\r' | sed 's/\r/%0A/g')
+            echo "::error title=test failed::${BRIEF:0:6000}"
             exit "$STATUS"
           fi
 

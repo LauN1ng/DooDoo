@@ -100,7 +100,8 @@ struct EntryFlowTests {
         )
 
         let total = try dailyExpense(in: context)
-        let fee = tx.fee
+        // `tx.fee` 是 `Decimal?`，不能直接与 `Decimal` 比较（Optional 不参与隐式提升）。
+        let fee = tx.fee ?? 0
         let savingsBalance = savings.currentBalance
         let creditBalance = credit.currentBalance
         let netSum = savingsBalance + creditBalance
