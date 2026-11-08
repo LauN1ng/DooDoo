@@ -7,8 +7,12 @@ import Foundation
 /// 信用合计 −28,466.00、储蓄合计 3,120.00、父母借款 −20,000。
 @MainActor
 struct NetWorthTests {
+    private func d(_ text: String) -> Decimal {
+        Decimal(string: text, locale: Locale(identifier: "en_US_POSIX"))!
+    }
+
     private func snapshot(_ kind: AccountKind, _ value: String) -> AccountSnapshot {
-        AccountSnapshot(kind: kind, balance: Decimal(string: value)!)
+        AccountSnapshot(kind: kind, balance: d(value))
     }
 
     @Test("我有 = 储蓄 + 现金")
@@ -19,7 +23,7 @@ struct NetWorthTests {
             snapshot(.cash, "100"),
             snapshot(.credit, "-3120.00"),
         ]
-        #expect(NetWorth.mine(accounts) == Decimal(string: "3220.00"))
+        #expect(NetWorth.mine(accounts) == d("3220.00"))
     }
 
     @Test("我欠 = 信用 + 借款，取正值")
@@ -29,7 +33,7 @@ struct NetWorthTests {
             snapshot(.loan, "-20000.00"),
             snapshot(.savings, "3120.00"),
         ]
-        #expect(NetWorth.owe(accounts) == Decimal(string: "48466.00"))
+        #expect(NetWorth.owe(accounts) == d("48466.00"))
     }
 
     @Test("净资产 = 我有 − 我欠")
@@ -39,7 +43,7 @@ struct NetWorthTests {
             snapshot(.credit, "-28466.00"),
             snapshot(.loan, "-20000.00"),
         ]
-        #expect(NetWorth.net(accounts) == Decimal(string: "-45346.00"))
+        #expect(NetWorth.net(accounts) == d("-45346.00"))
     }
 
     @Test("负债求和异常为正时，我欠返回 0 而不是负数")

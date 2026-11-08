@@ -54,9 +54,14 @@ jobs:
           STATUS=$?
           set -e
           if [ "$STATUS" -ne 0 ]; then
-            echo "=== 构建失败，日志最后 40 行 ==="
-            tail -40 build.log || true
-            BODY=$(tail -40 build.log | tr '\n' '\r' | sed 's/\r/%0A/g' | cut -c1-6000)
+            echo "=== 所有 error: 行 ==="
+            grep -E "error:" build.log | head -30 || true
+            BODY=$(grep -E "error:" build.log | head -20 | tr '\n' '\r' | sed 's/\r/%0A/g' | cut -c1-6000)
+            if [ -z "$BODY" ]; then
+              echo "=== 没有 error: 行，退回日志尾部 ==="
+              tail -40 build.log || true
+              BODY=$(tail -40 build.log | tr '\n' '\r' | sed 's/\r/%0A/g' | cut -c1-6000)
+            fi
             echo "::error title=xcodebuild failed::$BODY"
             exit "$STATUS"
           fi
