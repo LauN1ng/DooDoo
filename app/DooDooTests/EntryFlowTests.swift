@@ -36,10 +36,12 @@ struct EntryFlowTests {
     }
 
     private func dailyExpense(in context: ModelContext) throws -> Decimal {
+        // 必须排除软删除：产品代码里所有查询都要这么做（AGENTS 7.2），
+        // 这里漏掉会让「软删回滚」那条用例把删掉的手续费也算进来。
         let transactions = try context.fetch(FetchDescriptor<Transaction>())
-        let figures = transactions.map {
-            TxFigure(kind: $0.kind, amount: $0.amount, date: $0.date, fee: $0.fee)
-        }
+        let figures = transactions
+            .filter { $0.deletedAt == nil }
+            .map { TxFigure(kind: $0.kind, amount: $0.amount, date: $0.date, fee: $0.fee) }
         return DayMath.expenseTotal(figures)
     }
 

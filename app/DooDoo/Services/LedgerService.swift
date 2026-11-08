@@ -3,8 +3,11 @@ import SwiftData
 
 /// 一笔流水对**两个**账户的净影响（M2b 起）。
 ///
-/// 单位：元。`from` 是付款方 / 转出方 / 扣款账户的变化（通常是负数），
-/// `to` 是收款方 / 转入方 / 被还信用卡的变化（正数：储蓄增加，信用欠款减少）。
+/// 单位：元。两个值**分别对应 `Transaction` 的两个账户字段**，不按「付出/收入」命名：
+/// - `from` = `transaction.account` 的余额变化（支出/还款/转账为负，收入为正）
+/// - `to` = `transaction.toAccount` 的余额变化（还款/转账为正，其余为 0）
+///
+/// 收入没有 `toAccount`，钱进的是 `account`，所以记在 `from` 位上。
 struct AccountFlow: Equatable, Sendable {
     var from: Decimal
     var to: Decimal
@@ -89,7 +92,9 @@ enum LedgerService {
         case .expense:
             return AccountFlow(from: -transaction.amount, to: 0)
         case .income:
-            return AccountFlow(from: 0, to: transaction.amount)
+            // 收入的收款方就是 `account`（没有 `toAccount`），必须记在 from 位上，
+            // 记到 to 会让钱加到一个 nil 账户上——余额凭空消失（已用单测抓住）。
+            return AccountFlow(from: transaction.amount, to: 0)
         case .repayment:
             return AccountFlow(from: -transaction.amount, to: transaction.amount)
         case .transfer:
