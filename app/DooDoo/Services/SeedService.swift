@@ -22,7 +22,7 @@ enum SeedService {
             settings.updatedAt = .now
             try context.save()
         }
-        try backfillIcons(context)
+        try backfillIcons(context: context)
         try LedgerService.recalculateAll(in: context)
     }
 
