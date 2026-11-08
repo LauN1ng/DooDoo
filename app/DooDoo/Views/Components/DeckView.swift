@@ -15,6 +15,11 @@ struct DeckView: View {
     private static let offsets: [CGFloat] = [-5, 4, -4]
     private static let swipeThreshold: CGFloat = 90
 
+    /// 卡片左右内距。规格写的是 16（按 390pt 设计稿量的），
+    /// 但真机是 402~440pt 宽，16pt 的占比变小、看着像贴边，端侧先放 20。
+    /// 已登记到 `首页规格冻结-v1.0.md` 第七节的端侧可调项。
+    private static let sideInset: CGFloat = 20
+
     var body: some View {
         GeometryReader { proxy in
             let visible = min(max(days.count - 1, 0), 3)
@@ -46,16 +51,16 @@ struct DeckView: View {
                     isToday: Calendar.current.isDateInToday(entry.day)
                 )
                 .frame(height: cardHeight)
-                .padding(.horizontal, 16)
+                .padding(.horizontal, DeckView.sideInset)
                 .padding(.bottom, frontBottom)
                 .offset(x: dragX)
                 .rotationEffect(.degrees(Double(dragX / 110)), anchor: .bottom)
-                .shadow(color: .black.opacity(0.06), radius: 14, x: 0, y: 8)
+                .shadow(color: .black.opacity(0.08), radius: 18, x: 0, y: 10)
                 .zIndex(10)
             } else {
                 sheet
                     .frame(height: cardHeight)
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, DeckView.sideInset)
                     .padding(.bottom, frontBottom - CGFloat(10 * depth))
                     .offset(x: Self.offsets[(depth - 1) % Self.offsets.count])
                     .rotationEffect(

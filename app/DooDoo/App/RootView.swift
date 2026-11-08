@@ -13,6 +13,9 @@ struct RootView: View {
             header
             content
         }
+        // 页头与状态栏必须是页面底色。原来这里是系统默认白，
+        // 和白色卡片连成一片，真机上看起来像"顶上多了一块白"。
+        .background(Palette.page.ignoresSafeArea())
     }
 
     private var header: some View {
@@ -53,7 +56,8 @@ struct RootView: View {
         }
         .padding(.horizontal, 20)
         .padding(.top, 6)
-        .padding(.bottom, 12)
+        // 规格里页头底到卡堆顶是 30（卡顶 116 − 页头底 86）。原来 12 太挤，卡片像贴着 tab。
+        .padding(.bottom, 24)
     }
 
     @ViewBuilder

@@ -27,6 +27,8 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Palette.page)
         .onAppear(perform: ensureDefaultSettings)
     }
 
