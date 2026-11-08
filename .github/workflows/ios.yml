@@ -61,16 +61,31 @@ jobs:
             exit "$STATUS"
           fi
 
-      - name: 单测（自动挑一台可用 iPhone 模拟器）
+      - name: 单测（预启动模拟器，失败回传日志）
+        timeout-minutes: 12
         run: |
-          set -o pipefail
+          set +e
+          set +o pipefail
           UDID=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k in sorted(d) for x in d[k] if x['name'].startswith('iPhone')))")
           echo "使用模拟器：$UDID"
+          # 先开机再跑测试：不预启动时 xcodebuild 有时会一直等模拟器
+          xcrun simctl boot "$UDID" 2>/dev/null || true
+          xcrun simctl bootstatus "$UDID" -b
           xcodebuild -project DooDoo.xcodeproj -scheme DooDoo \
             -destination "platform=iOS Simulator,id=$UDID" \
             -derivedDataPath build \
+            -parallel-testing-enabled NO \
             CODE_SIGNING_ALLOWED=NO \
-            test
+            test > test.log 2>&1
+          STATUS=$?
+          set -e
+          if [ "$STATUS" -ne 0 ]; then
+            echo "=== 单测失败，日志最后 60 行 ==="
+            tail -60 test.log || true
+            BODY=$(tail -60 test.log | tr '\n' '\r' | sed 's/\r/%0A/g' | cut -c1-6000)
+            echo "::error title=test failed::$BODY"
+            exit "$STATUS"
+          fi
 
       - name: 上传未签名产物
         if: always()
@@ -79,4 +94,89 @@ jobs:
           name: DooDoo-unsigned-app
           path: app/build/Build/Products/Debug-iphonesimulator/*.app
           if-no-files-found: warn
+          retention-days: 7
+
+  # ============================================================
+  # 未签名真机 IPA —— 给「端侧看一眼」用
+  #
+  # 触发：push 到 main、或 Actions 页面手动 Run workflow。PR 不跑（只需验证能构建）。
+  # 本仓库是 public，Actions 分钟不计费，所以每次 push 都直接出包；
+  # 想装最新版就下载该次 run 的 artifact，不必等手动触发。
+  #
+  # 产物不可直接安装：iOS 只认签名，需用 Sideloadly / AltStore 之类工具
+  # 拿自己的 Apple ID 重签一次（免费账号有效期 7 天，过期重签即可）。
+  #
+  # 为什么不用 archive + -exportArchive：导出这一步强制要求签名证书与
+  # provisioning profile，未签名场景走不通；只能 build 出 Release-iphoneos
+  # 的 .app，再自己按 Payload/ 结构压成 IPA。
+  # ============================================================
+  ipa:
+    name: 未签名 IPA（真机侧载）
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: macos-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 选择最新的 Xcode
+        run: |
+          ls -d /Applications/Xcode*.app || true
+          XCODE_APP=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE_APP"
+          xcodebuild -version
+
+      - name: 安装 XcodeGen
+        run: brew install xcodegen
+
+      - name: 生成工程
+        run: xcodegen generate
+
+      - name: 构建真机 Release（未签名）
+        run: |
+          set -o pipefail
+          xcodebuild -project DooDoo.xcodeproj -scheme DooDoo \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build-ipa \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            EXPANDED_CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            build | tee build-ipa.log
+
+      - name: 打包成 IPA
+        run: |
+          set -euo pipefail
+          APP_PATH=$(find build-ipa/Build/Products/Release-iphoneos -maxdepth 1 -type d -name "DooDoo.app" | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "::error::构建产物里没有 DooDoo.app"
+            ls -R build-ipa/Build/Products || true
+            exit 1
+          fi
+          echo "APP_PATH=$APP_PATH"
+          lipo -info "$APP_PATH/DooDoo" || true
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP_PATH/Info.plist" || true
+          /usr/libexec/PlistBuddy -c "Print :MinimumOSVersion" "$APP_PATH/Info.plist" || true
+
+          rm -rf out && mkdir -p out/Payload
+          cp -R "$APP_PATH" out/Payload/
+          ( cd out && zip -qry DooDoo-unsigned.ipa Payload )
+          ls -lh out/DooDoo-unsigned.ipa
+          shasum -a 256 out/DooDoo-unsigned.ipa | tee out/DooDoo-unsigned.ipa.sha256
+
+      - name: 上传 IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: DooDoo-unsigned-ipa
+          path: |
+            app/out/DooDoo-unsigned.ipa
+            app/out/DooDoo-unsigned.ipa.sha256
+          if-no-files-found: error
           retention-days: 7

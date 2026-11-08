@@ -29,9 +29,7 @@ enum AccountKind: String, Codable, CaseIterable, Sendable {
 /// 额度、账单周期、还款日等字段属于 M2/M3，**不要提前加**。
 @Model
 final class Account {
-    /// 稳定标识。
-    var id: UUID
-
+    // 标识由 SwiftData 的 `persistentModelID` 提供，不自己声明 `id`。
     /// 账户名，如「花呗」「建行5044」。
     var name: String
 
@@ -54,7 +52,6 @@ final class Account {
     }
 
     init(name: String, kind: AccountKind, currentBalance: Decimal = 0, createdAt: Date = .now) {
-        self.id = UUID()
         self.name = name
         self.kindRaw = kind.rawValue
         self.currentBalance = currentBalance

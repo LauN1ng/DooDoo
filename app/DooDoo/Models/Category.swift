@@ -4,9 +4,7 @@ import SwiftData
 /// 分类：8 类支出 + 2 类收入，v1 不支持自定义（PRD 3.1.2）。
 @Model
 final class Category {
-    /// 稳定标识。
-    var id: UUID
-
+    // 标识由 SwiftData 的 `persistentModelID` 提供，不自己声明 `id`。
     var name: String
 
     /// 展示用 emoji。M1 先用系统 emoji，M4 换成 `assets/emoji` 的 3D 贴图。
@@ -25,7 +23,6 @@ final class Category {
     var transactions: [Transaction] = []
 
     init(name: String, emoji: String, sortOrder: Int, isIncome: Bool, tintHex: String) {
-        self.id = UUID()
         self.name = name
         self.emoji = emoji
         self.sortOrder = sortOrder

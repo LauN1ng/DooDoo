@@ -36,9 +36,8 @@ enum TransactionKind: String, Codable, CaseIterable, Sendable {
 /// **金额永远为正**，方向由 `kind` 决定：支出是 `expense` + 正数，不是负数金额。
 @Model
 final class Transaction {
-    /// 稳定标识（PRD 第八节有该字段）。
-    var id: UUID
-
+    // 不自己声明 `id`：SwiftData 的 @Model 已通过 `persistentModelID` 提供 Identifiable，
+    // 再写一个 `id: UUID` 会和它抢同一个名字，运行时 schema 容易出问题。
     /// 单位：元。恒为正数。
     var amount: Decimal
 
@@ -82,7 +81,6 @@ final class Transaction {
         createdAt: Date = .now,
         deletedAt: Date? = nil
     ) {
-        self.id = UUID()
         self.amount = amount
         self.kindRaw = kind.rawValue
         self.date = date

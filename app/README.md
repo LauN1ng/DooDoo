@@ -16,7 +16,7 @@
 | 数据 | SwiftData，纯本地，无 CloudKit、无账号 |
 | 网络 | 零请求、零分析 SDK |
 | 并发 | `SWIFT_VERSION = 6.0`，`SWIFT_STRICT_CONCURRENCY = complete` |
-| CI | `.github/workflows/ios.yml`：push/PR 跑构建 + 单测并出未签名模拟器 `.app`；手动 `Run workflow` 额外出未签名真机 `.ipa`（`ipa` job，需 `build` 绿） |
+| CI | `.github/workflows/ios.yml`：push/PR 跑构建 + 单测并出未签名模拟器 `.app`；**push 到 `main` 额外自动出未签名真机 `.ipa`**（`ipa` job，需 `build` 绿）；仓库 public，分钟不计费 |
 
 ## 二、目录（实际，不是设想）
 
@@ -47,17 +47,17 @@ app/
 | 想做的事 | 唯一做法 | 不存在 |
 |---|---|---|
 | 编译 / 跑单测 | push 到 `main`，看 Actions 的 `build` job | 本机编译 |
-| 在 iPhone 上打开 | 手动 `Run workflow` → 下载未签名 IPA → Sideloadly 自签 | 本机连真机调试 |
+| 在 iPhone 上打开 | 每次 push 到 `main` 都出包 → 下载未签名 IPA → Sideloadly 自签 | 本机连真机调试 |
 | 看界面长什么样 | 只有上面这一条 | iOS 模拟器（要 macOS） |
 
 本地能做的只有三件：改 Swift、改 `project.yml`、读 CI 日志。写完就 push，让 CI 给结论——**不要写"本地编译通过"，那是假话**。
 
 ### 拿到能装进 iPhone 的 IPA（四步）
 
-1. GitHub → Actions → **iOS** → 右上 **Run workflow**（分支 `main`）→ 运行。
-2. 等 `build`（构建 + 单测）绿，再等 `ipa`（真机 Release 构建 + 打包）绿。
-3. 在该次 run 页面底部下载 artifact **`DooDoo-unsigned-ipa`**（7 天后过期），内含 `DooDoo-unsigned.ipa` 与 `.sha256`。
-4. Windows 上用 **Sideloadly** 拿自己的 Apple ID 重签后装到 iPhone。Sideloadly 需要 iTunes 提供 Apple 驱动，**装官网版 iTunes，不要装 Microsoft Store 版**（商店版不带驱动）。
+1. **push 到 `main`**（或在 Actions 页手动 **Run workflow**）→ 等两个 job 变绿：`build`（编译 + 单测）→ `ipa`（真机 Release 构建 + 打包）。仓库是 public，Actions 分钟不计费，**每次 push 都直接出包**。
+2. 在该次 run 页面底部下载 artifact **`DooDoo-unsigned-ipa`**（7 天后过期），内含 `DooDoo-unsigned.ipa` 与 `.sha256`。
+3. Windows 上用 **Sideloadly** 拿自己的 Apple ID 重签。Sideloadly 需要 iTunes 提供 Apple 驱动，**装官网版 iTunes，不要装 Microsoft Store 版**（商店版不带驱动）。
+4. 装到 iPhone：首次要先在手机上打开开发者模式（见下表）并信任证书。
 
 关键限制（**不是 bug，是 iOS 的规则**）：
 
