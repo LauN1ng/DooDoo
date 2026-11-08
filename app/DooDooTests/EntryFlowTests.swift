@@ -53,8 +53,9 @@ struct EntryFlowTests {
             note: "好利来", account: credit, in: context
         )
 
+        let total = try dailyExpense(in: context)
         #expect(credit.currentBalance == dec("-3249.42"))
-        #expect(try dailyExpense(in: context) == dec("32.00"))
+        #expect(total == dec("32.00"))
     }
 
     @Test("收入：收款账户增加，不计入消费统计")
@@ -67,8 +68,9 @@ struct EntryFlowTests {
             account: savings, in: context
         )
 
+        let total = try dailyExpense(in: context)
         #expect(savings.currentBalance == dec("13000.00"))
-        #expect(try dailyExpense(in: context) == 0)
+        #expect(total == 0)
     }
 
     @Test("还款：两边同时动，消费统计不变")
@@ -81,9 +83,10 @@ struct EntryFlowTests {
             account: savings, toAccount: credit, in: context
         )
 
+        let total = try dailyExpense(in: context)
         #expect(credit.currentBalance == 0)
         #expect(savings.currentBalance == dec("1782.58"))
-        #expect(try dailyExpense(in: context) == 0, "还款不属于消费")
+        #expect(total == 0, "还款不属于消费")
     }
 
     @Test("转账带手续费：只把手续费算进消费")
@@ -96,12 +99,17 @@ struct EntryFlowTests {
             account: savings, toAccount: credit, receivedAmount: dec("999.90"), in: context
         )
 
-        #expect(tx.fee == dec("0.10"))
-        #expect(savings.currentBalance == dec("4000.00"), "转出账户扣本金 1000，不额外扣手续费")
-        #expect(credit.currentBalance == dec("-2217.52"), "转入账户只入账 999.90")
-        #expect(savings.currentBalance + credit.currentBalance
-                == dec("1782.48"), "两边余额之和比原来少 0.10，正好是手续费")
-        #expect(try dailyExpense(in: context) == dec("0.10"), "转账本金不算消费，只算手续费")
+        let total = try dailyExpense(in: context)
+        let fee = tx.fee
+        let savingsBalance = savings.currentBalance
+        let creditBalance = credit.currentBalance
+        let netSum = savingsBalance + creditBalance
+
+        #expect(fee == dec("0.10"))
+        #expect(savingsBalance == dec("4000.00"), "转出账户扣本金 1000，不额外扣手续费")
+        #expect(creditBalance == dec("-2217.52"), "转入账户只入账 999.90")
+        #expect(netSum == dec("1782.48"), "两边余额之和比原来少 0.10，正好是手续费")
+        #expect(total == dec("0.10"), "转账本金不算消费，只算手续费")
     }
 
     @Test("软删除：余额与统计都回滚")
@@ -115,9 +123,10 @@ struct EntryFlowTests {
         )
         try LedgerService.softDelete(tx, in: context)
 
+        let total = try dailyExpense(in: context)
         #expect(savings.currentBalance == dec("5000.00"))
         #expect(credit.currentBalance == dec("-3217.42"))
-        #expect(try dailyExpense(in: context) == 0)
+        #expect(total == 0)
     }
 
     @Test("调账后 recalculateAll 与增量写入结果一致")

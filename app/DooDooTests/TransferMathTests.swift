@@ -32,17 +32,28 @@ struct TransferMathTests {
     @Test("大额也能精确到分")
     func feeLargeAmount() {
         let fee = TransferMath.fee(amount: dec("123456.78"), received: dec("123456.28"))
-        #expect(fee == dec("0.50"))
+        let expected = dec("0.50")
+        #expect(fee == expected)
     }
 
     @Test("校验：到账不能大于转出")
     func validation() {
-        #expect(TransferMath.isValid(amount: dec("1000"), received: dec("999.90")))
-        #expect(!TransferMath.isValid(amount: dec("1000"), received: dec("1000.01")))
-        #expect(!TransferMath.isValid(amount: 0, received: 0))
-        #expect(!TransferMath.isValid(amount: dec("1000"), received: dec("-1")))
-        #expect(TransferMath.validationMessage(amount: 0, received: 0) != nil)
-        #expect(TransferMath.validationMessage(amount: dec("1000"), received: dec("999.90")) == nil)
+        // 断言里只放简单比较：复杂表达式塞进 `#expect` 会让类型检查器在宏展开后
+        // 处理一个很大的泛型树，Swift Testing 在个别版本上会直接崩（CI 只报编译任务名）。
+        let okCase = TransferMath.isValid(amount: dec("1000"), received: dec("999.90"))
+        let overReceived = TransferMath.isValid(amount: dec("1000"), received: dec("1000.01"))
+        let zeroAmount = TransferMath.isValid(amount: 0, received: 0)
+        let negativeReceived = TransferMath.isValid(amount: dec("1000"), received: dec("-1"))
+
+        let messageForZero = TransferMath.validationMessage(amount: 0, received: 0)
+        let messageForOk = TransferMath.validationMessage(amount: dec("1000"), received: dec("999.90"))
+
+        #expect(okCase)
+        #expect(overReceived == false)
+        #expect(zeroAmount == false)
+        #expect(negativeReceived == false)
+        #expect(messageForZero != nil)
+        #expect(messageForOk == nil)
     }
 
     @Test("还款后剩余欠款：正常、还清、超额")

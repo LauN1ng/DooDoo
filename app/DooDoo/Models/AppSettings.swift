@@ -71,7 +71,11 @@ final class AppSettings {
     var seedVersion: Int = 0
 
     /// 主色 id（`AccentStyle` 的 rawValue）。后加字段，必须有默认值。
-    var accentId: String = AccentStyle.ink.rawValue
+    ///
+    /// 默认值必须写字面量：`@Model` 对属性默认值要求「完全限定的字面量」，
+    /// 写成 `AccentStyle.ink.rawValue` 这类属性访问在部分 Xcode 版本上会报
+    /// "A default value requires a fully qualified domain named value"（`Date.now` 踩过同样的坑）。
+    var accentId: String = "ink"
 
     var updatedAt: Date
 
