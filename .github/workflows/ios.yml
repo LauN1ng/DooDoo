@@ -98,6 +98,14 @@ jobs:
             fi
           done
           echo "包内 png 数量：$(ls "$APP" | grep -c '\.png$' || true)"
+
+          # 防止回退：bundle 根目录的 PNG 必须用 Image(uiImage:) 加载，
+          # Image("名字") 只查 asset catalog，会画成空白。
+          if grep -rn 'Image(name)' DooDoo/Views > /dev/null 2>&1; then
+            echo "::error::视图里出现了 Image(name)，bundle 根目录 PNG 会画成空白，请改用 Image(uiImage:)"
+            MISSING=1
+          fi
+
           exit $MISSING
 
       - name: 上传未签名产物

@@ -31,17 +31,20 @@ struct TxRowView: View {
     }
 
     /// 这一笔自己的图标优先，没有就用分类默认图标；图片缺失才退回 emoji 字符。
-    private var iconName: String? {
-        if let own = transaction.iconName, UIImage(named: own) != nil { return own }
-        if let category = transaction.category?.iconName, UIImage(named: category) != nil { return category }
+    private var icon: UIImage? {
+        if let own = transaction.iconName, let image = UIImage(named: own) { return image }
+        if let category = transaction.category?.iconName, let image = UIImage(named: category) { return image }
         return nil
     }
 
     /// Fluent3D 图标 27×27（原型尺寸），落在 42×42 的分类色槽里。
+    ///
+    /// **必须走 `UIImage`**：`Image("Croissant")` 只查 asset catalog，
+    /// 对 bundle 根目录的 PNG 会画成空白（槽里既没图也没 emoji 兜底，就是这个原因）。
     @ViewBuilder
     private var slot: some View {
-        if let name = iconName {
-            Image(name)
+        if let icon {
+            Image(uiImage: icon)
                 .resizable()
                 .scaledToFit()
                 .frame(width: 27, height: 27)
