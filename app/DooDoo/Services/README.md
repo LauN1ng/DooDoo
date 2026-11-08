@@ -1,6 +1,7 @@
 # Services · 领域服务
 
-> 状态：M0 空目录（目录先行，代码 M1 起写）。
+> 状态：**M1 已有两个**——`LedgerService`（插入 / 软删除）与 `SeedService`（首次启动铺演示数据）。
+> `LedgerService.recalculateAll()` 故意留到 M2：余额算法比没有更危险，不写半成品。
 
 | 服务 | 里程碑 | 职责 |
 |---|---|---|

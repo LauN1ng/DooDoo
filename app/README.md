@@ -1,7 +1,7 @@
 # app/ · DooDoo iOS 工程
 
-> 状态：**M0 已跑通**（2026-11-08）。CI 在 Xcode 26.6 / iOS 26.5 SDK 上构建通过、3 条单测绿、未签名 `.app` 已产出。
-> 本机是 Windows + PowerShell，没有 Xcode——**以后每次改代码仍要靠 CI 或 Mac 验证**，本地只能说"写完了"。
+> 状态：**M0 已跑通**（2026-11-08）。CI 在 Xcode 26.6 / iOS 26.5 SDK 上构建通过、3 条单测绿、未签名 `.app` 已产出；手动触发可另出**未签名真机 `.ipa`**，用于端侧安装查看。
+> 开发机是 **Windows + PowerShell，没有 Mac、没有 Xcode，只有一台 iPhone**——每次改代码只能靠 CI 编译、靠 iPhone 真机验收，本地只能说"写完了"。
 
 ## 一、工程事实
 
@@ -16,7 +16,7 @@
 | 数据 | SwiftData，纯本地，无 CloudKit、无账号 |
 | 网络 | 零请求、零分析 SDK |
 | 并发 | `SWIFT_VERSION = 6.0`，`SWIFT_STRICT_CONCURRENCY = complete` |
-| CI | `.github/workflows/ios.yml`：出未签名 `.app` + 跑单测 |
+| CI | `.github/workflows/ios.yml`：push/PR 跑构建 + 单测并出未签名模拟器 `.app`；手动 `Run workflow` 额外出未签名真机 `.ipa`（`ipa` job，需 `build` 绿） |
 
 ## 二、目录（实际，不是设想）
 
@@ -40,28 +40,36 @@ app/
 
 每个模块目录都有自己的 `README.md`（职责 / 入口文件 / 数据流向）。
 
-## 三、怎么跑
+## 三、怎么跑（本工作区**没有 Mac**）
 
-Mac 上：
+**事实：开发机是 Windows，手上只有一台 iPhone。** Xcode、`xcodebuild`、`xcodegen`、iOS 模拟器在本机全部跑不了，**唯一**的编译路径是 GitHub Actions。别在本机找 Xcode，找不到是正常的。
 
-```bash
-brew install xcodegen
-cd app
-xcodegen generate
-open DooDoo.xcodeproj      # 选一台 iPhone 模拟器，⌘R
-```
+| 想做的事 | 唯一做法 | 不存在 |
+|---|---|---|
+| 编译 / 跑单测 | push 到 `main`，看 Actions 的 `build` job | 本机编译 |
+| 在 iPhone 上打开 | 手动 `Run workflow` → 下载未签名 IPA → Sideloadly 自签 | 本机连真机调试 |
+| 看界面长什么样 | 只有上面这一条 | iOS 模拟器（要 macOS） |
 
-纯命令行（和 CI 一致）：
+本地能做的只有三件：改 Swift、改 `project.yml`、读 CI 日志。写完就 push，让 CI 给结论——**不要写"本地编译通过"，那是假话**。
 
-```bash
-cd app
-xcodegen generate
-xcodebuild -project DooDoo.xcodeproj -scheme DooDoo \
-  -configuration Debug \
-  -destination 'generic/platform=iOS Simulator' \
-  CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
-  build
-```
+### 拿到能装进 iPhone 的 IPA（四步）
+
+1. GitHub → Actions → **iOS** → 右上 **Run workflow**（分支 `main`）→ 运行。
+2. 等 `build`（构建 + 单测）绿，再等 `ipa`（真机 Release 构建 + 打包）绿。
+3. 在该次 run 页面底部下载 artifact **`DooDoo-unsigned-ipa`**（7 天后过期），内含 `DooDoo-unsigned.ipa` 与 `.sha256`。
+4. Windows 上用 **Sideloadly** 拿自己的 Apple ID 重签后装到 iPhone。Sideloadly 需要 iTunes 提供 Apple 驱动，**装官网版 iTunes，不要装 Microsoft Store 版**（商店版不带驱动）。
+
+关键限制（**不是 bug，是 iOS 的规则**）：
+
+| 限制 | 说明 |
+|---|---|
+| 不能直接装 | 产物**未签名**，iOS 拒绝安装未签名 App，必须由自签工具补签 |
+| 开发者模式必须开 | iPhone「设置 → 隐私与安全性 → 开发者模式」打开并重启，否则自签 App 点开即闪退 |
+| 7 天过期 | 免费 Apple ID 签的证书 7 天失效；同一账号 7 天内最多 3 个自签 App |
+| 设备要信任 | 首次安装后到「设置 → 通用 → VPN与设备管理」信任对应开发者证书 |
+| 不要用 archive 导出 | `xcodebuild archive` + `-exportArchive` 强制要求证书与描述文件，无证书必失败；CI 因此走 `build` + 手工压 `Payload/` |
+
+> 想免掉手动续签：Windows 上装 **AltServer**，手机同一 Wi-Fi 下 AltStore 会自动续签；或上付费开发者账号（一年有效）。M1 之后每次改代码都要重装一次，续签成本远低于重新构建。
 
 ## 四、M0 门禁与验证方法
 
@@ -69,10 +77,12 @@ xcodebuild -project DooDoo.xcodeproj -scheme DooDoo \
 |---|---|---|
 | 单测能过 | 3 条冒烟测试（tab 定义 / 默认值 / 内存容器读写） | ✅ CI 通过 |
 | CI 能出未签名产物 | `DooDoo-unsigned-app`，5.8 MB，sha256 `a082958c…` | ✅ run `42423907280` |
-| 模拟器能启动 | 单测已把 app 装进模拟器跑通；但**没人看过界面** | 🟡 CI 侧通过，观感待人工 |
+| CI 能出未签名 IPA | 手动 `Run workflow` → `ipa` job → artifact `DooDoo-unsigned-ipa` | ⬜ 待首次运行验证 |
+| iPhone 能装上并打开 | 下载 IPA → Sideloadly 自签 → 首页出得来 | ⬜ 待人工 |
+| 界面观感对 | 在 iPhone 上逐页看三个 tab 与设置页 | ⬜ 待人工（**本项目唯一的界面验收手段**） |
 | 数据能落盘 | 设置页拨「逾期横幅」→ 杀进程 → 重开，开关保持 | ⬜ 待人工 |
 
-**前两条是硬门禁，已过；后两条是人工确认，进 M1 前顺手做一遍。**
+**前三条是硬门禁（第 3 条待首次运行）；后三条只能靠 iPhone 人工确认——本工作区没有 macOS，模拟器这条路不存在。**
 
 ## 五、不要做的事
 

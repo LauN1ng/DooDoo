@@ -1,6 +1,6 @@
 # Views · SwiftUI 视图
 
-> 状态：M0 三个空壳（`FlowView` / `AssetsView` / `SettingsView`）。
+> 状态：**M1 的首页已可用**（`FlowView` + `Components/DeckView` / `DayCardView` / `TxRowView` / `Palette`）；`AssetsView` 仍是占位。
 
 | 视图 | 里程碑 | 对应规格 |
 |---|---|---|

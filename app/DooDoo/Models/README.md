@@ -1,6 +1,6 @@
 # Models · SwiftData 模型
 
-> 状态：M0 只有 `AppSettings`。其余模型按里程碑增量落地。
+> 状态：**M1 已落四个模型**——`AppSettings` / `Account` / `Category` / `Transaction`。分期与账单等 M3 再加。
 
 | 模型 | 里程碑 | 说明 |
 |---|---|---|
