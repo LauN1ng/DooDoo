@@ -5,6 +5,7 @@
 | 文件 | 里程碑 | 输入 → 输出 |
 |---|---|---|
 | `MoneyMath.swift` | M2 | 金额加减、分账、舍入（`NSDecimalRound`，显式指定规则） |
+| `TransferMath.swift` | M2b | 转出/到账 → 手续费（`max(0, 转出−到账)`）、双金额校验、还款后欠款与余额 |
 | `DebtPlanMath.swift` | M3 | 期数序列、首末期差额、余数落位（默认末期，可切首期） |
 | `AnnualRateSolver.swift` | M3 | 每期金额 + 期数 + 本金 → **反算年化（估算值，只展示）** |
 

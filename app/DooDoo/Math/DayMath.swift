@@ -6,10 +6,14 @@ struct TxFigure: Equatable, Sendable {
     let amount: Decimal
     let date: Date
 
-    init(kind: TransactionKind, amount: Decimal, date: Date) {
+    /// 转账手续费（只有 `.transfer` 有值）。**手续费计入消费统计**，转账本金不计（PRD 9.8）。
+    let fee: Decimal?
+
+    init(kind: TransactionKind, amount: Decimal, date: Date, fee: Decimal? = nil) {
         self.kind = kind
         self.amount = amount
         self.date = date
+        self.fee = fee
     }
 }
 
@@ -20,9 +24,23 @@ enum DayMath {
         calendar.startOfDay(for: date)
     }
 
-    /// 支出合计。只算 `kind == .expense`——还款、转账、调整都不进消费统计（PRD 9.1）。
+    /// 支出合计。
+    ///
+    /// 口径（PRD 9.1 / 9.8）：
+    /// - `.expense` 全额计入；
+    /// - `.transfer` **只计手续费**，本金不算消费；
+    /// - `.repayment` / `.income` / `.adjustment` 不计。
     static func expenseTotal(_ items: [TxFigure]) -> Decimal {
-        items.reduce(Decimal.zero) { $0 + ($1.kind.countsAsExpense ? $1.amount : 0) }
+        items.reduce(Decimal.zero) { sum, item in
+            switch item.kind {
+            case .expense:
+                return sum + item.amount + (item.fee ?? 0)
+            case .transfer:
+                return sum + (item.fee ?? 0)
+            case .income, .repayment, .adjustment:
+                return sum
+            }
+        }
     }
 
     /// 收入合计。

@@ -9,6 +9,9 @@ struct DayCardView: View {
     let items: [Transaction]
     let isToday: Bool
 
+    /// 点记账行时的动作，参数为这张卡代表的那一天。默认空实现，方便预览与单测。
+    var onAdd: (Date) -> Void = { _ in }
+
     private static let months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
     private static let weekdays = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"]
 
@@ -17,7 +20,9 @@ struct DayCardView: View {
     }
 
     private var expenseTotal: Decimal {
-        DayMath.expenseTotal(items.map { TxFigure(kind: $0.kind, amount: $0.amount, date: $0.date) })
+        DayMath.expenseTotal(items.map {
+            TxFigure(kind: $0.kind, amount: $0.amount, date: $0.date, fee: $0.fee)
+        })
     }
 
     var body: some View {
@@ -29,6 +34,7 @@ struct DayCardView: View {
                 .padding(.top, 14)
                 .padding(.bottom, 2)
             content
+            addRow
         }
         .padding(EdgeInsets(top: 20, leading: 18, bottom: 16, trailing: 18))
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -70,6 +76,34 @@ struct DayCardView: View {
                 }
             }
         }
+    }
+
+    /// 记账行（B2 空分类位）：42 空槽 + 「记一笔」，与流水行同构。
+    ///
+    /// 每张日卡都带这一行——翻到 11/6 点它，记的就是 11/6 的账（补记历史日）。
+    private var addRow: some View {
+        Button { onAdd(day) } label: {
+            HStack(spacing: 12) {
+                Text("＋")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(Palette.sub)
+                    .frame(width: 42, height: 42)
+                    .background(
+                        RoundedRectangle(cornerRadius: 13, style: .continuous)
+                            .fill(Palette.pillOn)
+                    )
+
+                Text("记一笔")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Palette.ink2)
+
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, 9)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("记一笔")
     }
 
     private var dayLabel: String {

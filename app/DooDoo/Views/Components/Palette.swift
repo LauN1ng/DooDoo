@@ -21,6 +21,16 @@ enum Palette {
     static let oweDot = Color(hex: 0xE8734A)
     static let overdraft = Color(hex: 0xA32D2D)
     static let overdraftBed = Color(hex: 0xFDECEC)
+
+    /// 记一笔的主色（分类选中、主按钮、金额强调）。默认墨黑。
+    static func accent(_ style: AccentStyle) -> Color {
+        Color(hex: style.hex)
+    }
+
+    /// 主色的 12% 底，用于二级分类选中态。
+    static func accentWash(_ style: AccentStyle) -> Color {
+        Color(hex: style.hex).opacity(0.12)
+    }
 }
 
 extension Color {

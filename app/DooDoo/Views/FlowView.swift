@@ -13,6 +13,10 @@ struct FlowView: View {
 
     @State private var index = 0
 
+    /// 记一笔面板。`entryDay` 记住是从哪一天的卡打开的——补记历史日靠它。
+    @State private var showingEntry = false
+    @State private var entryDay = Date.now
+
     init() {
         let start = DayMath.recentDayStarts(7).last
             ?? Calendar.current.startOfDay(for: .now)
@@ -24,13 +28,22 @@ struct FlowView: View {
     }
 
     var body: some View {
-        DeckView(days: cards, index: $index)
-            .padding(.bottom, 8)
-            .background(Palette.page)
-            .task {
-                // 首次启动铺演示数据（已有分类就跳过），并给老数据补 Fluent3D 图标
-                try? SeedService.prepare(context: context)
-            }
+        DeckView(days: cards, index: $index, onAdd: { day in
+            entryDay = day
+            showingEntry = true
+        })
+        .padding(.bottom, 8)
+        .background(Palette.page)
+        .sheet(isPresented: $showingEntry) {
+            EntryView(initialDate: entryDay)
+                .presentationDetents([.large])
+                .presentationCornerRadius(28)
+                .presentationDragIndicator(.visible)
+        }
+        .task {
+            // 首次启动铺演示数据（已有分类就跳过），并给老数据补 Fluent3D 图标
+            try? SeedService.prepare(context: context)
+        }
     }
 
     /// 窗口内的天（新的在前）。空账本时只留今天一张空卡（规格 3.1「首用只有 1 张」）。

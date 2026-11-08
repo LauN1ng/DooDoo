@@ -1,15 +1,17 @@
 # Views · SwiftUI 视图
 
-> 状态：**M2a 首页与资产页都可用**。
+> 状态：**M2b**。首页、资产页、记一笔都可用。
 > 首页：`FlowView` + `DeckView` / `DayCardView` / `TxRowView`；
-> 资产页：`AssetsView` + `NetWorthCard` / `AccountGroupView` / `AccountDeck` / `CardFace` / `GroupOverlay` / `AccountEditor`。设置页仍是最简版本。
+> 资产页：`AssetsView` + `NetWorthCard` / `AccountGroupView` / `AccountDeck` / `CardFace` / `GroupOverlay` / `AccountEditor`；
+> 记一笔：`Entry/EntryView` + `AccountCardStrip` / `CategoryPicker`。设置页仍是最简版本。
 
 | 视图 | 里程碑 | 对应规格 |
 |---|---|---|
 | `FlowView` | M1 | `docs/design/spec/首页规格冻结-v1.0.md` |
 | `AssetsView` | M2 | `docs/design/spec/资产页规格冻结-v1.0.md`（正文 v1.1） |
+| `Entry/EntryView` | M1b / M2b | `docs/design/spec/记一笔规格冻结-v1.0.md`（四类型、卡面六层、二级分类） |
+| `CardFace` | M2b | 同上第三节（六层，158×100 / 144×96 / 132×82 / 112×72 四档） |
 | `SettingsView` | M0 起可用 | PRD 9.15 + M5 验收清单 |
-| 记一笔面板 | M1 | **未冻结**（A 版已选定），不得凭 `pending/` 直接写生产代码 |
 
 ## 约束
 

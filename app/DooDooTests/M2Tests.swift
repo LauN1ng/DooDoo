@@ -160,19 +160,24 @@ struct LedgerRecalcTests {
         #expect(account.currentBalance == decimal("2204.30"))
     }
 
-    @Test("还款与转账暂不影响余额（M2b 才实现）")
-    func repaymentIsLeftOut() throws {
+    @Test("还款同时影响两个账户（M2b）")
+    func repaymentTouchesBothAccounts() throws {
         let container = try makeContainer()
         let context = ModelContext(container)
 
-        let account = Account(name: "招行8857", kind: .credit, initialBalance: decimal("-3120.00"))
-        context.insert(account)
+        let savings = Account(name: "建行5044", kind: .savings, initialBalance: decimal("5000.00"))
+        let credit = Account(name: "招行8857", kind: .credit, initialBalance: decimal("-3120.00"))
+        context.insert(savings)
+        context.insert(credit)
         try context.save()
 
         try LedgerService.insert(
-            amount: decimal("500.00"), kind: .repayment, date: .now, account: account, in: context
+            amount: decimal("500.00"), kind: .repayment, date: .now,
+            account: savings, toAccount: credit, in: context
         )
-        #expect(account.currentBalance == decimal("-3120.00"))
+
+        #expect(savings.currentBalance == decimal("4500.00"), "扣款账户减少")
+        #expect(credit.currentBalance == decimal("-2620.00"), "被还信用卡欠款减少")
     }
 
     @Test("校准余额：反推 initialBalance，重算后正好落在目标值")

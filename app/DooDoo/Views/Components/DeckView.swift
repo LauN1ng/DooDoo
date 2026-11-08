@@ -8,6 +8,8 @@ import SwiftUI
 struct DeckView: View {
     let days: [(day: Date, items: [Transaction])]
     @Binding var index: Int
+    /// 记一笔入口的动作。参数是**这一张卡代表的那一天**——补记历史日靠它。
+    var onAdd: (Date) -> Void = { _ in }
 
     @GestureState private var dragX: CGFloat = 0
 
@@ -48,7 +50,8 @@ struct DeckView: View {
                 DayCardView(
                     day: entry.day,
                     items: entry.items,
-                    isToday: Calendar.current.isDateInToday(entry.day)
+                    isToday: Calendar.current.isDateInToday(entry.day),
+                    onAdd: { onAdd(entry.day) }
                 )
                 .frame(height: cardHeight)
                 .padding(.horizontal, DeckView.sideInset)
