@@ -51,23 +51,22 @@ struct AccountDeck: View {
         }
     }
 
-    /// 后层只有纸边：同品牌渐变 + 亮度分档，不渲染任何文字（规格 6.2）。
+    /// 后层只有纸边：同一张卡面底图（无文字），靠亮度分档区分前后（规格 6.2）。
+    ///
+    /// 用底图而不是重新拼渐变，是为了和前层卡面同色同质感——
+    /// 底图里叠了高光和光带，纯渐变拼出来的纸边会明显比前卡暗一档。
     private func backSheet(for account: Account, depth: Int) -> some View {
         let style = BrandPalette.style(account.brandId)
-        return RoundedRectangle(cornerRadius: 13, style: .continuous)
-            .fill(
-                LinearGradient(
-                    colors: [Color(hex: style.c1), Color(hex: style.c2)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+        return Image(style.cardAsset(variant: account.variant))
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+            .frame(width: 132, height: 82)
+            .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 13, style: .continuous)
                     .strokeBorder(.white.opacity(0.22), lineWidth: 0.5)
             )
             .brightness(backBrightness(style: style, depth: depth))
-            .frame(width: 132, height: 82)
             .shadow(color: .black.opacity(0.13), radius: 3, x: 0, y: 2)
     }
 

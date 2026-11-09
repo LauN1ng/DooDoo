@@ -9,8 +9,8 @@
 |---|---|---|
 | `FlowView` | M1 | `docs/design/spec/首页规格冻结-v1.0.md` |
 | `AssetsView` | M2 | `docs/design/spec/资产页规格冻结-v1.0.md`（正文 v1.1） |
-| `Entry/EntryView` | M1b / M2b | `docs/design/spec/记一笔规格冻结-v1.0.md`（四类型、卡面六层、二级分类） |
-| `CardFace` | M2b | 同上第三节（六层，158×100 / 144×96 / 132×82 / 112×72 四档） |
+| `Entry/EntryView` | M1b / M2b | `docs/design/spec/记一笔规格冻结-v1.0.md`（四类型、二级分类） |
+| `CardFace` | M2b → 11-09 换资源 | 规格第三节四档尺寸；**底图走 `Assets.xcassets/Card` 资源 + `Texture` 纹理，文字层实时画**（原「六层代码画」已废弃） |
 | `SettingsView` | M0 起可用 | PRD 9.15 + M5 验收清单 |
 
 ## 约束

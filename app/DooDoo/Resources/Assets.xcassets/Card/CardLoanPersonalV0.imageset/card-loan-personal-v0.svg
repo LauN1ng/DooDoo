@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="296" height="186" viewBox="0 0 296 186">
+  <defs>
+    <linearGradient id="bgloanpersonalv0" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#A8846A"/>
+      <stop offset="1" stop-color="#4E3627"/>
+    </linearGradient>
+    <linearGradient id="shloanpersonalv0" x1="0" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#d8c8bc" stop-opacity="0.3"/>
+      <stop offset="0.45" stop-color="#d8c8bc" stop-opacity="0.02"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.1"/>
+    </linearGradient>
+    <linearGradient id="bandloanpersonalv0" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0.30" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="0.47" stop-color="#ffffff" stop-opacity="0.1"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="chiploanpersonalv0" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#E8D7A8"/>
+      <stop offset="0.5" stop-color="#C9AE74"/>
+      <stop offset="1" stop-color="#9C8347"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="296" height="186" fill="url(#bgloanpersonalv0)"/>
+  <rect width="296" height="186" fill="url(#shloanpersonalv0)"/>
+  <rect width="296" height="186" fill="url(#bandloanpersonalv0)"/>
+  
+  
+</svg>

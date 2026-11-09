@@ -279,17 +279,25 @@ struct EntryView: View {
                 Button {
                     vm.grade = selected ? nil : grade
                 } label: {
-                    Text("\(grade.emoji) \(grade.title)")
-                        .font(.system(size: 11.5, weight: selected ? .semibold : .regular))
-                        .foregroundStyle(selected ? Palette.card : Palette.ink2)
-                        .padding(.horizontal, 11)
-                        .padding(.vertical, 7)
-                        .background(
-                            Capsule().fill(selected ? accent : Palette.card)
-                        )
-                        .overlay(
-                            Capsule().strokeBorder(selected ? .clear : Palette.line, lineWidth: 1)
-                        )
+                    HStack(spacing: 3) {
+                        // 正式徽章（Fluent 3D 字块），不用 emoji：emoji 跨设备渲染不一致，和卡面调性也打架
+                        Image(grade.assetName)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 18, height: 18)
+                        Text(grade.title)
+                            .font(.system(size: 11.5, weight: selected ? .semibold : .regular))
+                            .foregroundStyle(selected ? Palette.card : Palette.ink2)
+                    }
+                    .padding(.leading, 7)
+                    .padding(.trailing, 10)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule().fill(selected ? accent : Palette.card)
+                    )
+                    .overlay(
+                        Capsule().strokeBorder(selected ? .clear : Palette.line, lineWidth: 1)
+                    )
                 }
                 .buttonStyle(.plain)
             }
