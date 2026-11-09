@@ -37,7 +37,11 @@ struct DeckView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             .contentShape(Rectangle())
             .animation(.spring(response: 0.34, dampingFraction: 0.86), value: index)
-            .gesture(swipe)
+            // 真机反馈：卡片中部划不动，只有头部能滑。前卡的内容区是流水
+            // `ScrollView`，它的 pan 手势会赢得竞争，把外层 `.gesture` 吃掉。
+            // `.simultaneousGesture` 让两者并行识别：横向拖动翻日卡，纵向仍交给
+            // 列表滚动（方向判定在 `swipe` 里，横不过 90pt 不翻页）。
+            .simultaneousGesture(swipe)
         }
     }
 
@@ -90,7 +94,9 @@ struct DeckView: View {
     }
 
     private var swipe: some Gesture {
-        DragGesture(minimumDistance: 12)
+        // 16 而非 12：与内部 ScrollView 并行识别时，先让手指走出明确方向再判，
+        // 减少纵向滚动时被误判成横向翻页。
+        DragGesture(minimumDistance: 16)
             .updating($dragX) { value, state, _ in
                 guard abs(value.translation.width) > abs(value.translation.height) else { return }
                 state = value.translation.width

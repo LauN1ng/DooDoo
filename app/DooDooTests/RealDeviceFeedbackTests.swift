@@ -158,4 +158,69 @@ struct RealDeviceFeedbackTests {
         vm.setAmountText("0.05")
         #expect(vm.validationMessage == "手续费不能大于转出金额")
     }
+
+    // MARK: - 真机反馈：手续费必须落到「当日支出合计」（PRD 9.1 / 9.8）
+
+    /// 之前只测到 ViewModel 联动，没测「保存 → 落库 → 合计」这条完整链路。
+    /// 真机反馈「手续费没有被当支出」就是这块没有回归保护。
+    @Test("转账 1000 / 到账 999.90：手续费落库且只按手续费计入支出")
+    func transferFeeCountsAsExpense() throws {
+        let context = try makeContext()
+        let from = Account(name: "工资卡", kind: .savings, initialBalance: dec("5000"))
+        let to = Account(name: "支付宝", kind: .savings, initialBalance: dec("0"))
+        context.insert(from)
+        context.insert(to)
+        try context.save()
+
+        let vm = EntryViewModel()
+        vm.load(context: context)
+        vm.setType(.transfer)
+        vm.payer = from
+        vm.target = to
+        vm.setAmountText("1000")
+        vm.setFeeText("0.10")
+        #expect(vm.canSave)
+
+        vm.save(in: context)
+
+        let txs = try context.fetch(FetchDescriptor<Transaction>())
+        #expect(txs.count == 1)
+        let tx = try #require(txs.first)
+        #expect(tx.kind == .transfer)
+        #expect(tx.fee == dec("0.10"), "手续费必须落库，不能只活在 ViewModel 里")
+        #expect(tx.receivedAmount == dec("999.90"))
+
+        let total = DayMath.expenseTotal([
+            TxFigure(kind: tx.kind, amount: tx.amount, date: tx.date, fee: tx.fee)
+        ])
+        #expect(total == dec("0.10"), "本金 1000 不计支出，只计手续费 0.10")
+
+        #expect(from.currentBalance == dec("4000"), "转出方扣本金 1000")
+        #expect(to.currentBalance == dec("999.90"), "转入方到账 999.90")
+    }
+
+    @Test("转账无手续费：不增加当日支出合计")
+    func transferWithoutFeeNotCounted() throws {
+        let context = try makeContext()
+        let from = Account(name: "工资卡", kind: .savings, initialBalance: dec("5000"))
+        let to = Account(name: "支付宝", kind: .savings, initialBalance: dec("0"))
+        context.insert(from)
+        context.insert(to)
+        try context.save()
+
+        let vm = EntryViewModel()
+        vm.load(context: context)
+        vm.setType(.transfer)
+        vm.payer = from
+        vm.target = to
+        vm.setAmountText("1000")
+        vm.save(in: context)
+
+        let all = try context.fetch(FetchDescriptor<Transaction>())
+        let tx = try #require(all.first)
+        #expect(tx.fee == dec("0"), "无手续费时 fee 为 0，不是 nil 也算不出支出")
+        #expect(DayMath.expenseTotal([
+            TxFigure(kind: tx.kind, amount: tx.amount, date: tx.date, fee: tx.fee)
+        ]) == dec("0"))
+    }
 }

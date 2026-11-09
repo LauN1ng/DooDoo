@@ -12,14 +12,15 @@ struct TxRowView: View {
     }
 
     private var subtitle: String {
-        let category = transaction.category?.name
-        let account = transaction.account?.displayShortName
-        switch (category, account) {
-        case let (c?, a?): return "\(c) · \(a)"
-        case let (c?, nil): return c
-        case let (nil, a?): return a
-        default: return transaction.kind.title
+        var parts: [String] = []
+        if let category = transaction.category?.name { parts.append(category) }
+        if let account = transaction.account?.displayShortName { parts.append(account) }
+        // 转账行金额是「转出本金」，本金不计消费；手续费才是支出。
+        // 不在副标题写出来，用户无从判断那 0.10 到底进没进合计（真机反馈）。
+        if transaction.kind == .transfer, let fee = transaction.fee, fee > 0 {
+            parts.append("手续费 ¥" + MoneyMath.money(fee))
         }
+        return parts.isEmpty ? transaction.kind.title : parts.joined(separator: " · ")
     }
 
     private var amountColor: Color {
