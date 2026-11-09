@@ -25,6 +25,43 @@ enum SeedService {
         }
         try backfillIcons(context: context)
         try LedgerService.recalculateAll(in: context)
+        try normalizeLiabilitySigns(context: context)
+    }
+
+    /// 数据修复（2026-11-09 真机反馈 #8，推荐方案 A）。
+    ///
+    /// 早期 `AccountEditor` 把「欠 600」存成 `currentBalance = +600`，于是还款页
+    /// `maxDebt` 取 0、金额带出 0.00、主按钮一直禁用。语义上信用 / 借款账户的
+    /// 欠款必须为负（见 `Account.currentBalance` 注释），所以把正余额的负债账户
+    /// 校准到它的相反数。
+    ///
+    /// - 必须走 `LedgerService.adjustAccountBalance`：`currentBalance` 是派生值，
+    ///   直接赋值会在下一次 `recalculateAll` 被覆盖（AGENTS 7.2）。
+    /// - 幂等：纠正后余额为负，下次启动不再命中，不需要额外的版本标记。
+    /// - 边界 1：0 不纠正（已还清）；储蓄 / 现金账户不动。
+    /// - 边界 2：**多还款产生的正余额（溢缴）是合法状态**（见
+    ///   `TransferMath.balanceAfterRepay`），不能翻回欠款。这类账户必然有未软删的
+    ///   还款流水，用「有没有还款流水」区分，不加持久化标记、不改数据模型。
+    ///   只有存在疑似错误账户时才扫一次流水表，正常启动零额外开销。
+    static func normalizeLiabilitySigns(context: ModelContext) throws {
+        let accounts = try context.fetch(FetchDescriptor<Account>())
+        let suspicious = accounts.filter { $0.kind.isLiability && $0.currentBalance > 0 }
+        guard !suspicious.isEmpty else { return }
+
+        let transactions = try context.fetch(FetchDescriptor<Transaction>())
+        let repaidIDs = Set(
+            transactions
+                .filter { $0.kind == .repayment && $0.deletedAt == nil }
+                .compactMap { $0.toAccount?.persistentModelID }
+        )
+
+        for account in suspicious where !repaidIDs.contains(account.persistentModelID) {
+            try LedgerService.adjustAccountBalance(
+                account,
+                to: -account.currentBalance,
+                in: context
+            )
+        }
     }
 
     // MARK: - 版本迁移

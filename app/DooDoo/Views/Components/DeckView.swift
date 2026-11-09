@@ -97,10 +97,12 @@ struct DeckView: View {
             }
             .onEnded { value in
                 guard abs(value.translation.width) > abs(value.translation.height) else { return }
-                if value.translation.width < -Self.swipeThreshold, index < max(days.count - 1, 0) {
-                    index += 1          // 左滑：看更早
-                } else if value.translation.width > Self.swipeThreshold, index > 0 {
-                    index -= 1          // 右滑：回到更近
+                // 2026-11-09 真机反馈 #2：首版把方向做反了。规格 v1.0 未定义方向，
+                // 按用户直觉定案：右滑 = 翻到昨天，左滑 = 回今天（已回写规格第七节）。
+                if value.translation.width > Self.swipeThreshold, index < max(days.count - 1, 0) {
+                    index += 1          // 右滑：翻到更早的一天（昨天）
+                } else if value.translation.width < -Self.swipeThreshold, index > 0 {
+                    index -= 1          // 左滑：回到更近的一天（今天）
                 }
             }
     }

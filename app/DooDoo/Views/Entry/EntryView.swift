@@ -51,7 +51,9 @@ struct EntryView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) { footer }
         .task {
             vm.setType(initialType)
-            vm.date = initialDate
+            // 真机反馈 #1：日卡给的是当天 00:00，直接用会让新流水排到日卡最底。
+            // 今天用当前时刻，补记历史日把当前时分秒套到那一天。
+            vm.date = DayMath.entryTimestamp(for: initialDate)
             vm.load(context: context)
             amountFocused = true
         }
@@ -203,6 +205,8 @@ struct EntryView: View {
 
     private func attributionPill(_ account: Account?) -> String? {
         guard let account else { return nil }
+        // 真机反馈 #4：收入页只看了账户类型，写成了「存进 支付宝 立即扣款」。
+        if vm.type == .income { return "立即到账" }
         if account.kind == .credit, let start = account.billCycleStart, let end = account.billCycleEnd {
             return "账单期 \(start)/15–\(end) · 计入下月"
         }
@@ -220,7 +224,10 @@ struct EntryView: View {
             Text("¥")
                 .font(.system(size: 20, weight: .medium))
                 .foregroundStyle(Palette.faint)
-            TextField("0.00", text: $vm.amountText)
+            TextField("0.00", text: Binding(
+                get: { vm.amountText },
+                set: { vm.setAmountText($0) }
+            ))
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.trailing)
                 .font(.system(size: 46, weight: .bold))
@@ -243,7 +250,10 @@ struct EntryView: View {
             Text("¥")
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(Palette.faint)
-            TextField("与转出相同", text: $vm.receivedText)
+            TextField("与转出相同", text: Binding(
+                get: { vm.receivedText },
+                set: { vm.setReceivedText($0) }
+            ))
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.trailing)
                 .font(.system(size: 26, weight: .semibold))
@@ -415,19 +425,32 @@ struct EntryView: View {
         .frame(maxWidth: .infinity)
     }
 
+    /// PRD 9.8 允许「填到账金额」**或**「直接填手续费 0.1」两路。
+    /// 首版把手续费做成只读展示（真机反馈 #9），这里补上第二个输入框。
     private var feeRow: some View {
-        HStack(spacing: 8) {
-            Text("手续费")
-                .font(.system(size: 12))
-                .foregroundStyle(Palette.sub)
-            Text("¥" + MoneyMath.money(vm.fee))
-                .font(.system(size: 13, weight: .semibold))
-                .monospacedDigit()
-                .foregroundStyle(Palette.ink)
-            Spacer(minLength: 0)
-            Text("= 转出 − 到账")
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 6) {
+                Text("手续费")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Palette.sub)
+                Spacer(minLength: 0)
+                Text("¥")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Palette.faint)
+                TextField("0.00", text: Binding(
+                    get: { vm.feeText },
+                    set: { vm.setFeeText($0) }
+                ))
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .font(.system(size: 15, weight: .semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(Palette.ink)
+                    .frame(maxWidth: 120)
+            }
+            Text("填手续费或到账，另一边自动算（= 转出 − 到账）")
                 .font(.system(size: 10))
-                .foregroundStyle(Palette.sub)
+                .foregroundStyle(Palette.faint)
         }
         .padding(.horizontal, 18)
         .padding(.top, 2)

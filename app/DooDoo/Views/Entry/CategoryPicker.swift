@@ -23,7 +23,10 @@ struct CategoryPicker: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            topRow
+            VStack(spacing: 0) {
+                topRow
+                selectedHint
+            }
 
             if showingSub, !subs.isEmpty {
                 subPanel
@@ -32,6 +35,31 @@ struct CategoryPicker: View {
             }
         }
         .zIndex(showingSub ? 5 : 0)
+    }
+
+    /// 分类选中回显（2026-11-09 真机反馈 #7）：一级色块不随二级变化，
+    /// 选完浮层收起后全屏原本没有任何地方能看出选了「咖啡」。
+    /// 这里只用文字，不换图标——分类图标等 71 槽位正式映射再一起换。
+    private var selectedHint: some View {
+        HStack(spacing: 5) {
+            Text("已选")
+                .font(.system(size: 10))
+                .foregroundStyle(Palette.faint)
+            Text(selectedPath)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Palette.ink)
+                .lineLimit(1)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 18)
+        .padding(.top, 3)
+    }
+
+    private var selectedPath: String {
+        guard let subKey, let sub = subs.first(where: { $0.key == subKey }) else {
+            return topName
+        }
+        return "\(topName) › \(sub.name)"
     }
 
     // MARK: - 一级

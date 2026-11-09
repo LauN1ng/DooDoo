@@ -25,6 +25,12 @@ final class EntryViewModel {
     var amountText: String = ""
     /// 转账的到账金额文本。为空时视为等于金额（无手续费）。
     var receivedText: String = ""
+    /// 转账的手续费文本。PRD 9.8 明确允许「…或直接填『手续费 0.1』」，
+    /// 首版只做了「填到账」那一半（2026-11-09 真机反馈 #9）。
+    /// 与 `receivedText` 双向联动，改任何一个另一个自动反算。
+    var feeText: String = ""
+    /// 改「转出」时按哪一边重算：true = 手续费固定、到账跟动。
+    private(set) var feeDriven = false
     var note: String = ""
     var date: Date = .now
 
@@ -67,6 +73,48 @@ final class EntryViewModel {
 
     var fee: Decimal {
         type == .transfer ? TransferMath.fee(amount: amount, received: received) : 0
+    }
+
+    // MARK: - 转账三字段联动
+
+    /// 三个输入框都走**自定义 Binding 的 setter**，不用 `.onChange`：
+    /// 联动写另一个字段是直接赋值，不会再触发它的 setter，从根上避免两个
+    /// onChange 互相触发成死循环。
+    ///
+    /// `feeDriven` 只在用户真的编辑了手续费时为 true，改「转出」时据此决定
+    /// 保持手续费固定（到账跟动）还是保持到账固定（手续费跟动）。
+    func setAmountText(_ new: String) {
+        amountText = new
+        guard type == .transfer else { return }
+        if feeDriven { syncReceivedFromFee() } else { syncFeeFromReceived() }
+    }
+
+    func setFeeText(_ new: String) {
+        feeText = new
+        guard type == .transfer else { return }
+        feeDriven = !new.isEmpty
+        syncReceivedFromFee()
+    }
+
+    func setReceivedText(_ new: String) {
+        receivedText = new
+        guard type == .transfer else { return }
+        feeDriven = false
+        syncFeeFromReceived()
+    }
+
+    /// 填手续费 → 到账 = 转出 − 手续费（PRD 9.8 第二路）。
+    /// 边界：手续费大于转出时到账下限取 0，由校验提示。
+    private func syncReceivedFromFee() {
+        let value = amount - Self.decimal(feeText)
+        let normalized = value > 0 ? value : 0
+        receivedText = Self.plainAmount(normalized)
+    }
+
+    /// 填到账（或改转出）→ 手续费 = 转出 − 到账，负数按 0。
+    private func syncFeeFromReceived() {
+        let value = TransferMath.fee(amount: amount, received: received)
+        feeText = value > 0 ? Self.plainAmount(value) : ""
     }
 
     /// 一级分类（支出 8 类 / 收入 2 类）。
@@ -142,6 +190,9 @@ final class EntryViewModel {
             if let message = TransferMath.validationMessage(amount: amount, received: received) {
                 return message
             }
+            if feeDriven, Self.decimal(feeText) > amount {
+                return "手续费不能大于转出金额"
+            }
         }
         if payer == nil && type != .adjustment { return "选一个账户" }
         if (type == .repayment || type == .transfer) && target == nil { return "选一个目标账户" }
@@ -198,6 +249,9 @@ final class EntryViewModel {
         subKey = nil
         grade = nil
         errorMessage = nil
+        receivedText = ""
+        feeText = ""
+        feeDriven = false
 
         switch type {
         case .expense:
@@ -223,7 +277,6 @@ final class EntryViewModel {
             payer = payerCandidates.first
             target = targetCandidates.first { $0.persistentModelID != payer?.persistentModelID }
             amountText = ""
-            receivedText = ""
             topKey = ""
         case .adjustment:
             payer = payerCandidates.first

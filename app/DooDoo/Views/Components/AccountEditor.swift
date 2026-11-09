@@ -51,7 +51,8 @@ struct AccountEditor: View {
 
                 Section("金额") {
                     HStack {
-                        Text("余额")
+                        // 负债账户的界面口径是「欠款正数」，落库才取负（真机反馈 #8）。
+                        Text(kind.isLiability ? "欠款" : "余额")
                         Spacer()
                         TextField("0.00", text: $balanceText)
                             .keyboardType(.decimalPad)
@@ -66,7 +67,9 @@ struct AccountEditor: View {
                                 .multilineTextAlignment(.trailing)
                         }
                     }
-                    Text("余额是派生值：保存后会按流水重算，当前输入作为校准目标。")
+                    Text(kind.isLiability
+                         ? "欠款填正数（欠 600 就填 600）。余额是派生值：保存后会按流水重算，当前输入作为校准目标。"
+                         : "余额是派生值：保存后会按流水重算，当前输入作为校准目标。")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -131,13 +134,22 @@ struct AccountEditor: View {
         shortName = account.shortName
         last4 = account.last4
         limitText = account.creditLimit.map { MoneyMath.money($0) } ?? ""
-        balanceText = MoneyMath.money(account.currentBalance)
+        // 编辑负债账户时也显示「欠款正数」，与保存口径一致；否则来回编辑会把符号翻两次。
+        let balance = account.currentBalance
+        let shown = account.kind.isLiability && balance < 0 ? -balance : balance
+        balanceText = MoneyMath.money(shown)
         dueDay = account.dueDay ?? 0
     }
 
     private func save() {
-        let target = Decimal(string: balanceText.replacingOccurrences(of: ",", with: ""),
+        let parsed = Decimal(string: balanceText.replacingOccurrences(of: ",", with: ""),
                              locale: Locale(identifier: "en_US_POSIX")) ?? 0
+        // 2026-11-09 真机反馈 #8：用户按「欠 600」填 600，首版直接存成 +600，
+        // 导致还款页 maxDebt = 0、金额带出 0.00、主按钮禁用。
+        // Account.currentBalance 的语义是「信用/借款欠款为负」，这里统一取负。
+        // 填 -600 也按 600 处理，避免符号来回翻。
+        let magnitude = parsed < 0 ? -parsed : parsed
+        let target = kind.isLiability ? -magnitude : parsed
         let limit = limitText.isEmpty
             ? nil
             : Decimal(string: limitText.replacingOccurrences(of: ",", with: ""),

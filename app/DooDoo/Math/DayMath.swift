@@ -24,6 +24,28 @@ enum DayMath {
         calendar.startOfDay(for: date)
     }
 
+    /// 记一笔的时间戳：今天用「当前时刻」，补记历史日把当前时分秒套到那一天。
+    ///
+    /// 真机反馈 #1：日卡传进来的 `day` 是当天 00:00，直接落库会让新流水按时间倒序
+    /// 排在所有已有流水（12:10、13:05…）下面，看起来像「新的一笔在最底部」。
+    /// - 输入：`day` = 日卡代表的自然日（通常 00:00）；`now` = 当前时刻。
+    /// - 输出：同一天带真实时分秒的时间戳；`day` 与 `now` 同日时原样返回 `now`。
+    /// - 边界：日历换算失败（极端时区 / DST）时退回 `day`，不抛错。
+    /// - 用 `inSameDayAs` 而非 `isDateInToday`，让结果完全由入参决定，便于单测。
+    static func entryTimestamp(
+        for day: Date,
+        now: Date = .now,
+        calendar: Calendar = .current
+    ) -> Date {
+        if calendar.isDate(day, inSameDayAs: now) { return now }
+        let clock = calendar.dateComponents([.hour, .minute, .second], from: now)
+        var components = calendar.dateComponents([.year, .month, .day], from: day)
+        components.hour = clock.hour
+        components.minute = clock.minute
+        components.second = clock.second
+        return calendar.date(from: components) ?? day
+    }
+
     /// 支出合计。
     ///
     /// 口径（PRD 9.1 / 9.8）：
