@@ -44,7 +44,8 @@ struct BrandStyle: Sendable, Equatable {
         let v = (0...2).contains(variant) ? variant : 0
         let stem = id
             .split(separator: "-")
-            .map { $0.prefix(1).uppercased() + $0.dropFirst() }
+            // `prefix(1)` 返回 Substring，不能直接和 String 相加
+            .map { String($0.prefix(1)).uppercased() + String($0.dropFirst()) }
             .joined()
         return "Card" + stem + "V" + String(v)
     }
