@@ -22,7 +22,7 @@ final class Category {
     var name: String
 
     /// Fluent3D emoji 的资源名（bundle 里的 PNG，不带扩展名），例 `"Croissant"`。
-    /// 二级复用父类的图标——bundle 里只有 14 张图，39 个子类各配一张不现实。
+    /// 每个二级都有自己的图标（2026-11-10 按用户挑选定案，61 张 PNG 进包）。
     var iconName: String = ""
 
     /// 兜底字符。图片资源缺失时才用，正常不显示。
@@ -90,91 +90,94 @@ extension Category {
         let isIncome: Bool
     }
 
-    /// 内置分类：一级 10 个（支出 8 + 收入 2）+ 二级 48 个（支出 39 + 收入 9）。
+    /// 内置分类：一级 10 个（支出 8 + 收入 2）+ 二级 51 个（支出 42 + 收入 9）。
     ///
     /// 顺序即展示顺序：先父后子，同一父类的子类连续排列，方便种子一次性插入。
     static let builtIn: [BuiltIn] = [
         // MARK: 一级 · 支出 8 类
-        .init(key: "food", parentKey: nil, name: "吃", icon: "Croissant", emoji: "🍰", tint: "#FFF1E6", isIncome: false),
-        .init(key: "wear", parentKey: nil, name: "穿", icon: "TShirt", emoji: "👕", tint: "#FDF1EA", isIncome: false),
-        .init(key: "home", parentKey: nil, name: "住", icon: "House", emoji: "🏠", tint: "#F1F4EA", isIncome: false),
+        .init(key: "food", parentKey: nil, name: "吃", icon: "ForkAndKnifeWithPlate", emoji: "🍰", tint: "#FFF1E6", isIncome: false),
+        .init(key: "wear", parentKey: nil, name: "穿", icon: "Necktie", emoji: "👕", tint: "#FDF1EA", isIncome: false),
+        .init(key: "home", parentKey: nil, name: "住", icon: "Houses", emoji: "🏠", tint: "#F1F4EA", isIncome: false),
         .init(key: "transport", parentKey: nil, name: "行", icon: "LightRail", emoji: "🚇", tint: "#EAF2FF", isIncome: false),
-        .init(key: "fun", parentKey: nil, name: "乐", icon: "GameDie", emoji: "🎮", tint: "#F3EEFF", isIncome: false),
-        .init(key: "health", parentKey: nil, name: "医", icon: "Pill", emoji: "💊", tint: "#EAF6F1", isIncome: false),
-        .init(key: "social", parentKey: nil, name: "情", icon: "Cat", emoji: "🐱", tint: "#FBEEF4", isIncome: false),
+        .init(key: "fun", parentKey: nil, name: "乐", icon: "Joystick", emoji: "🎮", tint: "#F3EEFF", isIncome: false),
+        .init(key: "health", parentKey: nil, name: "医", icon: "Hospital", emoji: "💊", tint: "#EAF6F1", isIncome: false),
+        .init(key: "social", parentKey: nil, name: "情", icon: "CatFace", emoji: "🐱", tint: "#FBEEF4", isIncome: false),
         .init(key: "misc", parentKey: nil, name: "其他", icon: "Package", emoji: "📦", tint: "#F2F1ED", isIncome: false),
 
         // MARK: 二级 · 吃（8）
-        .init(key: "food.breakfast", parentKey: "food", name: "早餐", icon: "Croissant", emoji: "🥐", tint: "#FFF1E6", isIncome: false),
-        .init(key: "food.lunch", parentKey: "food", name: "午餐", icon: "BentoBox", emoji: "🍱", tint: "#FFF1E6", isIncome: false),
-        .init(key: "food.dinner", parentKey: "food", name: "晚餐", icon: "BentoBox", emoji: "🍜", tint: "#FFF1E6", isIncome: false),
-        .init(key: "food.latenight", parentKey: "food", name: "夜宵", icon: "BentoBox", emoji: "🍢", tint: "#FFF1E6", isIncome: false),
+        .init(key: "food.breakfast", parentKey: "food", name: "早餐", icon: "Bread", emoji: "🥐", tint: "#FFF1E6", isIncome: false),
+        .init(key: "food.lunch", parentKey: "food", name: "午餐", icon: "CookedRice", emoji: "🍱", tint: "#FFF1E6", isIncome: false),
+        .init(key: "food.dinner", parentKey: "food", name: "晚餐", icon: "SteamingBowl", emoji: "🍜", tint: "#FFF1E6", isIncome: false),
+        .init(key: "food.latenight", parentKey: "food", name: "夜宵", icon: "MeatOnBone", emoji: "🍢", tint: "#FFF1E6", isIncome: false),
         .init(key: "food.coffee", parentKey: "food", name: "咖啡", icon: "HotBeverage", emoji: "☕️", tint: "#FFF1E6", isIncome: false),
-        .init(key: "food.drink", parentKey: "food", name: "饮料", icon: "HotBeverage", emoji: "🧋", tint: "#FFF1E6", isIncome: false),
+        .init(key: "food.drink", parentKey: "food", name: "饮料", icon: "TropicalDrink", emoji: "🧋", tint: "#FFF1E6", isIncome: false),
         .init(key: "food.snack", parentKey: "food", name: "零食", icon: "Croissant", emoji: "🍪", tint: "#FFF1E6", isIncome: false),
-        .init(key: "food.grocery", parentKey: "food", name: "买菜", icon: "ShoppingBags", emoji: "🥬", tint: "#FFF1E6", isIncome: false),
+        .init(key: "food.grocery", parentKey: "food", name: "买菜", icon: "LeafyGreen", emoji: "🥬", tint: "#FFF1E6", isIncome: false),
 
         // MARK: 二级 · 穿（5）
         .init(key: "wear.top", parentKey: "wear", name: "上衣", icon: "TShirt", emoji: "👕", tint: "#FDF1EA", isIncome: false),
-        .init(key: "wear.pants", parentKey: "wear", name: "裤子", icon: "TShirt", emoji: "👖", tint: "#FDF1EA", isIncome: false),
-        .init(key: "wear.shoes", parentKey: "wear", name: "鞋", icon: "TShirt", emoji: "👟", tint: "#FDF1EA", isIncome: false),
-        .init(key: "wear.accessory", parentKey: "wear", name: "配饰", icon: "ShoppingBags", emoji: "💍", tint: "#FDF1EA", isIncome: false),
-        .init(key: "wear.haircut", parentKey: "wear", name: "理发", icon: "ShoppingBags", emoji: "💇", tint: "#FDF1EA", isIncome: false),
+        .init(key: "wear.pants", parentKey: "wear", name: "裤子", icon: "Jeans", emoji: "👖", tint: "#FDF1EA", isIncome: false),
+        .init(key: "wear.shoes", parentKey: "wear", name: "鞋", icon: "RunningShoe", emoji: "👟", tint: "#FDF1EA", isIncome: false),
+        .init(key: "wear.accessory", parentKey: "wear", name: "配饰", icon: "Glasses", emoji: "💍", tint: "#FDF1EA", isIncome: false),
+        .init(key: "wear.haircut", parentKey: "wear", name: "理发", icon: "BarberPole", emoji: "💇", tint: "#FDF1EA", isIncome: false),
 
-        // MARK: 二级 · 住（5）
-        .init(key: "home.rent", parentKey: "home", name: "房租", icon: "House", emoji: "🛏", tint: "#F1F4EA", isIncome: false),
-        .init(key: "home.utility", parentKey: "home", name: "水电", icon: "House", emoji: "💡", tint: "#F1F4EA", isIncome: false),
-        .init(key: "home.property", parentKey: "home", name: "物业", icon: "House", emoji: "🏢", tint: "#F1F4EA", isIncome: false),
-        .init(key: "home.furniture", parentKey: "home", name: "家居", icon: "House", emoji: "🪑", tint: "#F1F4EA", isIncome: false),
-        .init(key: "home.repair", parentKey: "home", name: "维修", icon: "House", emoji: "🔧", tint: "#F1F4EA", isIncome: false),
+        // MARK: 二级 · 住（6）
+        .init(key: "home.rent", parentKey: "home", name: "房租", icon: "Key", emoji: "🛏", tint: "#F1F4EA", isIncome: false),
+        .init(key: "home.utility", parentKey: "home", name: "水电", icon: "HighVoltage", emoji: "💡", tint: "#F1F4EA", isIncome: false),
+        .init(key: "home.property", parentKey: "home", name: "物业", icon: "OfficeBuilding", emoji: "🏢", tint: "#F1F4EA", isIncome: false),
+        .init(key: "home.furniture", parentKey: "home", name: "家居", icon: "CouchAndLamp", emoji: "🪑", tint: "#F1F4EA", isIncome: false),
+        .init(key: "home.repair", parentKey: "home", name: "维修", icon: "HammerAndWrench", emoji: "🔧", tint: "#F1F4EA", isIncome: false),
+        .init(key: "home.water", parentKey: "home", name: "水费", icon: "Droplet", emoji: "💧", tint: "#F1F4EA", isIncome: false),
 
-        // MARK: 二级 · 行（5）
-        .init(key: "transport.metro", parentKey: "transport", name: "地铁", icon: "LightRail", emoji: "🚇", tint: "#EAF2FF", isIncome: false),
-        .init(key: "transport.bus", parentKey: "transport", name: "公交", icon: "LightRail", emoji: "🚌", tint: "#EAF2FF", isIncome: false),
+        // MARK: 二级 · 行（7）
+        .init(key: "transport.metro", parentKey: "transport", name: "地铁", icon: "Metro", emoji: "🚇", tint: "#EAF2FF", isIncome: false),
+        .init(key: "transport.bus", parentKey: "transport", name: "公交", icon: "Bus", emoji: "🚌", tint: "#EAF2FF", isIncome: false),
         .init(key: "transport.taxi", parentKey: "transport", name: "打车", icon: "Taxi", emoji: "🚕", tint: "#EAF2FF", isIncome: false),
-        .init(key: "transport.fuel", parentKey: "transport", name: "加油", icon: "Taxi", emoji: "⛽️", tint: "#EAF2FF", isIncome: false),
-        .init(key: "transport.parking", parentKey: "transport", name: "停车", icon: "Taxi", emoji: "🅿️", tint: "#EAF2FF", isIncome: false),
+        .init(key: "transport.fuel", parentKey: "transport", name: "加油", icon: "FuelPump", emoji: "⛽️", tint: "#EAF2FF", isIncome: false),
+        .init(key: "transport.parking", parentKey: "transport", name: "停车", icon: "PButton", emoji: "🅿️", tint: "#EAF2FF", isIncome: false),
+        .init(key: "transport.plane", parentKey: "transport", name: "飞机", icon: "Airplane", emoji: "✈️", tint: "#EAF2FF", isIncome: false),
+        .init(key: "transport.ship", parentKey: "transport", name: "轮船", icon: "Ferry", emoji: "🚢", tint: "#EAF2FF", isIncome: false),
 
         // MARK: 二级 · 乐（5）
-        .init(key: "fun.movie", parentKey: "fun", name: "电影", icon: "GameDie", emoji: "🎬", tint: "#F3EEFF", isIncome: false),
-        .init(key: "fun.game", parentKey: "fun", name: "游戏", icon: "GameDie", emoji: "🎮", tint: "#F3EEFF", isIncome: false),
-        .init(key: "fun.party", parentKey: "fun", name: "聚会", icon: "BentoBox", emoji: "🍻", tint: "#F3EEFF", isIncome: false),
-        .init(key: "fun.travel", parentKey: "fun", name: "旅行", icon: "GameDie", emoji: "✈️", tint: "#F3EEFF", isIncome: false),
-        .init(key: "fun.subscription", parentKey: "fun", name: "订阅", icon: "GameDie", emoji: "📺", tint: "#F3EEFF", isIncome: false),
+        .init(key: "fun.movie", parentKey: "fun", name: "电影", icon: "FilmFrames", emoji: "🎬", tint: "#F3EEFF", isIncome: false),
+        .init(key: "fun.game", parentKey: "fun", name: "游戏", icon: "Joystick", emoji: "🎮", tint: "#F3EEFF", isIncome: false),
+        .init(key: "fun.party", parentKey: "fun", name: "聚会", icon: "PartyPopper", emoji: "🍻", tint: "#F3EEFF", isIncome: false),
+        .init(key: "fun.travel", parentKey: "fun", name: "旅行", icon: "Luggage", emoji: "✈️", tint: "#F3EEFF", isIncome: false),
+        .init(key: "fun.subscription", parentKey: "fun", name: "订阅", icon: "GemStone", emoji: "📺", tint: "#F3EEFF", isIncome: false),
 
         // MARK: 二级 · 医（4）
         .init(key: "health.medicine", parentKey: "health", name: "药品", icon: "Pill", emoji: "💊", tint: "#EAF6F1", isIncome: false),
-        .init(key: "health.clinic", parentKey: "health", name: "门诊", icon: "Pill", emoji: "🏥", tint: "#EAF6F1", isIncome: false),
-        .init(key: "health.checkup", parentKey: "health", name: "体检", icon: "Pill", emoji: "🩺", tint: "#EAF6F1", isIncome: false),
-        .init(key: "health.dental", parentKey: "health", name: "牙科", icon: "Pill", emoji: "🦷", tint: "#EAF6F1", isIncome: false),
+        .init(key: "health.clinic", parentKey: "health", name: "门诊", icon: "Stethoscope", emoji: "🏥", tint: "#EAF6F1", isIncome: false),
+        .init(key: "health.checkup", parentKey: "health", name: "体检", icon: "HealthWorker", emoji: "🩺", tint: "#EAF6F1", isIncome: false),
+        .init(key: "health.dental", parentKey: "health", name: "牙科", icon: "Tooth", emoji: "🦷", tint: "#EAF6F1", isIncome: false),
 
         // MARK: 二级 · 情（4）
-        .init(key: "social.gift", parentKey: "social", name: "礼物", icon: "Cat", emoji: "🎁", tint: "#FBEEF4", isIncome: false),
-        .init(key: "social.pet", parentKey: "social", name: "宠物", icon: "Cat", emoji: "🐱", tint: "#FBEEF4", isIncome: false),
-        .init(key: "social.redpacket", parentKey: "social", name: "红包", icon: "Cat", emoji: "🧧", tint: "#FBEEF4", isIncome: false),
-        .init(key: "social.human", parentKey: "social", name: "人情", icon: "Cat", emoji: "🤝", tint: "#FBEEF4", isIncome: false),
+        .init(key: "social.gift", parentKey: "social", name: "礼物", icon: "WrappedGift", emoji: "🎁", tint: "#FBEEF4", isIncome: false),
+        .init(key: "social.pet", parentKey: "social", name: "宠物", icon: "CatFace", emoji: "🐱", tint: "#FBEEF4", isIncome: false),
+        .init(key: "social.redpacket", parentKey: "social", name: "红包", icon: "RedEnvelope", emoji: "🧧", tint: "#FBEEF4", isIncome: false),
+        .init(key: "social.human", parentKey: "social", name: "人情", icon: "PeopleHugging", emoji: "🤝", tint: "#FBEEF4", isIncome: false),
 
         // MARK: 二级 · 其他（3）
-        .init(key: "misc.fee", parentKey: "misc", name: "手续费", icon: "Package", emoji: "🏦", tint: "#F2F1ED", isIncome: false),
-        .init(key: "misc.various", parentKey: "misc", name: "杂项", icon: "Package", emoji: "📦", tint: "#F2F1ED", isIncome: false),
-        .init(key: "misc.fine", parentKey: "misc", name: "罚款", icon: "Package", emoji: "🚨", tint: "#F2F1ED", isIncome: false),
+        .init(key: "misc.fee", parentKey: "misc", name: "手续费", icon: "CurrencyExchange", emoji: "🏦", tint: "#F2F1ED", isIncome: false),
+        .init(key: "misc.various", parentKey: "misc", name: "杂项", icon: "MoneyWithWings", emoji: "📦", tint: "#F2F1ED", isIncome: false),
+        .init(key: "misc.fine", parentKey: "misc", name: "罚款", icon: "Receipt", emoji: "🚨", tint: "#F2F1ED", isIncome: false),
 
         // MARK: 一级 · 收入 2 类
         .init(key: "salary", parentKey: nil, name: "工资", icon: "MoneyBag", emoji: "💰", tint: "#EAF6EC", isIncome: true),
         .init(key: "otherIncome", parentKey: nil, name: "其他收入", icon: "Bank", emoji: "💵", tint: "#EAF6EC", isIncome: true),
 
         // MARK: 二级 · 工资（4）
-        .init(key: "salary.monthly", parentKey: "salary", name: "月薪", icon: "MoneyBag", emoji: "💰", tint: "#EAF6EC", isIncome: true),
-        .init(key: "salary.bonus", parentKey: "salary", name: "奖金", icon: "MoneyBag", emoji: "🏆", tint: "#EAF6EC", isIncome: true),
-        .init(key: "salary.overtime", parentKey: "salary", name: "加班费", icon: "MoneyBag", emoji: "🌙", tint: "#EAF6EC", isIncome: true),
-        .init(key: "salary.allowance", parentKey: "salary", name: "补贴", icon: "MoneyBag", emoji: "🧾", tint: "#EAF6EC", isIncome: true),
+        .init(key: "salary.monthly", parentKey: "salary", name: "月薪", icon: "Briefcase", emoji: "💰", tint: "#EAF6EC", isIncome: true),
+        .init(key: "salary.bonus", parentKey: "salary", name: "奖金", icon: "Trophy", emoji: "🏆", tint: "#EAF6EC", isIncome: true),
+        .init(key: "salary.overtime", parentKey: "salary", name: "加班费", icon: "AlarmClock", emoji: "🌙", tint: "#EAF6EC", isIncome: true),
+        .init(key: "salary.allowance", parentKey: "salary", name: "补贴", icon: "HeavyDollarSign", emoji: "🧾", tint: "#EAF6EC", isIncome: true),
 
         // MARK: 二级 · 其他收入（5）
-        .init(key: "otherIncome.redpacket", parentKey: "otherIncome", name: "红包", icon: "Bank", emoji: "🧧", tint: "#EAF6EC", isIncome: true),
-        .init(key: "otherIncome.reimburse", parentKey: "otherIncome", name: "报销", icon: "Bank", emoji: "📄", tint: "#EAF6EC", isIncome: true),
-        .init(key: "otherIncome.refund", parentKey: "otherIncome", name: "退款", icon: "Bank", emoji: "↩️", tint: "#EAF6EC", isIncome: true),
+        .init(key: "otherIncome.redpacket", parentKey: "otherIncome", name: "红包", icon: "RedEnvelope", emoji: "🧧", tint: "#EAF6EC", isIncome: true),
+        .init(key: "otherIncome.reimburse", parentKey: "otherIncome", name: "报销", icon: "LeftArrowCurvingRight", emoji: "📄", tint: "#EAF6EC", isIncome: true),
+        .init(key: "otherIncome.refund", parentKey: "otherIncome", name: "退款", icon: "ReverseButton", emoji: "↩️", tint: "#EAF6EC", isIncome: true),
         .init(key: "otherIncome.interest", parentKey: "otherIncome", name: "利息", icon: "Bank", emoji: "🏦", tint: "#EAF6EC", isIncome: true),
-        .init(key: "otherIncome.parttime", parentKey: "otherIncome", name: "兼职", icon: "Bank", emoji: "💼", tint: "#EAF6EC", isIncome: true),
+        .init(key: "otherIncome.parttime", parentKey: "otherIncome", name: "兼职", icon: "YenBanknote", emoji: "💼", tint: "#EAF6EC", isIncome: true),
     ]
 
     /// 按 key 取内置规格。

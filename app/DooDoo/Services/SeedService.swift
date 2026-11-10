@@ -135,20 +135,20 @@ enum SeedService {
 
     private static let seedTransactions: [SeedTx] = [
         (0, 12, 10, "好利来", "food.snack", "花呗", "32.00", "Croissant"),
-        (0, 12, 40, "地铁", "transport.metro", "建设银行储蓄卡 5044", "4.00", "LightRail"),
-        (0, 13, 5, "麦富迪猫粮", "social.pet", "京东白条", "129.00", "Cat"),
+        (0, 12, 40, "地铁", "transport.metro", "建设银行储蓄卡 5044", "4.00", "Metro"),
+        (0, 13, 5, "麦富迪猫粮", "social.pet", "京东白条", "129.00", "CatFace"),
         (0, 8, 20, "星巴克", "food.coffee", "花呗", "28.00", "HotBeverage"),
         (0, 18, 30, "滴滴", "transport.taxi", "招商银行信用卡 8857", "19.50", "Taxi"),
-        (0, 12, 0, "工作午餐", "food.lunch", "微信余额", "26.00", "BentoBox"),
-        (0, 20, 15, "日用补货", "wear.top", "余额宝", "63.00", "ShoppingBags"),
-        (0, 21, 40, "手游充值", "fun.game", "花呗", "30.00", "GameDie"),
+        (0, 12, 0, "工作午餐", "food.lunch", "微信余额", "26.00", "CookedRice"),
+        (0, 20, 15, "日用补货", "wear.top", "余额宝", "63.00", "TShirt"),
+        (0, 21, 40, "手游充值", "fun.game", "花呗", "30.00", "Joystick"),
         (1, 9, 5, "星巴克", "food.coffee", "花呗", "28.00", "HotBeverage"),
         (1, 19, 20, "滴滴", "transport.taxi", "招商银行信用卡 8857", "19.50", "Taxi"),
-        (2, 15, 45, "麦富迪猫粮", "social.pet", "京东白条", "129.00", "Cat"),
-        (3, 10, 30, "好利来", "food.breakfast", "花呗", "26.00", "Croissant"),
-        (3, 8, 50, "地铁", "transport.metro", "建设银行储蓄卡 5044", "4.00", "LightRail"),
-        (5, 18, 0, "朋友聚餐", "food.dinner", "微信余额", "186.00", "BentoBox"),
-        (5, 20, 30, "电影票", "fun.movie", "花呗", "76.00", "GameDie"),
+        (2, 15, 45, "麦富迪猫粮", "social.pet", "京东白条", "129.00", "CatFace"),
+        (3, 10, 30, "好利来", "food.breakfast", "花呗", "26.00", "Bread"),
+        (3, 8, 50, "地铁", "transport.metro", "建设银行储蓄卡 5044", "4.00", "Metro"),
+        (5, 18, 0, "朋友聚餐", "food.dinner", "微信余额", "186.00", "SteamingBowl"),
+        (5, 20, 30, "电影票", "fun.movie", "花呗", "76.00", "FilmFrames"),
         (6, 22, 10, "打车回家", "transport.taxi", "支付宝余额", "33.00", "Taxi"),
     ]
 
@@ -233,53 +233,68 @@ enum SeedService {
     /// 老库补齐：分类缺 key / 图标时按内置规格回填；流水缺图标时按商户名或分类回填。
     ///
     /// M1 时期建的分类没有 `key`，这里按名字找回（优先匹配一级，避免「红包」这类同名二级误配）。
+    /// - 2026-11-10 起同时负责**图标改版对齐**：内置分类按 `key` 直接对齐 `builtIn`
+    ///   的图标与底色，老库里还指向退役图标的流水改挂到所属分类的新图标
+    ///   （v1 分类不可改名/删除，覆盖是安全的；`retiredIcons` 之外的按笔图标保留）。
     static func backfillIcons(context: ModelContext) throws {
         var dirty = false
 
+        let specs = Dictionary(uniqueKeysWithValues: Category.builtIn.map { ($0.key, $0) })
         let categories = try context.fetch(FetchDescriptor<Category>())
         for category in categories {
-            let needsKey = category.key.isEmpty
-            let needsIcon = category.iconName.isEmpty
-            guard needsKey || needsIcon else { continue }
+            // 有 key 的直接按规格对齐（M1b 之后建的库都走这条）
+            if !category.key.isEmpty, let spec = specs[category.key] {
+                if category.iconName != spec.icon { category.iconName = spec.icon; dirty = true }
+                if category.tintHex != spec.tint { category.tintHex = spec.tint; dirty = true }
+                continue
+            }
 
-            let spec = Category.builtIn.first { $0.parentKey == nil && $0.name == category.name }
-                ?? Category.builtIn.first { $0.name == category.name }
-
-            if needsKey, let spec {
+            // M1 时期没有 key：按名字找回（优先匹配一级，避免「红包」这类同名二级误配）
+            guard let spec = Category.builtIn.first(where: { $0.parentKey == nil && $0.name == category.name })
+                    ?? Category.builtIn.first(where: { $0.name == category.name }) else { continue }
+            if category.key.isEmpty {
                 category.key = spec.key
                 category.parentKey = spec.parentKey
             }
-            if needsIcon, let spec {
-                category.iconName = spec.icon
-            }
+            if category.iconName != spec.icon { category.iconName = spec.icon }
+            if category.tintHex != spec.tint { category.tintHex = spec.tint }
             dirty = true
         }
 
         let transactions = try context.fetch(FetchDescriptor<Transaction>())
-        for tx in transactions where tx.iconName == nil {
-            if let note = tx.note, let icon = noteIcons[note] {
-                tx.iconName = icon
-            } else {
+        for tx in transactions {
+            if tx.iconName == nil {
+                if let note = tx.note, let icon = noteIcons[note] {
+                    tx.iconName = icon
+                } else {
+                    tx.iconName = tx.category?.iconName
+                }
+                dirty = true
+            } else if let name = tx.iconName, retiredIcons.contains(name) {
                 tx.iconName = tx.category?.iconName
+                dirty = true
             }
-            dirty = true
         }
 
         if dirty { try context.save() }
     }
 
+    /// 2026-11-10 换图标后不再作为分类默认值的 5 张。
+    /// 老库的流水若还指着它们，启动时改挂到所属分类的新图标；图片本身仍留在包里兜底。
+    private static let retiredIcons: Set<String> = ["BentoBox", "Cat", "GameDie", "House", "ShoppingBags"]
+
     /// 演示数据里「商户名 → 图标」，取自 `home-v1.0.html`。
     private static let noteIcons: [String: String] = [
         "好利来": "Croissant",
-        "地铁": "LightRail",
-        "麦富迪猫粮": "Cat",
+        "地铁": "Metro",
+        "麦富迪猫粮": "CatFace",
         "星巴克": "HotBeverage",
         "滴滴": "Taxi",
-        "工作午餐": "BentoBox",
-        "日用补货": "ShoppingBags",
-        "手游充值": "GameDie",
-        "朋友聚餐": "BentoBox",
-        "电影票": "GameDie",
+        "工作午餐": "CookedRice",
+        "日用补货": "TShirt",
+        "手游充值": "Joystick",
+        "朋友聚餐": "SteamingBowl",
+        "电影票": "FilmFrames",
         "打车回家": "Taxi",
     ]
 }

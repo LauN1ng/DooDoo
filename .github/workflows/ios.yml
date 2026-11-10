@@ -104,7 +104,11 @@ jobs:
         run: |
           APP=build/Build/Products/Debug-iphonesimulator/DooDoo.app
           MISSING=0
-          for n in Croissant TShirt House LightRail GameDie Pill Cat Package MoneyBag Bank HotBeverage Taxi BentoBox ShoppingBags; do
+          # 2026-11-10 起改为从 Category.swift 反查，不再手写清单
+          # （写死清单会在换图标后变成「校验旧图标、放过新图标」）
+          ICONS=$(grep -o 'icon: "[^"]*"' DooDoo/Models/Category.swift | sed 's/icon: "//;s/"$//' | sort -u)
+          echo "代码里共 $(echo "$ICONS" | wc -l | tr -d ' ') 个图标名"
+          for n in $ICONS; do
             if [ ! -f "$APP/$n.png" ]; then
               echo "::error::图标没进包：$n.png"
               MISSING=1

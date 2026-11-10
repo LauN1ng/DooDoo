@@ -16,7 +16,7 @@
 | `Transaction` | M1 | 流水，软删除（`deletedAt`），金额一律 `Decimal`。M2b 加 `toAccount` / `receivedAmount` / `fee` / `groupID`——`groupID` 让转账与它自动生成的手续费流水绑定，删除时级联 |
 | `DebtPlan` | M3 | 分期计划：剩余期数 + 每期金额 + 首期还款日；利率是反算只读 |
 | `Installment` / `BillStatement` | M3 | 期数与账单期，用于「本月要还」口径 |
-| `Category` | M1 | 一级 8 类支出 + 2 类收入，各带二级子类（共 39 个内置）；`key`/`parentKey` 存层级，统计按一级 |
+| `Category` | M1 | 一级 8 类支出 + 2 类收入，各带二级子类（共 51 个内置，每个一级/二级各配一枚 Fluent3D 图标）；`key`/`parentKey` 存层级，统计按一级 |
 
 ## 硬规则（`AGENTS.md` 7.1）
 

@@ -175,13 +175,20 @@ struct EntryFlowTests {
         #expect(sub.isTopLevel == false)
     }
 
-    @Test("内置分类够用：一级 10 个、二级 48 个")
+    @Test("内置分类够用：一级 10 个、二级 51 个")
     func builtInCount() {
         let tops = DooDoo.Category.builtIn.filter { $0.parentKey == nil }
         let subs = DooDoo.Category.builtIn.filter { $0.parentKey != nil }
         #expect(tops.count == 10)
-        #expect(subs.count == 48)
+        #expect(subs.count == 51)
         #expect(tops.filter { !$0.isIncome }.count == 8)
         #expect(tops.filter { $0.isIncome }.count == 2)
+
+        // 2026-11-10 图标定案时补的三个二级：住/水费、行/飞机、行/轮船
+        let added: Set<String> = ["home.water", "transport.plane", "transport.ship"]
+        #expect(added.isSubset(of: Set(subs.map(\.key))))
+
+        // 每个槽位都有图标名（2026-11-10 起二级不再复用父级图标）
+        #expect(DooDoo.Category.builtIn.allSatisfy { !$0.icon.isEmpty })
     }
 }
