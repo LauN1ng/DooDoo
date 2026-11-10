@@ -212,6 +212,21 @@ final class EntryViewModel {
 
     var canSave: Bool { validationMessage == nil }
 
+    /// 保存成功后给用户看的一句回执。
+    ///
+    /// 只有转账需要：它一笔同时动两个账户，而流水里只留一条「转出」记录。
+    /// 真机反馈 #12——用户看到钱从 A 出去了，却没有任何地方说 B 收到了，
+    /// 于是以为「被转账户没收入」。账其实是对的（`LedgerService` 给了对方
+    /// `+= received`），缺的就是这句。
+    var receiptText: String? {
+        guard type == .transfer, canSave, let payer, let target else { return nil }
+        let inWord = target.kind.isLiability ? "还款" : "到账"
+        let head = "已从 \(payer.displayShortName) 转出 ¥" + MoneyMath.money(amount)
+        let tail = "\(target.displayShortName) \(inWord) ¥" + MoneyMath.money(received)
+        let feePart = fee > 0 ? "，手续费 ¥" + MoneyMath.money(fee) : "，无手续费"
+        return head + "，" + tail + feePart
+    }
+
     /// 主按钮文案。
     var primaryTitle: String {
         switch type {

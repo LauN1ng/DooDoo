@@ -13,8 +13,21 @@ struct TxRowView: View {
 
     private var subtitle: String {
         var parts: [String] = []
-        if let category = transaction.category?.name { parts.append(category) }
-        if let account = transaction.account?.displayShortName { parts.append(account) }
+
+        // 转账要写成「A → B」。原来只列了付款方，收款方在列表里完全不可见，
+        // 用户会以为钱转丢了（真机反馈 #12）。
+        if transaction.kind == .transfer {
+            if let from = transaction.account?.displayShortName,
+               let to = transaction.toAccount?.displayShortName {
+                parts.append("\(from) → \(to)")
+            } else if let from = transaction.account?.displayShortName {
+                parts.append(from)
+            }
+        } else {
+            if let category = transaction.category?.name { parts.append(category) }
+            if let account = transaction.account?.displayShortName { parts.append(account) }
+        }
+
         // 转账行金额是「转出本金」，本金不计消费；手续费才是支出。
         // 不在副标题写出来，用户无从判断那 0.10 到底进没进合计（真机反馈）。
         if transaction.kind == .transfer, let fee = transaction.fee, fee > 0 {

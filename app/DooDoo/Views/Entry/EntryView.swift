@@ -20,6 +20,8 @@ struct EntryView: View {
 
     @State private var vm = EntryViewModel()
     @FocusState private var amountFocused: Bool
+    /// 转账保存后的短回执。非 nil 时先显示 1.1 秒再关面板（真机反馈 #12）。
+    @State private var receipt: String?
 
     init(initialType: TransactionKind = .expense, initialDate: Date = .now) {
         self.initialType = initialType
@@ -49,6 +51,13 @@ struct EntryView: View {
         }
         .background(Palette.page.ignoresSafeArea())
         .safeAreaInset(edge: .bottom, spacing: 0) { footer }
+        .overlay { receiptBanner }
+        .task(id: receipt) {
+            // 有回执就停一下再关，没有就由保存处直接 dismiss。
+            guard receipt != nil else { return }
+            try? await Task.sleep(for: .milliseconds(1100))
+            dismiss()
+        }
         .task {
             vm.setType(initialType)
             // 真机反馈 #1：日卡给的是当天 00:00，直接用会让新流水排到日卡最底。
@@ -56,6 +65,36 @@ struct EntryView: View {
             vm.date = DayMath.entryTimestamp(for: initialDate)
             vm.load(context: context)
             amountFocused = true
+        }
+    }
+
+    // MARK: - 保存回执
+
+    @ViewBuilder
+    private var receiptBanner: some View {
+        if let receipt {
+            VStack {
+                Spacer()
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 15))
+                    Text(receipt)
+                        .font(.system(size: 13.5, weight: .medium))
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Palette.ink.opacity(0.92))
+                )
+                .padding(.horizontal, 24)
+                .padding(.bottom, 96)
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+            .allowsHitTesting(false)
         }
     }
 
@@ -163,10 +202,13 @@ struct EntryView: View {
             previewBox
 
         case .transfer:
+            // 真机反馈 #12：手续费原来排在「转出金额」之前、字号 15pt，
+            // 被 20pt 转出和 26pt 到账两头夹着，用户根本看不见。
+            // 现顺序改成 转出 → 到账 → 手续费，字号提到与到账同一量级。
             transferDual
-            feeRow
             amountRow
             receivedRow
+            feeRow
             noteRow
             previewBox
 
@@ -435,15 +477,16 @@ struct EntryView: View {
 
     /// PRD 9.8 允许「填到账金额」**或**「直接填手续费 0.1」两路。
     /// 首版把手续费做成只读展示（真机反馈 #9），这里补上第二个输入框。
+    /// 真机反馈 #12：字号 15pt 且排在金额之前，实际没人看见——提到 17pt 并与金额左对齐。
     private var feeRow: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text("手续费")
                     .font(.system(size: 12))
                     .foregroundStyle(Palette.sub)
                 Spacer(minLength: 0)
                 Text("¥")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(Palette.faint)
                 TextField("0.00", text: Binding(
                     get: { vm.feeText },
@@ -451,18 +494,18 @@ struct EntryView: View {
                 ))
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.trailing)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 17, weight: .semibold))
                     .monospacedDigit()
                     .foregroundStyle(Palette.ink)
-                    .frame(maxWidth: 120)
+                    .frame(maxWidth: 160)
             }
             Text("填手续费或到账，另一边自动算（= 转出 − 到账）")
                 .font(.system(size: 10))
                 .foregroundStyle(Palette.faint)
         }
-        .padding(.horizontal, 18)
+        .padding(.horizontal, 20)
         .padding(.top, 2)
-        .padding(.bottom, 2)
+        .padding(.bottom, 12)
     }
 
     // MARK: - 余额预览
@@ -471,16 +514,37 @@ struct EntryView: View {
     private var previewBox: some View {
         VStack(spacing: 6) {
             if let payer = vm.payer, let after = vm.payerBalanceAfter {
-                previewRow(
-                    label: "记下后 · \(payer.displayShortName) \(balanceWord(payer))",
-                    value: after
-                )
+                if vm.type == .transfer {
+                    // 真机反馈 #12：原来只写「余额 ¥x」，看不出这笔在往外走。
+                    previewRow(
+                        label: "\(payer.displayShortName) 转出",
+                        value: after,
+                        delta: -vm.amount,
+                        deltaTint: Palette.sub
+                    )
+                } else {
+                    previewRow(
+                        label: "记下后 · \(payer.displayShortName) \(balanceWord(payer))",
+                        value: after
+                    )
+                }
             }
             if let target = vm.target, let after = vm.targetBalanceAfter {
-                previewRow(
-                    label: "\(target.displayShortName) \(balanceWord(target))",
-                    value: after
-                )
+                if vm.type == .transfer {
+                    // 被转账户必须显式写出「到账 +¥x」，否则用户只看到一条转出记录，
+                    // 会以为钱没了——数据本来是对的，缺的是这句话。
+                    previewRow(
+                        label: "\(target.displayShortName) \(transferInWord(target))",
+                        value: after,
+                        delta: vm.received,
+                        deltaTint: Palette.income
+                    )
+                } else {
+                    previewRow(
+                        label: "\(target.displayShortName) \(balanceWord(target))",
+                        value: after
+                    )
+                }
             }
         }
         .padding(.horizontal, 14)
@@ -493,22 +557,40 @@ struct EntryView: View {
         .padding(.top, 12)
     }
 
-    private func previewRow(label: String, value: Decimal) -> some View {
-        HStack {
+    private func previewRow(
+        label: String,
+        value: Decimal,
+        delta: Decimal? = nil,
+        deltaTint: Color = Palette.sub
+    ) -> some View {
+        HStack(spacing: 6) {
             Text(label)
                 .font(.system(size: 11.5))
                 .foregroundStyle(Palette.sub)
                 .lineLimit(1)
             Spacer(minLength: 8)
+            if let delta, delta != 0 {
+                Text((delta > 0 ? "+" : "−") + "¥" + MoneyMath.money(abs(delta)))
+                    .font(.system(size: 12, weight: .semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(deltaTint)
+                    .lineLimit(1)
+            }
             Text("¥" + MoneyMath.money(abs(value)))
                 .font(.system(size: 13.5, weight: .semibold))
                 .monospacedDigit()
                 .foregroundStyle(Palette.ink)
+                .lineLimit(1)
         }
     }
 
     private func balanceWord(_ account: Account) -> String {
         account.kind.isLiability ? "欠款" : "余额"
+    }
+
+    /// 转入一个账户时该用哪个词：储蓄/现金是「到账」，信用/借款是「还款」。
+    private func transferInWord(_ account: Account) -> String {
+        account.kind.isLiability ? "还款" : "到账"
     }
 
     // MARK: - 底部
@@ -523,8 +605,15 @@ struct EntryView: View {
 
             Button {
                 amountFocused = false
+                let text = vm.receiptText
                 vm.save(in: context)
-                if vm.errorMessage == nil { dismiss() }
+                if vm.errorMessage == nil {
+                    if let text {
+                        withAnimation(.easeOut(duration: 0.18)) { receipt = text }
+                    } else {
+                        dismiss()
+                    }
+                }
             } label: {
                 Text(vm.primaryTitle)
                     .font(.system(size: 15.5, weight: .semibold))
@@ -537,8 +626,9 @@ struct EntryView: View {
                     )
             }
             .buttonStyle(.plain)
-            .disabled(!vm.canSave)
-            .opacity(vm.canSave ? 1 : 0.45)
+            // 回执停留的那 1.1 秒里必须挡住主按钮，否则手快会连点记成两笔。
+            .disabled(!vm.canSave || receipt != nil)
+            .opacity(vm.canSave && receipt == nil ? 1 : 0.45)
             .accessibilityLabel(vm.primaryTitle)
         }
         .padding(.horizontal, 16)
