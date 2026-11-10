@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DooDoo · 记一笔 · 贴合现有实现的三版</title>
+<style>
+  /* 全部数值来自 app/DooDoo/Views/Components/Palette.swift 与实际视图 */
+  :root{
+    --page:#F7F5F1; --card:#FFFFFF;
+    --ink:#1D1C1A; --ink2:#6B6862; --sub:#A8A39A; --faint:#C6C2B9;
+    --line:#EFECE5; --rowline:#F7F5F0;
+    --expense:#C0392B; --income:#2E9E6B;
+    --bed:#F3F0EA; --bed2:#EBE7E0;
+    --ios-blue:#007AFF; --sys-group:#F2F2F7; --sys-sep:#C6C7CC;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden}
+  body{background:#E9E7E1;color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased}
+
+  .bar{height:56px;display:flex;align-items:center;gap:14px;padding:0 20px;
+    border-bottom:1px solid #E2DFD9;background:#F4F1EC;position:relative;z-index:20}
+  .brand{font-size:13px;font-weight:600;white-space:nowrap}
+  .brand small{font-weight:400;color:#8A867D;font-size:11px;margin-left:8px}
+  .chips{display:flex;gap:6px;flex:0 0 auto}
+  .chip{border:1px solid #DEDAD2;background:#FBFAF7;color:#4A4741;font:inherit;font-size:12px;
+    padding:6px 12px;border-radius:999px;cursor:pointer;white-space:nowrap}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .modebtn{margin-left:auto;border:1px solid #DEDAD2;background:#FBFAF7;color:#4A4741;font:inherit;
+    font-size:12px;padding:6px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;flex:0 0 auto}
+  .modebtn.on{background:var(--ink);color:#fff}
+  .hint{font-size:11.5px;color:#8A867D;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  .stage{height:calc(100% - 56px);position:relative;overflow:hidden}
+  .single{height:100%;display:flex;align-items:center;justify-content:center;gap:30px}
+  .single.hide{display:none}
+  .devwrap{position:relative;flex:0 0 auto}
+  .device{width:390px;height:844px;border-radius:44px;background:var(--page);position:relative;overflow:hidden;
+    box-shadow:0 0 0 1px #DAD6CE,0 30px 70px rgba(0,0,0,.16);transform-origin:top left}
+
+  .sb{height:52px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 8px;
+    font-size:13px;font-weight:600;position:relative;z-index:20}
+  .sb .batt{width:22px;height:11px;border:1px solid rgba(29,28,26,.35);border-radius:3px;position:relative}
+  .sb .batt::after{content:"";position:absolute;left:1.5px;top:1.5px;bottom:1.5px;width:70%;background:var(--ink);border-radius:1.5px}
+
+  /* 页头（RootView.swift） */
+  .hdr{display:flex;align-items:center;padding:6px 20px 24px;position:relative;z-index:6}
+  .hdr .logo{font-size:19px;font-weight:600;letter-spacing:-.4px}
+  .hdr .seg{margin-left:auto;display:flex;padding:2px;border-radius:17px;background:#E5E3DE}
+  .hdr .seg i{width:36px;height:30px;border-radius:15px;display:grid;place-items:center;font-size:15px;
+    color:rgba(107,104,98,.6);font-style:normal}
+  .hdr .seg i.on{background:#fff;color:var(--ink)}
+
+  /* 卡堆 / 日卡（DeckView + DayCardView） */
+  .deck{position:absolute;left:20px;right:20px;top:112px;bottom:34px}
+  .deck.kb-on{bottom:264px}
+  .deck .sheet{position:absolute;left:0;right:0;top:10px;bottom:-10px;background:#fff;border-radius:24px;
+    border:1px solid rgba(29,28,26,.11);box-shadow:0 4px 4px rgba(29,28,26,.06)}
+  .deck .sheet.s2{top:20px;bottom:-20px;left:4px;right:-4px}
+  .daycard{position:absolute;left:0;right:0;top:0;bottom:0;background:#fff;border-radius:24px;
+    padding:20px 18px 16px;display:flex;flex-direction:column;
+    box-shadow:0 10px 18px rgba(0,0,0,.08);z-index:3}
+
+  .dc-head{display:flex;align-items:baseline;flex:0 0 auto}
+  .dc-mon{font-size:11px;letter-spacing:.9px;color:var(--sub)}
+  .dc-day{font-size:32px;font-weight:600;letter-spacing:-.02em;margin-left:6px;font-variant-numeric:tabular-nums}
+  .dc-lab{font-size:12px;color:var(--sub);margin-left:6px}
+  .dc-sum{margin-left:auto;display:flex;align-items:baseline;gap:6px}
+  .dc-sum span{font-size:11px;color:var(--sub)}
+  .dc-sum b{font-size:16px;font-weight:600;color:var(--expense);font-variant-numeric:tabular-nums}
+  .dc-hr{height:1px;background:var(--line);margin:14px 0 2px;flex:0 0 auto}
+
+  .rows{flex:0 0 auto}
+  .tx{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--rowline)}
+  .tx:last-child{border-bottom:0}
+  .slot{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;font-size:20px;flex:0 0 42px}
+  .tx .t{flex:1;min-width:0}
+  .tx .t b{display:block;font-size:14px;font-weight:500;line-height:1.2}
+  .tx .t span{display:block;font-size:11.5px;color:var(--sub);margin-top:3px}
+  .tx .v{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+
+  /* 记账行：和流水行同构（42 槽 + 14/11.5） */
+  .addrow{display:flex;align-items:center;gap:12px;padding:11px 0;cursor:pointer}
+  .addrow .slot{background:var(--bed);color:var(--sub);font-size:17px}
+  .addrow .t b{font-size:14px;font-weight:500;color:var(--ink2);display:block}
+  .addrow .t span{display:block;font-size:11.5px;color:var(--faint);margin-top:3px}
+
+  /* P1 / P3 的编辑行 */
+  .editrow{display:flex;flex-direction:column;gap:10px;padding:11px 0 4px}
+  .editline{display:flex;align-items:center;gap:12px}
+  .editline .amtbox{flex:1;min-width:0}
+  .editline .amt{font-size:32px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1}
+  .editline .amt i{font-style:normal;color:var(--faint);font-size:20px;margin-right:2px}
+  .editline .meta{font-size:11.5px;color:var(--sub);margin-top:3px}
+  .done{border:0;background:transparent;font:inherit;font-size:14px;font-weight:600;color:var(--ink);
+    padding:6px 2px;cursor:pointer}
+  .done:active{opacity:.5}
+  .catgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px 4px;padding-top:2px}
+  .cat{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
+  .cat .slot{width:42px;height:42px;font-size:19px}
+  .cat.on .slot{outline:2px solid var(--ink);outline-offset:-2px}
+  .cat span{font-size:10px;color:var(--ink2)}
+  .cat.on span{color:var(--ink);font-weight:600}
+
+  /* 系统数字键盘（iOS 数字键盘外观） */
+  .kbwrap{position:absolute;left:0;right:0;bottom:0;z-index:8;background:#D1D3D9;padding:6px 3px 22px}
+  .kb{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .kb button{height:46px;border:0;border-radius:5px;background:#fff;color:#000;
+    font:inherit;font-size:25px;cursor:pointer;box-shadow:0 1px 0 rgba(0,0,0,.32)}
+  .kb button:active{background:#D6D8DC}
+  .kb .zero{grid-column:span 1}
+  .kb .act{background:#ABB0BA;font-size:20px;display:grid;place-items:center}
+  .kb .act svg{width:22px;height:16px;fill:#1D1C1A}
+
+  /* P2：系统 sheet + Form */
+  .sheetmask{position:absolute;inset:0;background:rgba(0,0,0,.28);z-index:9}
+  .syssheet{position:absolute;left:0;right:0;bottom:0;top:64px;background:var(--sys-group);border-radius:12px 12px 0 0;
+    z-index:10;display:flex;flex-direction:column;overflow:hidden}
+  .syssheet .grab{position:absolute;left:50%;top:6px;width:36px;height:5px;border-radius:3px;background:rgba(60,60,67,.3);transform:translateX(-50%)}
+  .nav{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 8px;background:var(--sys-group)}
+  .nav .l,.nav .r{font-size:17px;color:var(--ios-blue);cursor:pointer}
+  .nav .t{font-size:17px;font-weight:600}
+  .form{flex:1;overflow-y:auto;padding:8px 16px 0}
+  .fgroup{background:#fff;border-radius:10px;margin-bottom:18px;overflow:hidden}
+  .frow2{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid #E5E5EA;min-height:44px}
+  .frow2:last-child{border-bottom:0}
+  .frow2 .k{font-size:17px}
+  .frow2 .val{margin-left:auto;font-size:17px;color:#8A8A8E;display:flex;align-items:center;gap:6px}
+  .frow2 .val b{color:#000;font-weight:400}
+  .frow2 .chev{color:#C4C4C6;font-size:15px}
+  .frow2.amount .v{font-size:22px;font-weight:500;margin-left:auto;font-variant-numeric:tabular-nums}
+  .gcap{font-size:13px;color:#8A8A8E;padding:0 4px 7px}
+  .segctl{display:flex;background:#EDEDF0;border-radius:9px;padding:2px;margin-left:auto}
+  .segctl b{font-size:13px;font-weight:500;padding:5px 10px;border-radius:7px;color:#000}
+  .segctl b.on{background:#fff;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+
+  .toast{position:absolute;left:50%;bottom:300px;transform:translate(-50%,8px);z-index:30;
+    background:rgba(29,28,26,.92);color:#fff;font-size:11.5px;padding:9px 15px;border-radius:999px;
+    opacity:0;transition:.22s;pointer-events:none;white-space:nowrap}
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+
+  /* 说明 */
+  .notes{width:340px;flex:0 0 340px;max-height:calc(100% - 40px);overflow-y:auto;background:#fff;
+    border-radius:18px;padding:20px;box-shadow:0 1px 2px rgba(29,28,26,.03),0 10px 28px rgba(29,28,26,.05)}
+  .notes::-webkit-scrollbar{width:0}
+  .kicker{font-size:9.5px;letter-spacing:.14em;font-weight:700;color:#B0ACA3}
+  .notes h2{margin:6px 0 8px;font-size:19px;font-weight:600;letter-spacing:-.02em}
+  .notes .lead{font-size:12.5px;line-height:1.75;color:#4A4741;margin:0 0 14px}
+  .notes .lead b{font-weight:600;color:#1D1C1A}
+  .notes h4{margin:16px 0 7px;font-size:10px;letter-spacing:.12em;color:#9A968D;font-weight:700}
+  .notes ul{margin:0;padding-left:15px;font-size:12px;line-height:1.8;color:#4A4741}
+  .notes ul li{margin-bottom:3px}
+  .notes ul b{font-weight:600;color:#1D1C1A}
+  .gear{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border-radius:12px;overflow:hidden;margin-bottom:14px}
+  .gear div{background:#FAF8F4;padding:9px 10px}
+  .gear span{display:block;font-size:9.5px;color:#9A968D}
+  .gear b{display:block;font-size:13px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
+  .pc{display:flex;flex-direction:column;gap:8px}
+  .pc p{margin:0;font-size:12px;line-height:1.7;padding:10px 12px;border-radius:12px;color:#4A4741}
+  .pc .pro{background:#F2F6EF}
+  .pc .con{background:#FAF2EF}
+  .pc p b{display:block;font-size:10px;letter-spacing:.08em;margin-bottom:3px}
+  .pc .pro b{color:#2E7D4F}
+  .pc .con b{color:#A3422F}
+  .reuse{margin-top:12px;font-size:11px;line-height:1.75;color:#5C5240;background:#FCF8EC;
+    border:1px solid #F0E6C8;border-radius:12px;padding:10px 12px}
+  .reuse b{color:#4A3D14}
+  .reuse code{font-size:10.5px;background:#F4EEDD;padding:1px 4px;border-radius:4px}
+
+  /* 对比 */
+  .compare{display:none;height:100%;overflow:auto;padding:20px}
+  .compare.on{display:block}
+  .strip{display:flex;gap:18px;align-items:flex-start}
+  .mini{margin:0;width:242px;flex:0 0 242px}
+  .mini-stage{width:242px;height:523px;position:relative}
+  .mini-stage .device{position:absolute;left:0;top:0;transform:scale(.62);transform-origin:top left}
+  .mini figcaption{padding-top:12px}
+  .badge{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.08em;background:var(--ink);color:#fff;
+    border-radius:5px;padding:2px 6px;margin-right:7px;vertical-align:1px}
+  .mini figcaption b{font-size:13px;font-weight:600}
+  .mini figcaption .desc{display:block;font-size:10.5px;color:#8A867D;line-height:1.6;margin-top:5px}
+  .tablewrap{margin-top:22px;background:#fff;border-radius:18px;padding:18px 20px 10px;max-width:1080px;
+    box-shadow:0 1px 2px rgba(29,28,26,.03),0 10px 28px rgba(29,28,26,.05)}
+  .tablewrap h2{margin:0 0 12px;font-size:13px;font-weight:600}
+  table{width:100%;border-collapse:collapse;font-size:11.5px}
+  th{text-align:left;font-size:9.5px;letter-spacing:.1em;color:#9A968D;font-weight:700;
+    padding:0 10px 8px 0;border-bottom:1px solid #EAE7E0;white-space:nowrap}
+  td{padding:9px 10px 9px 0;border-bottom:1px solid #F1EFE9;color:#4A4741;line-height:1.55;vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  td:first-child{font-weight:600;color:#1D1C1A;white-space:nowrap}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="brand">DooDoo 记账 <small>记一笔 · 贴合现有实现的三版</small></div>
+  <div class="chips" id="chips">
+    <button class="chip on" data-v="p1">P1 卡内一行</button>
+    <button class="chip" data-v="p2">P2 系统表单</button>
+    <button class="chip" data-v="p3">P3 卡内两行</button>
+  </div>
+  <button class="modebtn" id="modeBtn">并排对比</button>
+  <div class="hint" id="hint"></div>
+</div>
+
+<div class="stage">
+  <div class="single" id="single">
+    <div class="devwrap" id="devwrap"><div class="device" id="dev"></div></div>
+    <div class="notes" id="notes"></div>
+  </div>
+  <div class="compare" id="compare">
+    <div class="strip" id="strip"></div>
+    <div class="tablewrap">
+      <h2>三版对照（尺寸全部取自现有 SwiftUI 实现）</h2>
+      <table>
+        <tr><th>版本</th><th>新造的东西</th><th>复用现有零件</th><th>记完步数</th><th>代价</th></tr>
+        <tr><td>P1 卡内一行</td><td>仅一条「编辑行」（高 64）</td><td>日卡 24 圆角、42 色槽、14/11.5 字号、系统数字键盘</td><td>2 步</td><td>分类只能显示当前一个，换类要点色槽弹出 4×2</td></tr>
+        <tr><td>P2 系统表单</td><td>无</td><td>完全复用 <code>AccountEditor</code> 的 NavigationStack + Form 范式</td><td>2 步（但要点开保存）</td><td>不像记账 App；M4 之前只是「能用」</td></tr>
+        <tr><td>P3 卡内两行</td><td>编辑行 + 一行分类网格</td><td>同上，分类网格就是 42 色槽换 4 列排</td><td>2 步</td><td>日卡要多让出 116pt，单日多笔时挤</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+var CATS = [
+  {k:'吃', e:'🥐', bg:'#FFF1E6'}, {k:'穿', e:'👕', bg:'#FFEEF3'},
+  {k:'住', e:'🏠', bg:'#EFF7E8'}, {k:'行', e:'🚇', bg:'#EAF2FF'},
+  {k:'乐', e:'🎮', bg:'#F3EEFF'}, {k:'医', e:'💊', bg:'#E8F6F4'},
+  {k:'情', e:'🐱', bg:'#FFF8E4'}, {k:'其他', e:'✨', bg:'#F3F1EE'}
+];
+var GRADES = ['夯','飘','拉','NPC'];
+var S = {v:'p1', cat:'吃', acc:'花呗', grade:'夯', amount:'32.00', pick:false, toast:false};
+var MODE = 'single';
+
+function catOf(k){ for(var i=0;i<CATS.length;i++){ if(CATS[i].k===k) return CATS[i]; } return CATS[0]; }
+
+function sbHTML(){
+  return '<div class="sb"><span>9:41</span><span class="batt"></span></div>';
+}
+function hdrHTML(){
+  return '<div class="hdr"><span class="logo">DooDoo</span>'
+    + '<span class="seg"><i class="on">☰</i><i>◧</i><i>⚙</i></span></div>';
+}
+function rowsHTML(){
+  return '<div class="tx"><span class="slot" style="background:#FFF1E6">🥐</span>'
+      + '<span class="t"><b>好利来</b><span>吃 · 花呗</span></span><span class="v">−¥32.00</span></div>'
+    + '<div class="tx"><span class="slot" style="background:#EAF2FF">🚇</span>'
+      + '<span class="t"><b>地铁</b><span>行 · 花呗</span></span><span class="v">−¥4.00</span></div>'
+    + '<div class="tx"><span class="slot" style="background:#FFF8E4">🐱</span>'
+      + '<span class="t"><b>麦富迪猫粮</b><span>情 · 花呗</span></span><span class="v">−¥129.00</span></div>';
+}
+function catGridHTML(){
+  return '<div class="catgrid">' + CATS.map(function(c){
+    return '<div class="cat ' + (S.cat===c.k?'on':'') + '" data-act="cat" data-val="' + c.k + '">'
+      + '<span class="slot" style="background:' + c.bg + '">' + c.e + '</span>'
+      + '<span>' + c.k + '</span></div>';
+  }).join('') + '</div>';
+}
+function editRowHTML(){
+  var c = catOf(S.cat);
+  return '<div class="editrow">'
+    + '<div class="editline">'
+      + '<span class="slot" style="background:' + c.bg + '" data-act="pick">' + c.e + '</span>'
+      + '<span class="amtbox"><span class="amt"><i>¥</i>' + (S.amount || '0') + '</span>'
+        + '<span class="meta">' + c.k + ' · ' + S.acc + ' · 今天</span></span>'
+      + '<button class="done" data-act="save">完成</button>'
+    + '</div>'
+    + '</div>';
+}
+function addRowHTML(){
+  return '<div class="addrow" data-act="pick">'
+    + '<span class="slot">＋</span>'
+    + '<span class="t"><b>记一笔</b><span>花呗 · 吃</span></span></div>';
+}
+function kbHTML(){
+  var rows = [['1','2','3'],['4','5','6'],['7','8','9'],['.','0','del']];
+  return '<div class="kbwrap"><div class="kb">' + rows.map(function(r){
+    return r.map(function(k){
+      if(k==='del') return '<button class="act" data-act="key" data-val="del">⌫</button>';
+      return '<button data-act="key" data-val="' + k + '">' + k + '</button>';
+    }).join('');
+  }).join('') + '</div></div>';
+}
+
+function cardHTML(inner, cls){
+  return '<div class="deck ' + (cls || '') + '"><div class="sheet s2"></div><div class="sheet"></div>'
+    + '<div class="daycard">'
+      + '<div class="dc-head"><span class="dc-mon">NOV</span><span class="dc-day">08</span>'
+        + '<span class="dc-lab">今天</span>'
+        + '<span class="dc-sum"><span>支出</span><b>−¥165.00</b></span></div>'
+      + '<div class="dc-hr"></div>'
+      + '<div class="rows">' + rowsHTML() + '</div>'
+      + inner
+    + '</div></div>';
+}
+
+function p1(){
+  var inner = editRowHTML() + (S.pick ? catGridHTML() : '');
+  return sbHTML() + hdrHTML() + cardHTML(inner, 'kb-on') + kbHTML() + toastHTML();
+}
+function p3(){
+  return sbHTML() + hdrHTML()
+    + cardHTML(editRowHTML() + catGridHTML(), 'kb-on')
+    + kbHTML() + toastHTML();
+}
+function p2(){
+  var c = catOf(S.cat);
+  var form = '<div class="sheetmask"></div><div class="syssheet">'
+    + '<span class="grab"></span>'
+    + '<div class="nav"><span class="l" data-act="cancel">取消</span><span class="t">记一笔</span>'
+      + '<span class="r" data-act="save">保存</span></div>'
+    + '<div class="form">'
+      + '<div class="fgroup">'
+          + '<div class="frow2 amount"><span class="k">金额</span><span class="v">¥ ' + (S.amount || '0') + '</span></div>'
+        + '</div>'
+      + '<div class="gcap">这一笔是什么</div>'
+      + '<div class="fgroup">'
+          + '<div class="frow2" data-act="pick"><span class="k">分类</span>'
+            + '<span class="val"><b>' + c.e + ' ' + c.k + '</b><span class="chev">›</span></span></div>'
+          + '<div class="frow2" data-act="acc"><span class="k">账户</span>'
+            + '<span class="val"><b>' + S.acc + '</b><span class="chev">›</span></span></div>'
+          + '<div class="frow2" data-act="date"><span class="k">日期</span>'
+            + '<span class="val"><b>今天</b><span class="chev">›</span></span></div>'
+        + '</div>'
+      + '<div class="gcap">这笔值不值</div>'
+      + '<div class="fgroup">'
+          + '<div class="frow2"><span class="k">评分</span>'
+            + '<span class="segctl">' + GRADES.map(function(g){
+                return '<b class="' + (S.grade===g?'on':'') + '" data-act="grade" data-val="' + g + '">' + g + '</b>';
+              }).join('') + '</span></div>'
+          + '<div class="frow2" data-act="note"><span class="k">备注</span>'
+            + '<span class="val"><span class="chev">›</span></span></div>'
+        + '</div>'
+    + '</div></div>';
+  return sbHTML() + hdrHTML() + cardHTML(addRowHTML()) + form + toastHTML();
+}
+function toastHTML(){
+  return '<div class="toast' + (S.toast ? ' on' : '') + '" id="toast">已记下 · ¥' + (S.amount || '0') + '</div>';
+}
+function bodyHTML(k){ return k === 'p1' ? p1() : k === 'p2' ? p2() : p3(); }
+
+var NOTES = {
+  p1:{
+    name:'P1 · 卡内一行',
+    tagline:'记账行就是一条流水行，点开只多一行输入。',
+    lead:'记账行与 <code>TxRowView</code> <b>同构</b>：42 色槽 + 14pt 标题 + 11.5pt 副标。点开后它在原地变成一条「编辑行」——色槽、金额、完成，三样都在原来那一行的位置。不新建卡片、不遮罩、不加按钮底色。',
+    gear:[['编辑行高','64pt'],['金额字号','32pt'],['新增容器','0 个'],['记完步数','2 步']],
+    points:[
+      '金额用 <b>32pt semibold</b>，与日卡日期同字号——不抢日期的主角位',
+      '「完成」是 <b>14pt semibold 文字</b>，没有黑色块；App 里目前没有任何实心按钮',
+      '键盘用系统数字键盘的灰底白键（<code>#D1D3D9</code>），不自绘',
+      '分类默认带出上次，点 42 色槽才展开 4×2 网格，不占常驻空间',
+      '保存后这一行直接变成一条真实流水行，不需要关闭任何东西'
+    ],
+    pro:'新造的东西最少：只有一条编辑行。其余全部是现成零件，M4 做视觉时改一遍 Palette 就统一了。',
+    con:'分类一次只显示当前一个；想换类要多点一次（点色槽 → 选 → 收起）。',
+    reuse:'复用 <code>DayCardView</code> 的 24 圆角与 20/18/16 内距、<code>TxRowView</code> 的 42×42 色槽（圆角 13）、<code>Palette</code> 全部色值。'
+  },
+  p2:{
+    name:'P2 · 系统表单',
+    tagline:'和「新建账户」同一套：系统 sheet + Form + 取消/保存。',
+    lead:'App 里唯一的输入界面是 <code>AccountEditor</code>：<b>NavigationStack + Form + 工具栏「取消 / 保存」</b>。这一版记一笔完全照抄那个范式，一行自绘代码都不写，系统给什么用什么。',
+    gear:[['新造的东西','0'],['字段','6 组（PRD 全集）'],['圆角','系统 12'],['记完步数','2 步 + 一次保存']],
+    points:[
+      '顶部「取消 / 记一笔 / 保存」，蓝色 tint 全部用系统色',
+      '分组：金额 / 分类·账户·日期 / 评分·备注，标准 iOS 设置式布局',
+      '评分用系统 <code>SegmentedControl</code>，四档夯飘拉 NPC',
+      '数字键盘系统自带，不用管高度和避让',
+      'M4 之后如果嫌它不像记账 App，再单独美化，不影响数据链路'
+    ],
+    pro:'零设计成本、零兼容风险、零新组件；M3 之前这是最省事的做法，且与资产页的编辑入口天然一致。',
+    con:'慢——从「想记」到「记完」要过 sheet、过表单、过保存三关；这不是一个记账 App 该有的手感，只是「能用」。',
+    reuse:'复用 <code>AccountEditor.swift</code> 的全部范式：<code>NavigationStack</code>、<code>Form</code>、<code>cancellationAction</code> / <code>confirmationAction</code>。'
+  },
+  p3:{
+    name:'P3 · 卡内两行',
+    tagline:'一行金额，一行分类；分类就是流水行那排色槽换个排法。',
+    lead:'P1 的编辑行下面再让出 <b>116pt</b>，把 8 类改成 4×2 的 <b>42 色槽网格</b>——和流水行里的色槽一模一样，只是从横排变网格。分类一次全见，不用点开。',
+    gear:[['编辑区','180pt'],['金额字号','32pt'],['色槽','42pt（与流水行相同）'],['记完步数','2 步']],
+    points:[
+      '色槽 42×42、圆角 13、Fluent3D 图标 27×27，全部照 <code>TxRowView</code>',
+      '选中态用 2pt 内描边（<code>outline-offset:-2px</code>），不做位移或抬升',
+      '日卡从底部往上长出 180pt，键盘压下来，卡片让位，不遮罩',
+      '单日流水多时，卡片内容区可滚（<code>ScrollView</code> 已经有了）',
+      '再往下还能加一行「账户 · 评分」，但这一版刻意不加，先看够不够'
+    ],
+    pro:'分类全见、零额外点击；所有控件都是现成尺寸，最容易一次做对。',
+    con:'日卡要多让出 180pt，单日 5 笔以上时卡片内容会被挤到需要滚动；比 P1 多一层信息密度。',
+    reuse:'复用 <code>TxRowView</code> 的色槽规格（42 / 圆角 13 / 图 27）、<code>Palette.bed</code> 作空槽底色。'
+  }
+};
+
+function notesHTML(){
+  var n = NOTES[S.v];
+  return '<div class="kicker">VARIANT ' + S.v.toUpperCase() + '</div>'
+    + '<h2>' + n.name + '</h2>'
+    + '<p class="lead">' + n.lead + '</p>'
+    + '<div class="gear">' + n.gear.map(function(g){
+        return '<div><span>' + g[0] + '</span><b>' + g[1] + '</b></div>';
+      }).join('') + '</div>'
+    + '<h4>结构要点</h4><ul>' + n.points.map(function(p){ return '<li>' + p + '</li>'; }).join('') + '</ul>'
+    + '<h4>取舍</h4><div class="pc">'
+      + '<p class="pro"><b>好在哪</b>' + n.pro + '</p>'
+      + '<p class="con"><b>代价</b>' + n.con + '</p>'
+    + '</div>'
+    + '<div class="reuse">' + n.reuse + '</div>';
+}
+
+var dev = document.getElementById('dev');
+var notesEl = document.getElementById('notes');
+var singleEl = document.getElementById('single');
+var compareEl = document.getElementById('compare');
+var stripEl = document.getElementById('strip');
+var hintEl = document.getElementById('hint');
+var chipsEl = document.getElementById('chips');
+
+function render(){
+  if(MODE === 'single'){
+    dev.innerHTML = bodyHTML(S.v);
+    notesEl.innerHTML = notesHTML();
+    hintEl.textContent = NOTES[S.v].tagline;
+  } else {
+    stripEl.innerHTML = ['p1','p2','p3'].map(function(k){
+      var oldV = S.v, oldPick = S.pick, oldToast = S.toast;
+      S.v = k; S.pick = false; S.toast = false;
+      var html = '<figure class="mini"><div class="mini-stage"><div class="device">' + bodyHTML(k) + '</div></div>'
+        + '<figcaption><span class="badge">' + k.toUpperCase() + '</span><b>' + NOTES[k].name.split(' · ')[1] + '</b>'
+        + '<span class="desc">' + NOTES[k].tagline + '</span></figcaption></figure>';
+      S.v = oldV; S.pick = oldPick; S.toast = oldToast;
+      return html;
+    }).join('');
+    hintEl.textContent = '三版同屏：token 完全一致，差别只有「新造多少东西」。';
+  }
+  fit();
+}
+function fit(){
+  if(MODE !== 'single') return;
+  var s = Math.min((window.innerHeight - 56 - 34) / 844, 1);
+  var w = document.getElementById('devwrap');
+  w.style.width = (390 * s) + 'px';
+  w.style.height = (844 * s) + 'px';
+  dev.style.transform = 'scale(' + s + ')';
+}
+window.addEventListener('resize', fit);
+
+function save(){
+  S.toast = true; render();
+  setTimeout(function(){
+    S.toast = false;
+    var t = document.getElementById('toast');
+    if(t) t.classList.remove('on');
+  }, 1600);
+}
+function key(k){
+  var a = S.amount;
+  if(k === 'del'){ S.amount = a.slice(0, -1); render(); return; }
+  if(k === '.'){ if(a.indexOf('.') < 0) S.amount = (a || '0') + '.'; render(); return; }
+  var parts = a.split('.');
+  if(parts[1] && parts[1].length >= 2) return;
+  S.amount = (a === '' || a === '0') ? k : a + k;
+  render();
+}
+
+document.addEventListener('click', function(e){
+  if(MODE === 'compare') return;
+  var el = e.target.closest('[data-act]');
+  if(!el) return;
+  var act = el.dataset.act, val = el.dataset.val;
+
+  if(act === 'cat'){ S.cat = val; S.pick = false; render(); return; }
+  if(act === 'pick'){ S.pick = !S.pick; render(); return; }
+  if(act === 'key'){ key(val); render(); return; }
+  if(act === 'grade'){ S.grade = val; render(); return; }
+  if(act === 'acc'){ S.acc = (S.acc === '花呗' ? '建行 5044' : '花呗'); render(); return; }
+  if(act === 'save'){ save(); return; }
+  if(act === 'cancel'){ S.pick = false; render(); return; }
+  return;
+});
+
+document.getElementById('modeBtn').addEventListener('click', function(){
+  MODE = (MODE === 'single') ? 'compare' : 'single';
+  var mb = this;
+  if(MODE === 'compare'){
+    singleEl.classList.add('hide'); compareEl.classList.add('on');
+    mb.classList.add('on'); mb.textContent = '回到单屏';
+  } else {
+    singleEl.classList.remove('hide'); compareEl.classList.remove('on');
+    mb.classList.remove('on'); mb.textContent = '并排对比';
+  }
+  render();
+});
+
+chipsEl.addEventListener('click', function(e){
+  var b = e.target.closest('.chip');
+  if(!b) return;
+  S.v = b.dataset.v; S.pick = false;
+  if(MODE === 'compare'){
+    MODE = 'single';
+    singleEl.classList.remove('hide'); compareEl.classList.remove('on');
+    var mb = document.getElementById('modeBtn');
+    mb.classList.remove('on'); mb.textContent = '并排对比';
+  }
+  [].slice.call(chipsEl.children).forEach(function(c){ c.classList.toggle('on', c.dataset.v === S.v); });
+  render();
+});
+
+render();
+</script>
+</body>
+</html>

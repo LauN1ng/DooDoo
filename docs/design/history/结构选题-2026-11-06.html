@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DooDoo 结构选题 · 导航 7 选 1 / 流水 8 选 1</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#F7F6F3;color:#1F1E1C;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1280px;margin:0 auto;padding:44px 28px 90px}
+  h1{font-size:27px;margin:0 0 10px;letter-spacing:-.3px}
+  .sub{color:#6B6862;font-size:14px;line-height:1.75;margin:0 0 6px;max-width:820px}
+  .alert{background:#FCEBEB;border-left:3px solid #C0392B;padding:13px 16px;font-size:13px;line-height:1.7;margin:22px 0 0;border-radius:0 8px 8px 0;max-width:880px}
+  .note{background:#EEEDFE;border-left:3px solid #534AB7;padding:13px 16px;font-size:13px;line-height:1.7;margin:12px 0 0;border-radius:0 8px 8px 0;max-width:880px}
+  h2{font-size:19px;margin:56px 0 6px;padding-bottom:10px;border-bottom:2px solid #1F1E1C;display:inline-block}
+  .sechint{font-size:13px;color:#6B6862;margin:10px 0 26px;line-height:1.7}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(332px,1fr));gap:22px;align-items:start}
+  .opt{background:#fff;border:1px solid #E4E1DA;border-radius:14px;padding:18px 18px 16px}
+  .opt h3{font-size:15px;margin:0 0 7px;line-height:1.4}
+  .num{display:inline-block;background:#1F1E1C;color:#fff;border-radius:6px;padding:1px 7px;font-size:12px;margin-right:7px;vertical-align:2px;font-weight:600}
+  .principle{font-size:12.5px;color:#6B6862;margin:0 0 14px;line-height:1.65;min-height:40px}
+  .phone{width:100%;max-width:302px;margin:0 auto 15px;background:#fff;border:1px solid #D8D4CB;border-radius:26px;padding:8px 9px 0;height:552px;overflow:hidden;position:relative}
+  .sb{display:flex;justify-content:space-between;font-size:9px;color:#B0ACA3;padding:3px 6px 6px}
+  .ptitle{font-size:14px;font-weight:600;padding:2px 6px 9px;display:flex;justify-content:space-between;align-items:baseline}
+  .ptitle small{font-size:9.5px;color:#9A968D;font-weight:400}
+  .body{font-size:11px}
+  .dayhead{display:flex;justify-content:space-between;font-size:9.5px;color:#8A867D;padding:9px 6px 5px;border-bottom:1px solid #F0EDE7}
+  .row{display:flex;align-items:center;gap:8px;padding:7px 6px;border-bottom:1px solid #F5F3EE}
+  .ic{width:22px;height:22px;border-radius:7px;background:#EDEAE3;flex:0 0 22px}
+  .ic.sm{width:14px;height:14px;border-radius:4px;flex:0 0 14px}
+  .rmain{flex:1;min-width:0}
+  .t1{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .t2{font-size:9px;color:#9A968D;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .amt{font-size:11px;white-space:nowrap}
+  .neg{color:#C0392B}.pos{color:#2E7D4F}
+  .tabbar{position:absolute;left:0;right:0;bottom:0;display:flex;border-top:1px solid #EDEAE3;padding:7px 0 11px;background:#fff}
+  .tab{flex:1;text-align:center;font-size:8.5px;color:#A8A49B}
+  .tab.on{color:#1F1E1C;font-weight:600}
+  .tab i{display:block;width:15px;height:15px;border-radius:5px;background:#E8E5DE;margin:0 auto 3px}
+  .tab.on i{background:#1F1E1C}
+  .fl{position:absolute;right:13px;bottom:66px;width:42px;height:42px;border-radius:50%;background:#1F1E1C;color:#fff;font-size:9.5px;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.2}
+  .card{background:#FAF9F6;border:1px solid #EDEAE3;border-radius:10px;padding:10px;margin:7px 2px}
+  .danger{background:#FCEBEB;color:#A32D2D;border-radius:8px;padding:7px 9px;font-size:9.5px;margin:5px 2px;line-height:1.5}
+  .k{color:#9A968D}
+  .mini{font-size:9px;color:#9A968D;padding:2px 6px}
+  .probs{font-size:12px;line-height:1.7;margin:0}
+  .probs b{display:inline-block;width:30px;font-size:12px}
+  .bad{color:#A32D2D}.good{color:#2E7D4F}
+  .score{display:flex;flex-wrap:wrap;gap:9px;font-size:10.5px;margin-top:10px;padding-top:9px;border-top:1px dashed #E4E1DA;color:#6B6862}
+  .s3{color:#2E7D4F;font-weight:600}.s2{color:#B8860B;font-weight:600}.s1{color:#A32D2D;font-weight:600}
+  .final{background:#fff;border:1px solid #E4E1DA;border-radius:14px;padding:22px 24px;margin-top:26px}
+  .final h3{margin:0 0 12px;font-size:15px}
+  .final table{width:100%;border-collapse:collapse;font-size:13px}
+  .final td,.final th{padding:9px 10px;border-bottom:1px solid #F0EDE7;text-align:left;vertical-align:top}
+  .final th{font-size:12px;color:#8A867D;font-weight:500}
+  code{background:#F1EFE8;padding:1px 6px;border-radius:4px;font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>DooDoo 结构选题 · A 组 7 个 / B 组 8 个</h1>
+  <p class="sub">这不是视觉稿，是<strong>灰盒线框</strong>：只摆信息、不定颜色、不定字体、不做动效。你看的只有一件事——信息摆在哪、要不要出现。</p>
+  <div class="alert"><strong>先记一条更正：</strong>逾期红牌在「还款」页顶部，不在首页。首页只负责“今天花了什么 + 记一笔”。下面所有线框按这个前提画。</div>
+  <p class="sub" style="margin-top:14px">真实数据取自 PRD：17 个账户、58 笔分期、11 月要还 2,742.00、招行 8 月账单逾期。金额与文案都按真实密度放，避免“空数据好看、真数据崩”。</p>
+
+  <h2>A 组 · 导航（选 1 个）</h2>
+  <p class="sechint">考核点：三个时刻能不能各自一跳到达（记完账 / 还款日前看要还多少 / 想知道我有多少钱），以及 17 个账户下还款入口够不够重。</p>
+  <div class="grid">
+
+    <article class="opt">
+      <h3><span class="num">A1</span>底部四 Tab（流水 / 还款 / 资产 / 设置）</h3>
+      <p class="principle">和 PRD 第七节的信息架构 1:1 对齐，最标准、零学习成本。</p>
+      <div class="phone">
+        <div class="sb"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="ptitle">流水 <small>11月 · 支出 4,382</small></div>
+        <div class="body">
+          <div class="dayhead"><span>11月6日 星期四</span><span>−165.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">好利来</div><div class="t2">吃 · 花呗</div></div><span class="amt neg">−32.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">地铁</div><div class="t2">行 · 建行5044</div></div><span class="amt neg">−4.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">麦富迪猫粮</div><div class="t2">情 · 白条</div></div><span class="amt neg">−129.00</span></div>
+          <div class="dayhead"><span>11月5日 星期三</span><span>−84.50</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">蜜雪冰城</div><div class="t2">吃 · 余额宝</div></div><span class="amt neg">−6.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">物业费</div><div class="t2">住 · 招行8857</div></div><span class="amt neg">−78.50</span></div>
+        </div>
+        <div class="fl">记<br>一笔</div>
+        <div class="tabbar">
+          <div class="tab on"><i></i>流水</div><div class="tab"><i></i>还款</div><div class="tab"><i></i>资产</div><div class="tab"><i></i>设置</div>
+        </div>
+      </div>
+      <p class="probs"><b class="good">优</b>三个时刻都一跳可达；和 PRD 零改造；iOS 原生感最强<br><b class="bad">劣</b>「设置」一年开三次却占 25% 导航位；还款 tab 平时是空页，容易点进去又退出来</p>
+      <div class="score"><span>底线1 <span class="s3">●</span></span><span>底线2 <span class="s3">●</span></span><span>底线3 <span class="s3">●</span></span><span>闲置位 −1</span></div>
+    </article>
+
+    <article class="opt">
+      <h3><span class="num">A2</span>底部三 Tab + 设置收进右上角</h3>
+      <p class="principle">砍掉低频的「设置」，让三个高频页面各占 1/3，重心均匀。</p>
+      <div class="phone">
+        <div class="sb"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="ptitle">流水 <small>⚙︎</small></div>
+        <div class="body">
+          <div class="dayhead"><span>11月6日 星期四</span><span>−165.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">好利来</div><div class="t2">吃 · 花呗</div></div><span class="amt neg">−32.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">地铁</div><div class="t2">行 · 建行5044</div></div><span class="amt neg">−4.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">麦富迪猫粮</div><div class="t2">情 · 白条</div></div><span class="amt neg">−129.00</span></div>
+          <div class="dayhead"><span>11月5日 星期三</span><span>−84.50</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">蜜雪冰城</div><div class="t2">吃 · 余额宝</div></div><span class="amt neg">−6.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">物业费</div><div class="t2">住 · 招行8857</div></div><span class="amt neg">−78.50</span></div>
+        </div>
+        <div class="fl">记<br>一笔</div>
+        <div class="tabbar">
+          <div class="tab on"><i></i>流水</div><div class="tab"><i></i>还款</div><div class="tab"><i></i>资产</div>
+        </div>
+      </div>
+      <p class="probs"><b class="good">优</b>每个 tab 都是高频；还款在正中，拇指最舒服的落点<br><b class="bad">劣</b>设置藏进齿轮，第一次找导出/删数据会翻一下</p>
+      <div class="score"><span>底线1 <span class="s3">●</span></span><span>底线2 <span class="s3">●</span></span><span>底线3 <span class="s3">●</span></span><span>干净 <span class="s3">●</span></span></div>
+    </article>
+
+    <article class="opt">
+      <h3><span class="num">A3</span>两 Tab（流水 / 资产）+ 还款做成流水页顶部条</h3>
+      <p class="principle">把“这个月要还多少”搬到首页第一屏，用一条常驻摘要条代替一个 tab。</p>
+      <div class="phone">
+        <div class="sb"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="ptitle">流水 <small>⚙︎</small></div>
+        <div class="body">
+          <div class="card" style="margin-top:0"><div style="display:flex;justify-content:space-between"><span class="k">本月要还</span><span>2,742.00</span></div><div class="mini" style="padding:3px 0 0">最近 11/08 招行8857 · 665.36　›</div></div>
+          <div class="danger">招行8857 8月账单逾期 92 天 · 665.36</div>
+          <div class="dayhead"><span>11月6日 星期四</span><span>−165.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">好利来</div><div class="t2">吃 · 花呗</div></div><span class="amt neg">−32.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">地铁</div><div class="t2">行 · 建行5044</div></div><span class="amt neg">−4.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">麦富迪猫粮</div><div class="t2">情 · 白条</div></div><span class="amt neg">−129.00</span></div>
+        </div>
+        <div class="fl">记<br>一笔</div>
+        <div class="tabbar"><div class="tab on"><i></i>流水</div><div class="tab"><i></i>资产</div></div>
+      </div>
+      <p class="probs"><b class="good">优</b>还款压力天天在眼前，逾期不可能再漏（招行那次的教训直接治）<br><b class="bad">劣</b>和“首页第一眼是今天流水”有轻微冲突；两 tab 时底部栏显得空</p>
+      <div class="score"><span>底线1 <span class="s2">◐</span></span><span>底线2 <span class="s2">◐</span></span><span>底线3 <span class="s3">●</span></span><span>防逾期 <span class="s3">●</span></span></div>
+    </article>
+
+    <article class="opt">
+      <h3><span class="num">A4</span>五 Tab（流水 / 还款 / 资产 / 分期 / 设置）</h3>
+      <p class="principle">给 58 笔分期一个独立入口，存量管理不被埋在还款页第二层。</p>
+      <div class="phone">
+        <div class="sb"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="ptitle">流水 <small>11月</small></div>
+        <div class="body">
+          <div class="dayhead"><span>11月6日 星期四</span><span>−165.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">好利来</div><div class="t2">吃 · 花呗</div></div><span class="amt neg">−32.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">地铁</div><div class="t2">行 · 建行5044</div></div><span class="amt neg">−4.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">麦富迪猫粮</div><div class="t2">情 · 白条</div></div><span class="amt neg">−129.00</span></div>
+          <div class="dayhead"><span>11月5日 星期三</span><span>−84.50</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">蜜雪冰城</div><div class="t2">吃 · 余额宝</div></div><span class="amt neg">−6.00</span></div>
+        </div>
+        <div class="fl">记<br>一笔</div>
+        <div class="tabbar">
+          <div class="tab on"><i></i>流水</div><div class="tab"><i></i>还款</div><div class="tab"><i></i>资产</div><div class="tab"><i></i>分期</div><div class="tab"><i></i>设置</div>
+        </div>
+      </div>
+      <p class="probs"><b class="good">优</b>58 笔存量分期有独立家住，录入/核对路径最短<br><b class="bad">劣</b>分期其实是还款的子集，信息架构上冗余；5 个 tab 每个 60pt，文字要压到 9pt</p>
+      <div class="score"><span>底线1 <span class="s3">●</span></span><span>底线2 <span class="s3">●</span></span><span>底线3 <span class="s3">●</span></span><span>冗余 <span class="s1">−1</span></span></div>
+    </article>
+
+    <article class="opt">
+      <h3><span class="num">A5</span>无 Tab：全屏流水 + 顶部两个文字入口</h3>
+      <p class="principle">最像一本账。所有导航变成顶部一行文字，「记一笔」常驻右下角。</p>
+      <div class="phone">
+        <div class="sb"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="ptitle">流水 <small>还款 3 · 资产 ›</small></div>
+        <div class="body">
+          <div class="dayhead"><span>11月6日 星期四</span><span>−165.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">好利来</div><div class="t2">吃 · 花呗</div></div><span class="amt neg">−32.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">地铁</div><div class="t2">行 · 建行5044</div></div><span class="amt neg">−4.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">麦富迪猫粮</div><div class="t2">情 · 白条</div></div><span class="amt neg">−129.00</span></div>
+          <div class="dayhead"><span>11月5日 星期三</span><span>−84.50</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">蜜雪冰城</div><div class="t2">吃 · 余额宝</div></div><span class="amt neg">−6.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">物业费</div><div class="t2">住 · 招行8857</div></div><span class="amt neg">−78.50</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">京东 · 洗衣液</div><div class="t2">穿 · 白条</div></div><span class="amt neg">−48.90</span></div>
+        </div>
+        <div class="fl">记<br>一笔</div>
+      </div>
+      <p class="probs"><b class="good">优</b>流水拿到最大空间，一屏 9-10 行，最“账本”<br><b class="bad">劣</b>还款入口退化成右上角小字，和你“逾期不能再发生”的底线正面冲突；无 tab 的 App 在 iOS 上会显得非原生</p>
+      <div class="score"><span>底线1 <span class="s3">●</span></span><span>底线2 <span class="s3">●</span></span><span>底线3 <span class="s1">○</span></span><span>原生感 <span class="s1">○</span></span></div>
+    </article>
+
+    <article class="opt">
+      <h3><span class="num">A6</span>单页卡片流（净资产 → 本月要还 → 今日流水）</h3>
+      <p class="principle">Monarch / Copilot 的骨架：不切页，一屏按优先级堆三张卡，纵向滚动。</p>
+      <div class="phone">
+        <div class="sb"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="ptitle">DooDoo <small>⚙︎</small></div>
+        <div class="body">
+          <div class="card" style="margin-top:0"><div style="font-size:9px;color:#9A968D">净资产</div><div style="font-size:18px;margin:2px 0 4px">−25,346.00</div><div class="mini" style="padding:0">我有 3,120.00　我欠 28,466.00</div></div>
+          <div class="card"><div style="display:flex;justify-content:space-between"><span class="k">本月要还</span><span>2,742.00</span></div><div class="mini" style="padding:3px 0 0">11/08 招行8857 · 11/10 e招贷 · 11/25 花呗 ›</div></div>
+          <div class="danger">招行8857 8月账单逾期 92 天</div>
+          <div class="dayhead"><span>今天 11月6日</span><span>−165.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">好利来</div><div class="t2">吃 · 花呗</div></div><span class="amt neg">−32.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">地铁</div><div class="t2">行 · 建行5044</div></div><span class="amt neg">−4.00</span></div>
+        </div>
+        <div class="fl">记<br>一笔</div>
+      </div>
+      <p class="probs"><b class="good">优</b>一屏给全三个答案，四个“时刻”全覆盖；Monarch 已验证过<br><b class="bad">劣</b>流水被挤到第二屏，和“首页第一眼是今天的流水”直接矛盾；底部无 tab，回顶端靠滚</p>
+      <div class="score"><span>底线1 <span class="s3">●</span></span><span>底线2 <span class="s1">○</span></span><span>底线3 <span class="s3">●</span></span><span>信息密度 <span class="s3">●</span></span></div>
+    </article>
+
+    <article class="opt">
+      <h3><span class="num">A7</span>三 Tab：流水 / 账单 / 我</h3>
+      <p class="principle">把「还款」升格成「账单」——语义更宽，能同时装循环账单、分期、逾期。</p>
+      <div class="phone">
+        <div class="sb"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="ptitle">流水 <small>11月</small></div>
+        <div class="body">
+          <div class="dayhead"><span>11月6日 星期四</span><span>−165.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">好利来</div><div class="t2">吃 · 花呗</div></div><span class="amt neg">−32.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">地铁</div><div class="t2">行 · 建行5044</div></div><span class="amt neg">−4.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">麦富迪猫粮</div><div class="t2">情 · 白条</div></div><span class="amt neg">−129.00</span></div>
+          <div class="dayhead"><span>11月5日 星期三</span><span>−84.50</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">蜜雪冰城</div><div class="t2">吃 · 余额宝</div></div><span class="amt neg">−6.00</span></div>
+        </div>
+        <div class="fl">记<br>一笔</div>
+        <div class="tabbar"><div class="tab on"><i></i>流水</div><div class="tab"><i></i>账单</div><div class="tab"><i></i>我</div></div>
+      </div>
+      <p class="probs"><b class="good">优</b>“账单”能容纳 BillStatement 的全部语义，未来加功能不挤；三 tab 最稳<br><b class="bad">劣</b>“我”里塞资产，看净资产多一跳；“我”容易被做成杂物抽屉</p>
+      <div class="score"><span>底线1 <span class="s2">◐</span></span><span>底线2 <span class="s3">●</span></span><span>底线3 <span class="s3">●</span></span><span>扩展性 <span class="s3">●</span></span></div>
+    </article>
+
+  </div>
+
+  <h2>B 组 · 流水版式（选 1 个）</h2>
+  <p class="sechint">考核点：你 17 个账户、日均 8-10 笔。行内到底显示多少信息——显示少了没法对账，显示多了每天滚动很累。这一组决定未来三年你每天看 5 次的界面。</p>
+  <div class="grid">
+
+    <article class="opt">
+      <h3><span class="num">B1</span>日期分组 + 双行（商户 / 分类·账户）</h3>
+      <p class="principle">钱迹的行高 + Monarch 的“分类 · 账户”二级信息，PRD 里 R1 已指定参考。</p>
+      <div class="phone">
+        <div class="sb"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="ptitle">流水 <small>11月 · 支出 4,382.00</small></div>
+        <div class="body">
+          <div class="dayhead"><span>11月6日 星期四</span><span>−165.00</span></div>
+          <div class="row" style="padding:9px 6px"><span class="ic"></span><div class="rmain"><div class="t1">好利来</div><div class="t2">吃 · 花呗</div></div><span class="amt neg">−32.00</span></div>
+          <div class="row" style="padding:9px 6px"><span class="ic"></span><div class="rmain"><div class="t1">地铁</div><div class="t2">行 · 建行5044</div></div><span class="amt neg">−4.00</span></div>
+          <div class="row" style="padding:9px 6px"><span class="ic"></span><div class="rmain"><div class="t1">麦富迪猫粮</div><div class="t2">情 · 白条</div></div><span class="amt neg">−129.00</span></div>
+          <div class="dayhead"><span>11月5日 星期三</span><span>−84.50</span></div>
+          <div class="row" style="padding:9px 6px"><span class="ic"></span><div class="rmain"><div class="t1">蜜雪冰城</div><div class="t2">吃 · 余额宝</div></div><span class="amt neg">−6.00</span></div>
+          <div class="row" style="padding:9px 6px"><span class="ic"></span><div class="rmain"><div class="t1">物业费</div><div class="t2">住 · 招行8857</div></div><span class="amt neg">−78.50</span></div>
+          <div class="row" style="padding:9px 6px"><span class="ic"></span><div class="rmain"><div class="t1">工资</div><div class="t2">收入 · 招行工资卡</div></div><span class="amt pos">+6,476.00</span></div>
+        </div>
+        <div class="fl">记<br>一笔</div>
+        <div class="tabbar"><div class="tab on"><i></i>流水</div><div class="tab"><i></i>还款</div><div class="tab"><i></i>资产</div></div>
+      </div>
+      <p class="probs"><b class="good">优</b>账户归属永远可见，对账不用点开；一行 56pt 标准行高，拇指好点<br><b class="bad">劣</b>双行让一屏只能放 5 笔，58 笔分期的月份要滚很久</p>
+      <div class="score"><span>对账 <span class="s3">●</span></span><span>一屏密度 5 行 <span class="s2">◐</span></span><span>熟悉度 <span class="s3">●</span></span></div>
+    </article>
+
+    <article class="opt">
+      <h3><span class="num">B2</span>单行极简（emoji + 商户 + 金额）</h3>
+      <p class="principle">账户信息全部藏进详情，行内只留“谁的、多少钱”。</p>
+      <div class="phone">
+        <div class="sb"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="ptitle">流水 <small>11月</small></div>
+        <div class="body">
+          <div class="dayhead"><span>11月6日 星期四</span><span>−165.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">好利来</div></div><span class="amt neg">−32.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">地铁</div></div><span class="amt neg">−4.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">麦富迪猫粮</div></div><span class="amt neg">−129.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">瑞幸</div></div><span class="amt neg">−19.90</span></div>
+          <div class="dayhead"><span>11月5日 星期三</span><span>−84.50</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">蜜雪冰城</div></div><span class="amt neg">−6.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">物业费</div></div><span class="amt neg">−78.50</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">洗衣液</div></div><span class="amt neg">−48.90</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">工资</div></div><span class="amt pos">+6,476.00</span></div>
+          <div class="row"><span class="ic"></span><div class="rmain"><div class="t1">话费</div></div><span class="amt neg">−100.00</span></div>
+        </div>
+        <div class="fl">记<br>一笔</div>
+        <div class="tabbar"><div class="tab on"><i></i>流水</div><div class="tab"><i></i>还款</div><div class="tab"><i></i>资产</div></div>
+      </div>
+      <p class="probs"><b class="good">优</b>一屏 12 行，扫得最快，最“轻盈”<br><b class="bad">劣</b>你有 17 个账户，不看账户就没法对账，等于把底线 1 的成本转嫁给点开详情</p>
+      <div class="score"><span>对账 <span class="s1">○</span></span><span>一屏密度 12 行 <span class="s3">●</span></span><span>轻松感 <span class="s3">●</span></span></div>
+    </article>
+
+    <article class="opt">
+      <h3><span class="num">B3</span>账户色点式（行首 3px 色点 = 账户）</h3>
+      <p class="principle">单行版式 + 一个颜色点编码账户，省掉一行文字但保住归属。</p>
+      <div class="phone">
+        <div class="sb"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="ptitle">流水 <small>11月</small></div>
+        <div class="body">
+          <div class="dayhead"><span>11月6日 星期四</span><span>−165.00</span></div>
+          <div class="row"><span style="width:4px;height:20px;border-radius:2px;background:#C0392B;flex:0 0 4px"></span><span class="ic"></span><div class="rmain"><div class="t1">好利来</div></div><span class="amt neg">−32.00</span></div>
+          <div class="row"><span style="width:4px;height:20px;border-radius:2px;background:#1F6FB2;flex:0 0 4px"></span><span class="ic"></span><div class="rmain"><div class="t1">地铁</div></div><span class="amt neg">−4.00</span></div>
+          <div class="row"><span style="width:4px;height:20px;border-radius:2px;background:#B8860B;flex:0 0 4px"></span><span class="ic"></span><div class="rmain"><div class="t1">麦富迪猫粮</div></div><span class="amt neg">−129.00</span></div>
+          <div class="row"><span style="width:4px;height:20px;border-radius:2px;background:#1F6FB2;flex:0 0 4px"></span><span class="ic"></span><div class="rmain"><div class="t1">瑞幸</div></div><span class="amt neg">−19.90</span></div>
+          <div class="dayhead"><span>11月5日 星期三</span><span>−84.50</span></div>
+          <div class="row"><span style="width:4px;height:20px;border-radius:2px;background:#2E7D4F;flex:0 0 4px"></span><span class="ic"></span><div class="rmain"><div class="t1">蜜雪冰城</div></div><span class="amt neg">−6.00</span></div>
+          <div class="row"><span style="width:4px;height:20px;border-radius:2px;background:#6B47A8;flex:0 0 4px"></span><span class="ic"></span><div class="rmain"><div class="t1">物业费</div></div><span class="amt neg">−78.50</span></div>
+          <div class="row"><span style="width:4px;height:20px;border-radius:2px;background:#B8860B;flex:0 0 4px"></span><span class="ic"></span><div class="rmain"><div class="t1">洗衣液</div></div><span class="amt neg">−48.90</span></div>
+          <div class="row"><span style="width:4px;height:20px;border-radius:2px;background:#2E7D4F;flex:0 0 4px"></span><span class="ic"></span><div class="rmain"><div class="t1">工资</div></div><span class="amt pos">+6,476.00</span></div>
+        </div>
+        <div class="fl">记<br>一笔</div>
+        <div class="tabbar"><div class="tab on"><i></i>流水</div><div class="tab"><i></i>还款</div><div class="tab"><i></i>资产</div></div>
+      </div>
+      <p class="probs"><b class="good">优</b>单行密度 + 账户归属兼得；17 个账户用颜色区分有天然节奏<br><b class="bad">劣</b>17 种颜色记不住，色弱不友好；颜色和 Fluent Emoji 抢色，视觉容易脏</p>
+      <div class="score"><span>对账 <span class="s2">◐</span></span><span>一屏密度 11 行 <span class="s3">●</span></span><span>可访问性 <span class="s1">○</span></span></div>
+    </article>
+
+    <article class="opt">
+      <h3><span class="num">B4</span>每日一张卡片（卡头 = 日期 + 当日合计）</h3>
+      <p class="principle">一天一个容器，卡片之间留白分组，扫读节奏强。</p>
+      <div class="phone">
+        <div class="sb"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="ptitle">流水 <small>11月</small></div>
+        <div class="body">
+          <div class="card" style="margin-top:2px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>11月6日 星期四</span><span>−165.00</span></div>
+            <div class="row" style="padding:5px 0;border:0"><span class="ic"></span><div class="rmain"><div class="t1">好利来</div><div class="t2">吃 · 花呗</div></div><span class="amt neg">−32.00</span></div>
+            <div class="row" style="padding:5px 0;border:0"><span class="ic"></span><div class="rmain"><div class="t1">地铁</div><div class="t2">行 · 建行5044</div></div><span class="amt neg">−4.00</span></div>
+            <div class="row" style="padding:5px 0;border:0"><span class="ic"></span><div class="rmain"><div class="t1">麦富迪猫粮</div><div class="t2">情 · 白条</div></div><span class="amt neg">−129.00</span></div>
+          </div>
+          <div class="card"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>11月5日 星期三</span><span>−84.50</span></div>
+            <div class="row" style="padding:5px 0;border:0"><span class="ic"></span><div class="rmain"><div class="t1">蜜雪冰城</div><div class="t2">吃 · 余额宝</div></div><span class="amt neg">−6.00</span></div>
+            <div class="row" style="padding:5px 0;border:0"><span class="ic"></span><div class="rmain"><div class="t1">物业费</div><div class="t2">住 · 招行8857</div></div><span class="amt neg">−78.50</span></div>
+          </div>
+        </div>
+        <div class="fl">记<br>一笔</div>
+        <div class="tabbar"><div class="tab on"><i></i>流水</div><div class="tab"><i></i>还款</div><div class="tab"><i></i>资产</div></div>
+      </div>
+      <p class="probs"><b class="good">优</b>“今天花了多少”被卡头直接回答，一天的边界清晰<br><b class="bad">劣</b>卡片内边距吃掉空间，一屏只有 4-5 笔；跨天滚动会有大量空白</p>
+      <div class="score"><span>对账 <span class="s3">●</span></span><span>一屏密度 4 行 <span class="s1">○</span></span><span>日合计可见 <span class="s3">●</span></span></div>
+    </article>
+
+    <article class="opt">
+      <h3><span class="num">B5</span>时间轴式（左侧竖线 + 时间点）</h3>
+      <p class="principle">一天之内按时序排列，左侧一条竖线，时间做锚点。</p>
+      <div class="phone">
+        <div class="sb"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="ptitle">流水 <small>11月</small></div>
+        <div class="body" style="position:relative;padding-left:6px">
+          <div class="dayhead" style="border:0"><span>11月6日 星期四</span><span>−165.00</span></div>
+          <div style="position:absolute;left:44px;top:36px;bottom:8px;width:1px;background:#E4E1DA"></div>
+          <div class="row" style="border:0;gap:10px"><span style="font-size:8.5px;color:#B0ACA3;width:30px;text-align:right">08:12</span><span style="width:7px;height:7px;border-radius:50%;background:#C0392B;flex:0 0 7px;position:relative;z-index:1"></span><span class="ic"></span><div class="rmain"><div class="t1">地铁</div><div class="t2">行 · 建行5044</div></div><span class="amt neg">−4.00</span></div>
+          <div class="row" style="border:0;gap:10px"><span style="font-size:8.5px;color:#B0ACA3;width:30px;text-align:right">12:40</span><span style="width:7px;height:7px;border-radius:50%;background:#C0392B;flex:0 0 7px;position:relative;z-index:1"></span><span class="ic"></span><div class="rmain"><div class="t1">好利来</div><div class="t2">吃 · 花呗</div></div><span class="amt neg">−32.00</span></div>
+          <div class="row" style="border:0;gap:10px"><span style="font-size:8.5px;color:#B0ACA3;width:30px;text-align:right">19:05</span><span style="width:7px;height:7px;border-radius:50%;background:#C0392B;flex:0 0 7px;position:relative;z-index:1"></span><span class="ic"></span><div class="rmain"><div class="t1">麦富迪猫粮</div><div class="t2">情 · 白条</div></div><span class="amt neg">−129.00</span></div>
+          <div class="dayhead" style="border:0;margin-top:6px"><span>11月5日 星期三</span><span>−84.50</span></div>
+          <div class="row" style="border:0;gap:10px"><span style="font-size:8.5px;color:#B0ACA3;width:30px;text-align:right">15:20</span><span style="width:7px;height:7px;border-radius:50%;background:#C0392B;flex:0 0 7px;position:relative;z-index:1"></span><span class="ic"></span><div class="rmain"><div class="t1">蜜雪冰城</div><div class="t2">吃 · 余额宝</div></div><span class="amt neg">−6.00</span></div>
+        </div>
+        <div class="fl">记<br>一笔</div>
+        <div class="tabbar"><div class="tab on"><i></i>流水</div><div class="tab"><i></i>还款</div><div class="tab"><i></i>资产</div></div>
+      </div>
+      <p class="probs"><b class="good">优</b>“今天几点花的”有画面感，适合回溯一天<br><b class="bad">劣</b>左栏吃掉 40pt 宽度；时间对查账毫无用处（你只关心哪张卡）；虚线的视觉噪点最多</p>
+      <div class="score"><span>对账 <span class="s2">◐</span></span><span>一屏密度 5 行 <span class="s2">◐</span></span><span>空间浪费 <span class="s1">−1</span></span></div>
+    </article>
+
+    <article class="opt">
+      <h3><span class="num">B6</span>双列网格（每格一个 emoji + 商户 + 金额）</h3>
+      <p class="principle">像相册一样两列排，靠 emoji 认分类，密度极高。</p>
+      <div class="phone">
+        <div class="sb"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="ptitle">流水 <small>11月</small></div>
+        <div class="body">
+          <div class="dayhead"><span>11月6日 星期四</span><span>−165.00</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:7px 2px">
+            <div class="card" style="margin:0;text-align:center"><div class="ic" style="width:26px;height:26px;margin:0 auto 5px"></div><div style="font-size:10px">好利来</div><div style="font-size:11px" class="neg">−32.00</div></div>
+            <div class="card" style="margin:0;text-align:center"><div class="ic" style="width:26px;height:26px;margin:0 auto 5px"></div><div style="font-size:10px">地铁</div><div style="font-size:11px" class="neg">−4.00</div></div>
+            <div class="card" style="margin:0;text-align:center"><div class="ic" style="width:26px;height:26px;margin:0 auto 5px"></div><div style="font-size:10px">麦富迪猫粮</div><div style="font-size:11px" class="neg">−129.00</div></div>
+            <div class="card" style="margin:0;text-align:center"><div class="ic" style="width:26px;height:26px;margin:0 auto 5px"></div><div style="font-size:10px">瑞幸</div><div style="font-size:11px" class="neg">−19.90</div></div>
+            <div class="card" style="margin:0;text-align:center"><div class="ic" style="width:26px;height:26px;margin:0 auto 5px"></div><div style="font-size:10px">话费</div><div style="font-size:11px" class="neg">−100.00</div></div>
+            <div class="card" style="margin:0;text-align:center"><div class="ic" style="width:26px;height:26px;margin:0 auto 5px"></div><div style="font-size:10px">洗衣液</div><div style="font-size:11px" class="neg">−48.90</div></div>
+          </div>
+        </div>
+        <div class="fl">记<br>一笔</div>
+        <div class="tabbar"><div class="tab on"><i></i>流水</div><div class="tab"><i></i>还款</div><div class="tab"><i></i>资产</div></div>
+      </div>
+      <p class="probs"><b class="good">优</b>Emoji 成为主角，视觉记忆点最强，也最符合你“Fluent Emoji 当视觉主体”的决策<br><b class="bad">劣</b>格子放不下账户，对账要进详情；金额对齐乱，扫金额很慢；一条流水占一张卡，58 笔的月份要滚三屏</p>
+      <div class="score"><span>对账 <span class="s1">○</span></span><span>扫金额 <span class="s1">○</span></span><span>视觉记忆 <span class="s3">●</span></span></div>
+    </article>
+
+    <article class="opt">
+      <h3><span class="num">B7</span>表格账本式（日期 | 分类 | 账户 | 金额）</h3>
+      <p class="principle">类 Excel，紧凑无装饰，一屏塞 18-20 行，适合核对而不是浏览。</p>
+      <div class="phone">
+        <div class="sb"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="ptitle" style="font-size:12px">流水 <small>11月</small></div>
+        <div class="body" style="font-size:9.5px">
+          <div style="display:flex;padding:4px 4px;color:#9A968D;border-bottom:1px solid #E4E1DA"><span style="width:34px">日期</span><span style="width:42px">分类</span><span style="flex:1">商户</span><span style="width:52px">账户</span><span style="width:50px;text-align:right">金额</span></div>
+          <div style="display:flex;padding:5px 4px;border-bottom:1px solid #F5F3EE"><span style="width:34px;color:#8A867D">11-06</span><span style="width:42px">吃</span><span style="flex:1">好利来</span><span style="width:52px;color:#8A867D">花呗</span><span style="width:50px;text-align:right" class="neg">−32.00</span></div>
+          <div style="display:flex;padding:5px 4px;border-bottom:1px solid #F5F3EE"><span style="width:34px;color:#8A867D">11-06</span><span style="width:42px">行</span><span style="flex:1">地铁</span><span style="width:52px;color:#8A867D">建行5044</span><span style="width:50px;text-align:right" class="neg">−4.00</span></div>
+          <div style="display:flex;padding:5px 4px;border-bottom:1px solid #F5F3EE"><span style="width:34px;color:#8A867D">11-06</span><span style="width:42px">情</span><span style="flex:1">麦富迪</span><span style="width:52px;color:#8A867D">白条</span><span style="width:50px;text-align:right" class="neg">−129.00</span></div>
+          <div style="display:flex;padding:5px 4px;border-bottom:1px solid #F5F3EE"><span style="width:34px;color:#8A867D">11-05</span><span style="width:42px">吃</span><span style="flex:1">蜜雪冰城</span><span style="width:52px;color:#8A867D">余额宝</span><span style="width:50px;text-align:right" class="neg">−6.00</span></div>
+          <div style="display:flex;padding:5px 4px;border-bottom:1px solid #F5F3EE"><span style="width:34px;color:#8A867D">11-05</span><span style="width:42px">住</span><span style="flex:1">物业费</span><span style="width:52px;color:#8A867D">招行8857</span><span style="width:50px;text-align:right" class="neg">−78.50</span></div>
+          <div style="display:flex;padding:5px 4px;border-bottom:1px solid #F5F3EE"><span style="width:34px;color:#8A867D">11-05</span><span style="width:42px">穿</span><span style="flex:1">洗衣液</span><span style="width:52px;color:#8A867D">白条</span><span style="width:50px;text-align:right" class="neg">−48.90</span></div>
+          <div style="display:flex;padding:5px 4px;border-bottom:1px solid #F5F3EE"><span style="width:34px;color:#8A867D">11-01</span><span style="width:42px">收入</span><span style="flex:1">工资</span><span style="width:52px;color:#8A867D">工资卡</span><span style="width:50px;text-align:right" class="pos">+6,476</span></div>
+          <div style="display:flex;padding:5px 4px;border-bottom:1px solid #F5F3EE"><span style="width:34px;color:#8A867D">11-01</span><span style="width:42px">住</span><span style="flex:1">房租</span><span style="width:52px;color:#8A867D">建行5044</span><span style="width:50px;text-align:right" class="neg">−1,230.50</span></div>
+          <div style="display:flex;padding:5px 4px;border-bottom:1px solid #F5F3EE"><span style="width:34px;color:#8A867D">10-31</span><span style="width:42px">还</span><span style="flex:1">还款</span><span style="width:52px;color:#8A867D">招行8857</span><span style="width:50px;text-align:right">−525.72</span></div>
+        </div>
+        <div class="fl">记<br>一笔</div>
+        <div class="tabbar"><div class="tab on"><i></i>流水</div><div class="tab"><i></i>还款</div><div class="tab"><i></i>资产</div></div>
+      </div>
+      <p class="probs"><b class="good">优</b>对账效率最高，18 行一屏，账户/分类/金额全在视野里<br><b class="bad">劣</b>9.5pt 字长期看伤眼；完全没有“好看”可言，和底线 3 冲突；点按目标小于 36pt</p>
+      <div class="score"><span>对账 <span class="s3">●</span></span><span>一屏密度 18 行 <span class="s3">●</span></span><span>好看 <span class="s1">○</span></span></div>
+    </article>
+
+    <article class="opt">
+      <h3><span class="num">B8</span>纸感分区（无卡片、无分割线，只有日期标题 + 留白）</h3>
+      <p class="principle">Monarch 的手法 7：整页像一张纸，靠留白和极浅标题分组，行与行之间不画线。</p>
+      <div class="phone">
+        <div class="sb"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="ptitle">流水 <small>11月 · 支出 4,382.00</small></div>
+        <div class="body">
+          <div style="font-size:9px;color:#A8A49B;letter-spacing:.08em;padding:12px 6px 2px">11月6日 星期四</div>
+          <div class="row" style="border:0;padding:8px 6px"><span class="ic"></span><div class="rmain"><div class="t1">好利来</div><div class="t2">吃 · 花呗</div></div><span class="amt neg">−32.00</span></div>
+          <div class="row" style="border:0;padding:8px 6px"><span class="ic"></span><div class="rmain"><div class="t1">地铁</div><div class="t2">行 · 建行5044</div></div><span class="amt neg">−4.00</span></div>
+          <div class="row" style="border:0;padding:8px 6px"><span class="ic"></span><div class="rmain"><div class="t1">麦富迪猫粮</div><div class="t2">情 · 白条</div></div><span class="amt neg">−129.00</span></div>
+          <div style="font-size:9px;color:#A8A49B;letter-spacing:.08em;padding:16px 6px 2px">11月5日 星期三</div>
+          <div class="row" style="border:0;padding:8px 6px"><span class="ic"></span><div class="rmain"><div class="t1">蜜雪冰城</div><div class="t2">吃 · 余额宝</div></div><span class="amt neg">−6.00</span></div>
+          <div class="row" style="border:0;padding:8px 6px"><span class="ic"></span><div class="rmain"><div class="t1">物业费</div><div class="t2">住 · 招行8857</div></div><span class="amt neg">−78.50</span></div>
+          <div class="row" style="border:0;padding:8px 6px"><span class="ic"></span><div class="rmain"><div class="t1">工资</div><div class="t2">收入 · 工资卡</div></div><span class="amt pos">+6,476.00</span></div>
+        </div>
+        <div class="fl">记<br>一笔</div>
+        <div class="tabbar"><div class="tab on"><i></i>流水</div><div class="tab"><i></i>还款</div><div class="tab"><i></i>资产</div></div>
+      </div>
+      <p class="probs"><b class="good">优</b>最耐看、最像“一本账”，留白本身就是高级感；信息一点没少<br><b class="bad">劣</b>无行线时快速扫读容易串行；日期标题要压得很小，一屏只 6 行</p>
+      <div class="score"><span>对账 <span class="s3">●</span></span><span>一屏密度 6 行 <span class="s2">◐</span></span><span>好看 <span class="s3">●</span></span></div>
+    </article>
+
+  </div>
+
+  <div class="final">
+    <h3>怎么选</h3>
+    <table>
+      <tr><th style="width:110px">组合</th><th>方案</th><th>一句话理由</th></tr>
+      <tr><td><strong>保守</strong></td><td><code>A2</code> + <code>B1</code></td><td>三 Tab 重心均匀，双行流水把账户摊在明面上。最不容易在 M4 视觉阶段翻车。</td></tr>
+      <tr><td><strong>推荐</strong></td><td><code>A2</code> + <code>B8</code></td><td>骨架最稳（三 Tab），皮最耐看（纸感），且 B8 的信息量和 B1 完全一样，只是不画线。你“好看优先”的偏好在这里兑现，而不牺牲对账。</td></tr>
+      <tr><td><strong>激进</strong></td><td><code>A6</code> + <code>B3</code></td><td>首页一屏给全净资产/本月要还/今日流水，色点补账户。信息密度最高，但和“首页第一眼是今天流水”有冲突，需要你改一条底线。</td></tr>
+    </table>
+    <p style="font-size:13px;color:#6B6862;line-height:1.75;margin:16px 0 0">回复格式：<code>A2 + B8</code>。两套独立，可以混搭，但 A3 / A6 会给流水页顶部加内容，和 B4 / B6 这种吃空间的版式组合会变挤——我会在定案时提醒。<br>定完这两个，M4 视觉才解封；在那之前不要再打开任何截图库。</p>
+  </div>
+</div>
+</body>
+</html>

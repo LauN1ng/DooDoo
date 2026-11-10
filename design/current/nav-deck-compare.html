@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>导航层级 · 卡堆三版对照</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#EDEAE4;font-family:-apple-system,"PingFang SC",sans-serif;color:#1D1C1A;padding:20px 24px 24px}
+  .row{display:flex;gap:22px;align-items:flex-start}
+  .col{width:390px}
+  .hd{display:flex;align-items:baseline;gap:7px;margin-bottom:8px}
+  .hd b{font-size:13px}
+  .hd em{font-style:normal;font-size:11px;color:#8A867D}
+  .tag{font-size:10px;padding:2px 7px;border-radius:999px;font-weight:600}
+  .bad{background:#FBEDEB;color:#B4443A}
+  .ok{background:#EAF3EC;color:#2F7A48}
+  img{width:390px;display:block;border-radius:10px;box-shadow:0 8px 22px rgba(0,0,0,.10)}
+  .note{font-size:11px;line-height:1.5;color:#6F6B63;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="row">
+  <div class="col">
+    <div class="hd"><b>D0</b><em>落在卡堆外</em><span class="tag bad">同层</span></div>
+    <img src="nd-d0.png" alt="">
+    <div class="note">卡堆整体上移 44pt 让位。tab 站在背景上，不碰任何一层。底部被切出一条横带。</div>
+  </div>
+  <div class="col">
+    <div class="hd"><b>D1</b><em>压穿层厚带</em><span class="tag bad">吃掉叠层</span></div>
+    <img src="nd-d1.png" alt="">
+    <div class="note">tab 从卡面压到第 3 层，左侧 2 层卡边被它吃掉。读强势，但卡堆"能数出几天"失效。</div>
+  </div>
+  <div class="col">
+    <div class="hd"><b>D2</b><em>只压前卡</em><span class="tag ok">推荐</span></div>
+    <img src="nd-d2.png" alt="">
+    <div class="note">tab 停在最上层卡面上，30pt 层厚带完整从它下方穿过。控件比整堆卡高一层，卡片一张不少。</div>
+  </div>
+</div>
+</body>
+</html>

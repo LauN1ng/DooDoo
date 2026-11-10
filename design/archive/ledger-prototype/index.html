@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>流水卡片原型 · 横滑日期 / 上滑日历</title>
+<style>
+  :root{
+    --paper:#EFECE6; --screen:#F4F2ED; --card:#FFFFFF;
+    --ink:#16151A; --ink2:#6B6873; --ink3:#A09DA6;
+    --line:#EDE9E2; --red:#C8452F;
+    --r-card:28px;
+    --spring:cubic-bezier(.22,.9,.28,1);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",Inter,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100vh;padding:24px 16px 32px;gap:18px;
+  }
+
+  /* ---------- phone shell ---------- */
+  .phone{
+    position:relative;width:390px;height:844px;flex:none;
+    background:#0C0C0E;border-radius:52px;padding:10px;
+    box-shadow:0 2px 6px rgba(20,18,16,.12),0 30px 70px -30px rgba(20,18,16,.45);
+  }
+  .screen{
+    position:relative;width:100%;height:100%;border-radius:43px;overflow:hidden;
+    background:var(--screen);display:flex;flex-direction:column;
+  }
+  .island{position:absolute;top:11px;left:50%;transform:translateX(-50%);
+    width:112px;height:31px;background:#0C0C0E;border-radius:20px;z-index:60;pointer-events:none}
+  .statusbar{
+    height:52px;flex:none;display:flex;align-items:flex-end;justify-content:space-between;
+    padding:0 26px 6px;font-size:13px;font-weight:600;color:var(--ink);
+    position:relative;z-index:55;pointer-events:none;
+  }
+  .statusbar .right{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600}
+  .bars{display:flex;align-items:flex-end;gap:1.5px;height:10px}
+  .bars i{width:2.5px;background:var(--ink);border-radius:1px;display:block}
+  .bars i:nth-child(1){height:4px}.bars i:nth-child(2){height:6px}
+  .bars i:nth-child(3){height:8px}.bars i:nth-child(4){height:10px}
+  .batt{width:20px;height:10px;border:1.4px solid var(--ink);border-radius:3px;position:relative;opacity:.9}
+  .batt::after{content:"";position:absolute;inset:1.6px;right:5px;background:var(--ink);border-radius:1px}
+
+  /* ---------- pager ---------- */
+  .pager{
+    position:absolute;inset:52px 0 0 0;display:flex;
+    overflow-x:auto;overflow-y:hidden;
+    scrollbar-width:none;touch-action:pan-x;overscroll-behavior:contain;
+  }
+  .pager::-webkit-scrollbar{display:none}
+  .page{position:relative;flex:0 0 100%;height:100%;padding:6px 14px 62px}
+  .card{
+    height:100%;background:var(--card);border-radius:var(--r-card);
+    box-shadow:0 1px 2px rgba(22,21,26,.04),0 18px 40px -26px rgba(22,21,26,.35);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+
+  /* ---------- card head ---------- */
+  .head{padding:22px 22px 0}
+  .dayline{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px}
+  .dlabel{font-size:19px;font-weight:700;letter-spacing:-.01em}
+  .dlabel small{font-size:12px;font-weight:500;color:var(--ink3);margin-left:7px;letter-spacing:0}
+  .ddate{font-size:12px;color:var(--ink3);font-variant-numeric:tabular-nums}
+  .amount{display:flex;align-items:baseline;gap:2px;letter-spacing:-.045em}
+  .amount .cur{font-size:22px;font-weight:600;color:var(--ink2);transform:translateY(-4px)}
+  .amount .num{font-size:48px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+  .amount .dec{font-size:22px;font-weight:600;color:var(--ink2);transform:translateY(-4px)}
+  .caption{font-size:12px;color:var(--ink3);margin-top:9px}
+  .caption b{color:var(--ink2);font-weight:600}
+
+  /* ---------- rows ---------- */
+  .list{flex:1;padding:14px 14px 0;overflow:hidden;display:flex;flex-direction:column;gap:1px}
+  .row{display:flex;align-items:center;gap:12px;padding:9px 8px;border-radius:14px}
+  .row:active{background:#FAF8F5}
+  .ic{width:34px;height:34px;border-radius:11px;flex:none;display:grid;place-items:center}
+  .ic svg{width:17px;height:17px;stroke-width:1.7;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round}
+  .c-food{background:#E9F0E5;color:#4F6B47}
+  .c-coffee{background:#F4EBE3;color:#8A5E3B}
+  .c-transit{background:#E7EDF4;color:#3F5F7D}
+  .c-shop{background:#F4EAEC;color:#8C4A57}
+  .c-sub{background:#EDEAF4;color:#594E80}
+  .c-fun{background:#F1EEE4;color:#7A6A3D}
+  .c-income{background:#F6EAE7;color:#C8452F}
+  .mid{flex:1;min-width:0}
+  .nm{font-size:13.5px;font-weight:520;letter-spacing:-.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tm{font-size:11px;color:var(--ink3);margin-top:2px;font-variant-numeric:tabular-nums}
+  .amt{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.01em;flex:none}
+  .amt.plus{color:var(--red)}
+
+  /* ---------- card foot ---------- */
+  .foot{
+    margin-top:auto;padding:13px 22px 19px;display:flex;justify-content:space-between;align-items:center;
+    border-top:1px solid var(--line);font-size:12.5px;color:var(--ink3);
+  }
+  .foot .inc{color:var(--red);font-weight:600;font-variant-numeric:tabular-nums;font-size:13.5px}
+  .foot .inc.neg{color:var(--ink);font-weight:600}
+
+  /* ---------- all page ---------- */
+  .all{display:flex;flex-direction:column;height:100%;background:var(--card);border-radius:var(--r-card);
+    box-shadow:0 1px 2px rgba(22,21,26,.04),0 18px 40px -26px rgba(22,21,26,.35);overflow:hidden}
+  .all-head{padding:22px 22px 10px;flex:none}
+  .all-head h3{margin:0;font-size:17px;font-weight:700;letter-spacing:-.01em}
+  .all-head p{margin:7px 0 0;font-size:12px;color:var(--ink3);font-variant-numeric:tabular-nums}
+  .all-scroll{flex:1;overflow:hidden;touch-action:none;position:relative}
+  .all-inner{padding:0 14px 20px;will-change:transform}
+  .grp-h{display:flex;justify-content:space-between;align-items:baseline;padding:15px 8px 6px}
+  .grp-h b{font-size:12.5px;font-weight:650;letter-spacing:.01em}
+  .grp-h span{font-size:11px;color:var(--ink3);font-variant-numeric:tabular-nums}
+
+  /* ---------- dots ---------- */
+  .dots{position:absolute;left:0;right:0;bottom:0;height:62px;display:flex;align-items:center;justify-content:center;gap:6px;
+    z-index:30;pointer-events:none}
+  .dot{width:6px;height:6px;border-radius:50%;background:#D3CFC7;transition:.3s var(--spring)}
+  .dot.on{background:var(--ink);width:18px;border-radius:4px}
+  .dot.wide{width:10px}
+  .dot.wide.on{width:26px}
+  .hint{
+    position:absolute;left:50%;top:70%;transform:translate(-50%,-50%);
+    background:rgba(22,21,26,.84);color:#fff;font-size:11.5px;
+    padding:7px 14px;border-radius:20px;white-space:nowrap;z-index:40;
+    transition:opacity .5s ease, transform .5s ease;pointer-events:none;
+  }
+  .hint.out{opacity:0;transform:translate(-50%,-42%)}
+
+  /* ---------- calendar sheet ---------- */
+  .scrim{position:absolute;inset:0;background:rgba(22,21,26,.34);opacity:0;pointer-events:none;z-index:44}
+  .scrim.on{pointer-events:auto}
+  .sheet{
+    position:absolute;left:0;right:0;bottom:0;height:76%;background:var(--card);
+    border-radius:30px 30px 0 0;z-index:50;transform:translateY(100%);
+    box-shadow:0 -10px 40px -20px rgba(22,21,26,.4);display:flex;flex-direction:column;will-change:transform;
+  }
+  .grabber{padding:10px 0 4px;display:flex;justify-content:center;flex:none;touch-action:none}
+  .grabber i{width:38px;height:4px;border-radius:3px;background:#DCD8D0;display:block}
+  .cal-head{padding:8px 24px 2px;flex:none}
+  .cal-head .m{font-size:17px;font-weight:700;letter-spacing:-.01em}
+  .cal-head .s{font-size:12px;color:var(--ink3);margin-top:5px;font-variant-numeric:tabular-nums}
+  .cal-head .s b{color:var(--ink);font-weight:650}
+  .wk{display:grid;grid-template-columns:repeat(7,1fr);padding:14px 18px 4px;flex:none}
+  .wk span{text-align:center;font-size:10.5px;color:var(--ink3)}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px 0;padding:0 18px;flex:none}
+  .cell{height:50px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:13px}
+  .cell .d{font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--ink2);font-weight:520}
+  .cell .v{font-size:9px;font-variant-numeric:tabular-nums;color:var(--ink3);letter-spacing:-.02em}
+  .cell.has{background:#F7F4EF;cursor:pointer}
+  .cell.has .d{color:var(--ink);font-weight:650}
+  .cell.has .v{color:#8C6A5E}
+  .cell.has:active{background:#EFEBE4}
+  .cell.today{background:var(--ink)}
+  .cell.today .d{color:#fff;font-weight:700}
+  .cell.today .v{color:rgba(255,255,255,.6)}
+  .cell.mute .d{color:#DAD6CF}
+  .sheet-foot{margin-top:auto;padding:12px 24px 24px;font-size:11.5px;color:var(--ink3);text-align:center;flex:none}
+
+  /* ---------- caption ---------- */
+  .notes{max-width:520px;text-align:center;font-size:12.5px;line-height:1.9;color:#7B7770}
+  .notes b{color:#3B3833;font-weight:600}
+  .notes code{background:#E4E0D8;padding:1px 5px;border-radius:4px;font-size:11.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  @media (max-height:940px){ .phone{zoom:.88} }
+  @media (max-height:840px){ .phone{zoom:.78} }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="screen">
+    <div class="island"></div>
+    <div class="statusbar">
+      <span>9:41</span>
+      <span class="right">
+        <span class="bars"><i></i><i></i><i></i><i></i></span>
+        <span>5G</span>
+        <span class="batt"></span>
+      </span>
+    </div>
+
+    <div class="pager" id="pager"></div>
+
+    <div class="dots" id="dots"></div>
+    <div class="hint" id="hint">← 左滑看昨天　　↑ 上滑看日历</div>
+
+    <div class="scrim" id="scrim"></div>
+    <div class="sheet" id="sheet">
+      <div class="grabber"><i></i></div>
+      <div class="cal-head">
+        <div class="m">2026 年 11 月</div>
+        <div class="s" id="calsum"></div>
+      </div>
+      <div class="wk"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+      <div class="grid" id="calgrid"></div>
+      <div class="sheet-foot">点日期跳回当天 · 下滑收起</div>
+    </div>
+  </div>
+</div>
+
+<div class="notes">
+  <b>结构</b>：横向是一天一张卡片的时间轴，纵向上滑是日期维度的另一个入口。<br>
+  试着拖一拖卡片 —— <code>左滑</code> 翻到昨天，<code>滑到底</code> 进全部流水，<code>上滑</code> 打开日历。
+</div>
+
+<script>
+/* ============ 图标 ============ */
+const ICON = {
+  food:    '<svg viewBox="0 0 24 24"><path d="M4 11h16a8 8 0 0 1-16 0Z"/><path d="M3 20h18"/><path d="M9.2 7.2c0-1.1 1-1.1 1-2.2"/></svg>',
+  coffee:  '<svg viewBox="0 0 24 24"><path d="M5 8h11v6a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5V8Z"/><path d="M16 9.5h1.4a2.5 2.5 0 0 1 0 5H16"/></svg>',
+  transit: '<svg viewBox="0 0 24 24"><rect x="6" y="3.5" width="12" height="13" rx="3"/><path d="M6 10h12"/><circle cx="9.5" cy="13.6" r=".85"/><circle cx="14.5" cy="13.6" r=".85"/><path d="M9.2 16.6 7.2 20M14.8 16.6 16.8 20"/></svg>',
+  shop:    '<svg viewBox="0 0 24 24"><path d="M5.5 8h13l-1 12h-11l-1-12Z"/><path d="M9 8V6.2A3 3 0 0 1 15 6.2V8"/></svg>',
+  sub:     '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12.5" rx="3"/><path d="M3 10.5h18"/><path d="M6.5 15h3"/></svg>',
+  fun:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.2"/><path d="M10.2 9.4 15.2 12l-5 2.6V9.4Z"/></svg>',
+  income:  '<svg viewBox="0 0 24 24"><path d="M12 4.5v10"/><path d="M8.2 10.8 12 14.6l3.8-3.8"/><path d="M5 19.5h14"/></svg>'
+};
+
+/* ============ 数据 ============ */
+const DAYS = [
+  { label:"今天", date:"11月6日", wd:"周五", day:6, items:[
+    {t:"08:12", n:"早餐 · 豆浆油条", c:"food", a:-8.5},
+    {t:"12:30", n:"午饭 · 麻辣烫", c:"food", a:-32},
+    {t:"15:04", n:"瑞幸咖啡", c:"coffee", a:-19.9},
+    {t:"18:20", n:"地铁 4 号线", c:"transit", a:-4},
+    {t:"19:40", n:"盒马鲜生", c:"shop", a:-86.6},
+    {t:"21:10", n:"电影 · 好东西", c:"fun", a:-78}
+  ]},
+  { label:"昨天", date:"11月5日", wd:"周四", day:5, items:[
+    {t:"07:50", n:"早餐 · 包子豆浆", c:"food", a:-6},
+    {t:"09:00", n:"工资到账", c:"income", a:8000},
+    {t:"12:10", n:"公司午饭", c:"food", a:-26},
+    {t:"19:30", n:"打车回家", c:"transit", a:-34},
+    {t:"20:00", n:"健身房月卡", c:"sub", a:-199},
+    {t:"21:15", n:"超市采购", c:"shop", a:-64.3}
+  ]},
+  { label:"前天", date:"11月4日", wd:"周三", day:4, items:[
+    {t:"08:30", n:"Manner 咖啡", c:"coffee", a:-19.9},
+    {t:"12:20", n:"午饭 · 沙县", c:"food", a:-28},
+    {t:"14:00", n:"淘宝 · 键盘垫", c:"shop", a:-49},
+    {t:"18:00", n:"地铁 2 号线", c:"transit", a:-4},
+    {t:"22:00", n:"外卖夜宵", c:"food", a:-36}
+  ]},
+  { label:"周二", date:"11月3日", wd:"周二", day:3, items:[
+    {t:"08:15", n:"早餐 · 煎饼", c:"food", a:-9},
+    {t:"12:00", n:"午饭 · 食堂", c:"food", a:-25},
+    {t:"13:20", n:"退款 · 退货", c:"income", a:29},
+    {t:"18:30", n:"地铁往返", c:"transit", a:-8},
+    {t:"20:00", n:"电费", c:"sub", a:-120}
+  ]},
+  { label:"周一", date:"11月2日", wd:"周一", day:2, items:[
+    {t:"11:00", n:"早午餐", c:"food", a:-68},
+    {t:"15:00", n:"展览门票", c:"fun", a:-80},
+    {t:"19:00", n:"晚饭 · 小馆", c:"food", a:-96},
+    {t:"21:00", n:"奶茶", c:"coffee", a:-16}
+  ]},
+  { label:"周日", date:"11月1日", wd:"周日", day:1, items:[
+    {t:"10:00", n:"咖啡", c:"coffee", a:-22},
+    {t:"13:00", n:"午饭 · 面馆", c:"food", a:-45},
+    {t:"16:00", n:"优衣库", c:"shop", a:-239},
+    {t:"20:00", n:"电影", c:"fun", a:-78}
+  ]}
+];
+
+const fmt = (n) => { const s = Math.abs(n).toFixed(2); const [i, d] = s.split("."); return { i, d }; };
+const group3 = (s) => s.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+const money = (n) => (n < 0 ? "-" : "+") + group3(fmt(n).i) + "." + fmt(n).d;
+const num = (n) => group3(fmt(n).i) + "." + fmt(n).d;
+const spend = (d) => d.items.filter(x => x.a < 0).reduce((s, x) => s + x.a, 0);
+const earn  = (d) => d.items.filter(x => x.a > 0).reduce((s, x) => s + x.a, 0);
+const net   = (d) => spend(d) + earn(d);
+
+const pager = document.getElementById("pager");
+
+/* ============ 渲染 ============ */
+const rowHTML = (it, k) => `
+  <div class="row" style="--k:${k}">
+    <div class="ic c-${it.c}">${ICON[it.c]}</div>
+    <div class="mid"><div class="nm">${it.n}</div><div class="tm">${it.t}</div></div>
+    <div class="amt ${it.a > 0 ? "plus" : ""}">${money(it.a)}</div>
+  </div>`;
+
+const dayHTML = (d, i) => {
+  const sp = spend(d), ea = earn(d), nt = net(d), f = fmt(sp);
+  const count = d.items.filter(x => x.a < 0).length;
+  return `
+  <div class="page">
+    <div class="card">
+      <div class="head">
+        <div class="dayline">
+          <div class="dlabel">${d.label}<small>${d.wd}</small></div>
+          <div class="ddate">${d.date}</div>
+        </div>
+        <div class="amount">
+          <span class="cur">¥</span><span class="num">${group3(f.i)}</span><span class="dec">.${f.d}</span>
+        </div>
+        <div class="caption">支出 · <b>${count}</b> 笔${ea > 0 ? `　收入 <b>¥${num(ea)}</b>` : ""}</div>
+      </div>
+      <div class="list">${d.items.map(rowHTML).join("")}</div>
+      <div class="foot">
+        <span>当日结余</span>
+        <span class="inc ${nt < 0 ? "neg" : ""}">${(nt >= 0 ? "+" : "-") + "¥" + num(nt)}</span>
+      </div>
+    </div>
+  </div>`;
+};
+
+const totalSpend = DAYS.reduce((s, d) => s + spend(d), 0);
+const totalEarn  = DAYS.reduce((s, d) => s + earn(d), 0);
+
+const allHTML = `
+  <div class="page">
+    <div class="all">
+      <div class="all-head">
+        <h3>全部流水</h3>
+        <p>11 月 · 支出 ¥${num(totalSpend)}　收入 ¥${num(totalEarn)}</p>
+      </div>
+      <div class="all-scroll" id="allScroll">
+        <div class="all-inner" id="allInner">
+          ${DAYS.map(d => `
+            <div class="grp">
+              <div class="grp-h"><b>${d.date} ${d.wd}</b><span>-${num(Math.abs(spend(d)))}</span></div>
+              ${d.items.map(rowHTML).join("")}
+            </div>`).join("")}
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+pager.innerHTML = DAYS.map(dayHTML).join("") + allHTML;
+
+/* ============ 底部指示 ============ */
+const TOTAL_PAGES = DAYS.length + 1;
+const dotsEl = document.getElementById("dots");
+dotsEl.innerHTML = Array.from({ length: TOTAL_PAGES }, (_, i) =>
+  `<i class="dot ${i === TOTAL_PAGES - 1 ? "wide" : ""}"></i>`).join("");
+const dots = [...dotsEl.children];
+
+/* ============ 日历 ============ */
+const byDay = {};
+DAYS.forEach(d => { byDay[d.day] = d; });
+
+const calDays = [];
+{
+  const startIdx = (new Date(2026, 10, 1).getDay() + 6) % 7; // 周一为第 0 列
+  for (let i = 0; i < startIdx; i++) calDays.push(null);
+  for (let d = 1; d <= 30; d++) calDays.push(d);
+}
+document.getElementById("calgrid").innerHTML = calDays.map((d) => {
+  if (d === null) return `<div class="cell"></div>`;
+  const rec = byDay[d];
+  const a = rec ? Math.abs(spend(rec)) : null;
+  const cls = ["cell"];
+  if (rec) cls.push("has");
+  if (d === 6) cls.push("today");
+  if (d > 6) cls.push("mute");
+  return `<div class="${cls.join(" ")}" data-off="${6 - d}">
+    <div class="d">${d}</div>
+    ${a !== null ? `<div class="v">${a >= 1000 ? (a / 1000).toFixed(1) + "k" : Math.round(a)}</div>` : ""}
+  </div>`;
+}).join("");
+
+document.getElementById("calsum").innerHTML =
+  `本月支出 <b>¥${num(totalSpend)}</b> · 共 ${DAYS.reduce((s, d) => s + d.items.length, 0)} 笔`;
+
+/* ============ 交互状态 ============ */
+let idx = 0;
+const W = () => pager.clientWidth;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+const goTo = (i, smooth = true) => {
+  idx = clamp(i, 0, TOTAL_PAGES - 1);
+  pager.scrollTo({ left: idx * W(), behavior: smooth ? "smooth" : "auto" });
+  dots.forEach((d, k) => d.classList.toggle("on", k === idx));
+};
+dots[0].classList.add("on");
+
+pager.addEventListener("scroll", () => {
+  const i = clamp(Math.round(pager.scrollLeft / W()), 0, TOTAL_PAGES - 1);
+  idx = i;
+  dots.forEach((d, k) => d.classList.toggle("on", k === i));
+}, { passive: true });
+
+/* 触屏原生滑动结束后吸附到最近一页 */
+pager.addEventListener("scrollend", () => {
+  if (drag) return;
+  const target = clamp(Math.round(pager.scrollLeft / W()), 0, TOTAL_PAGES - 1);
+  if (Math.abs(pager.scrollLeft - target * W()) > 2) goTo(target);
+});
+
+const sheet = document.getElementById("sheet");
+const scrim = document.getElementById("scrim");
+const hint  = document.getElementById("hint");
+const allInner = document.getElementById("allInner");
+const allScroll = document.getElementById("allScroll");
+
+let sheetOpen = false, sheetH = 0, scrollY = 0, maxScroll = 0;
+const refresh = () => {
+  sheetH = sheet.offsetHeight;
+  maxScroll = Math.max(0, allInner.offsetHeight - allScroll.clientHeight);
+  scrollY = clamp(scrollY, 0, maxScroll);
+  allInner.style.transform = `translateY(${-scrollY}px)`;
+};
+
+const hideHint = () => hint.classList.add("out");
+
+/* ---------- 横向翻页 / 上滑开日历 / 全部流水内滚动 ---------- */
+let drag = null;
+
+pager.addEventListener("pointerdown", (e) => {
+  if (sheetOpen || drag) return;
+  refresh();
+  const mouse = e.pointerType === "mouse";
+  // 抓住正在进行中的滚动动画：直接落到最近一页，避免拖拽基准漂移
+  const base = Math.round(pager.scrollLeft / W()) * W();
+  if (mouse) pager.scrollLeft = base;
+  drag = {
+    id: e.pointerId, mouse,
+    sx: e.clientX, sy: e.clientY, ly: e.clientY,
+    sl: base, axis: null, p: 0,
+    inScroll: !!e.target.closest("#allScroll")
+  };
+  try { pager.setPointerCapture(e.pointerId); } catch (_) {}
+  (window.__tr = window.__tr || []).push(["down", Math.round(base), e.pointerType]);
+});
+function onMove(e) {
+  if (!drag || e.pointerId !== drag.id) return;
+  const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+
+  if (!drag.axis) {
+    if (Math.abs(dx) < 7 && Math.abs(dy) < 7) return;
+    drag.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+    hideHint();
+  }
+
+  if (drag.axis === "x") {
+    if (drag.mouse) {          // 触屏交给原生滚动，鼠标自己拖
+      e.preventDefault();
+      pager.scrollLeft = drag.sl - dx;
+    }
+    return;
+  }
+
+  /* 纵向 */
+  if (drag.inScroll) {
+    e.preventDefault();
+    drag.scrollDrag = true;
+    const d = drag.ly - e.clientY;
+    drag.ly = e.clientY;
+    let ny = scrollY + d;
+    if (ny < 0) ny *= 0.32;
+    if (ny > maxScroll) ny = maxScroll + (ny - maxScroll) * 0.32;
+    scrollY = ny;
+    allInner.style.transition = "none";
+    allInner.style.transform = `translateY(${-ny}px)`;
+    return;
+  }
+
+  if (idx === TOTAL_PAGES - 1) return;   // 全部流水页不开日历
+  if (dy >= 0) return;
+
+  e.preventDefault();
+  const p = clamp(-dy / (sheetH * 0.6), 0, 1.05);
+  drag.p = p;
+  drag.sheetDrag = true;
+  sheet.style.transition = "none";
+  sheet.style.transform = `translateY(${sheetH * (1 - p)}px)`;
+  scrim.style.transition = "none";
+  scrim.style.opacity = String(Math.min(1, p * 1.1));
+  scrim.classList.toggle("on", p > 0.02);
+}
+
+function onUp(e) {
+  if (!drag || e.pointerId !== drag.id) return;
+  const d = drag;
+  drag = null;
+  (window.__tr = window.__tr || []).push(["up", d.axis, Math.round(pager.scrollLeft), Math.round(d.sl)]);
+
+  if (d.axis === "x") {
+    if (d.mouse) {
+      const target = clamp(Math.round(pager.scrollLeft / W()), 0, TOTAL_PAGES - 1);
+      goTo(target);
+    }
+  } else if (d.axis === "y") {
+    if (d.scrollDrag) {
+      const target = clamp(scrollY, 0, maxScroll);
+      scrollY = target;
+      allInner.style.transition = "transform .4s var(--spring)";
+      allInner.style.transform = `translateY(${-target}px)`;
+    } else if (d.sheetDrag) {
+      if (d.p > 0.3) openSheet(); else closeSheet();
+    }
+  }
+}
+
+window.addEventListener("pointermove", onMove, { passive: false });
+window.addEventListener("pointerup", onUp);
+window.addEventListener("pointercancel", onUp);
+
+/* ---------- 日历开合 ---------- */
+function openSheet() {
+  refresh();
+  sheetOpen = true;
+  sheet.style.transition = "transform .48s var(--spring)";
+  sheet.style.transform = "translateY(0px)";
+  scrim.classList.add("on");
+  scrim.style.transition = "opacity .4s ease";
+  scrim.style.opacity = "1";
+  hideHint();
+}
+function closeSheet() {
+  sheetOpen = false;
+  refresh();
+  sheet.style.transition = "transform .42s var(--spring)";
+  sheet.style.transform = `translateY(${sheetH}px)`;
+  scrim.style.transition = "opacity .35s ease";
+  scrim.style.opacity = "0";
+  scrim.classList.remove("on");
+}
+
+/* ---------- 日历下滑关闭 ---------- */
+let sdrag = null;
+sheet.addEventListener("pointerdown", (e) => {
+  if (!sheetOpen) return;
+  sdrag = { sy: e.clientY, dy: 0 };
+  try { sheet.setPointerCapture(e.pointerId); } catch (_) {}
+});
+sheet.addEventListener("pointermove", (e) => {
+  if (!sdrag) return;
+  const dy = Math.max(0, e.clientY - sdrag.sy);
+  sdrag.dy = dy;
+  if (dy > 4) e.preventDefault();
+  sheet.style.transition = "none";
+  sheet.style.transform = `translateY(${dy}px)`;
+  scrim.style.transition = "none";
+  scrim.style.opacity = String(Math.max(0, 1 - dy / (sheetH * 0.8)));
+}, { passive: false });
+const ssettle = () => {
+  if (!sdrag) return;
+  const dy = sdrag.dy;
+  sdrag = null;
+  if (dy > sheetH * 0.16) closeSheet(); else openSheet();
+};
+sheet.addEventListener("pointerup", ssettle);
+sheet.addEventListener("pointercancel", ssettle);
+
+/* ---------- 点日期 ---------- */
+document.getElementById("calgrid").addEventListener("click", (e) => {
+  const cell = e.target.closest(".cell.has");
+  if (!cell) return;
+  const off = parseInt(cell.dataset.off, 10);
+  closeSheet();
+  setTimeout(() => goTo(clamp(off, 0, DAYS.length - 1)), 200);
+});
+scrim.addEventListener("click", closeSheet);
+
+/* ---------- 滚轮支持（桌面） ---------- */
+allScroll.addEventListener("wheel", (e) => {
+  if (idx !== TOTAL_PAGES - 1) return;
+  e.preventDefault();
+  scrollY = clamp(scrollY + e.deltaY, 0, maxScroll);
+  allInner.style.transition = "none";
+  allInner.style.transform = `translateY(${-scrollY}px)`;
+}, { passive: false });
+
+/* ---------- 初始化 ---------- */
+window.addEventListener("resize", () => { refresh(); goTo(idx, false); });
+refresh();
+setTimeout(hideHint, 5600);
+</script>
+</body>
+</html>

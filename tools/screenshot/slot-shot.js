@@ -1,0 +1,10 @@
+const fs = require('fs');
+await page.setViewportSize({ width: 880, height: 1020 });
+await page.goto('file:///D:/Work/WorkBuddy_File/account/design/current/slot-and-stack.html', { waitUntil: 'domcontentloaded', timeout: 20000 });
+await page.waitForTimeout(700);
+const cdp = await context.newCDPSession(page);
+const shot = await cdp.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+const buf = Buffer.from(shot.data, 'base64');
+fs.writeFileSync('D:/Work/WorkBuddy_File/account/design/current/_slots.png', buf);
+await cdp.detach();
+return { bytes: buf.length };

@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DooDoo · 记一笔 · 先选卡 + 二级分类</title>
+<style>
+  :root{
+    --panel:#F6F4EF; --card:#FFFFFF; --ink:#1D1C1A; --ink2:#5F5B55;
+    --sub:#8E8A83; --faint:#B6B2AA; --line:#EDE9E1; --bed:#FFFFFF;
+    --red:#C0392B; --green:#2E7D4F;
+    --accent:#1D1C1A; --accent-soft:rgba(29,28,26,.08);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden}
+  body{background:#E4E1DA;color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;display:flex;align-items:center;justify-content:center;flex-direction:column}
+
+  .bar{position:fixed;left:0;right:0;top:0;height:52px;display:flex;align-items:center;gap:14px;padding:0 20px;
+    background:#EFEDE8;border-bottom:1px solid #DEDBD4;z-index:60}
+  .bar .t{font-size:13px;font-weight:600}
+  .bar .t small{font-weight:400;color:#8A867D;font-size:11px;margin-left:8px}
+  .accs{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .accs .lbl{font-size:11px;color:#8A867D}
+  .dot{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:.15s}
+  .dot.on{border-color:#1D1C1A;transform:scale(1.06)}
+
+  .stage{margin-top:52px;flex:1;display:flex;align-items:center;justify-content:center;gap:26px;min-height:0}
+  .devwrap{position:relative;flex:0 0 auto}
+  .device{width:390px;height:844px;border-radius:44px;position:relative;overflow:hidden;background:var(--panel);
+    box-shadow:0 0 0 1px #D3D0C9,0 30px 70px rgba(0,0,0,.20);transform-origin:top left}
+
+  .sb{height:52px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 8px;
+    font-size:13px;font-weight:600;position:relative;z-index:20}
+  .sb .batt{width:22px;height:11px;border:1px solid rgba(29,28,26,.35);border-radius:3px;position:relative}
+  .sb .batt::after{content:"";position:absolute;left:1.5px;top:1.5px;bottom:1.5px;width:70%;background:var(--ink);border-radius:1.5px}
+
+  /* 面板 */
+  .panel{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;flex-direction:column;
+    padding:52px 14px 26px;overflow:hidden}
+
+  .headrow{display:flex;align-items:center;padding:4px 2px 12px;flex:0 0 auto}
+  .headrow .h{font-size:20px;font-weight:650;letter-spacing:-.02em}
+  .headrow .x{margin-left:auto;width:30px;height:30px;border:0;border-radius:50%;background:rgba(29,28,26,.06);
+    color:var(--ink2);font:inherit;font-size:15px;display:grid;place-items:center;cursor:pointer}
+
+  /* 类型分段 */
+  .seg{display:flex;background:#EBE7DF;border-radius:14px;padding:3px;flex:0 0 auto;margin-bottom:14px}
+  .seg button{flex:1;border:0;background:transparent;font:inherit;font-size:13.5px;color:var(--sub);
+    padding:9px 4px;border-radius:11px;cursor:pointer;transition:.15s}
+  .seg button.on{background:#fff;color:var(--ink);font-weight:650;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+
+  /* 彩卡横滑 */
+  .deckrow{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 14px;flex:0 0 auto;scrollbar-width:none}
+  .deckrow::-webkit-scrollbar{display:none}
+  .cc{flex:0 0 158px;height:100px;border-radius:16px;position:relative;overflow:hidden;cursor:pointer;
+    padding:11px 12px;display:flex;flex-direction:column;justify-content:space-between;
+    transition:transform .18s,box-shadow .18s;color:#fff}
+  .cc .bg{position:absolute;inset:0;border-radius:16px}
+  .cc .hi{position:absolute;inset:0;border-radius:16px;pointer-events:none;
+    background:radial-gradient(120% 90% at 8% -10%,rgba(255,255,255,.30),rgba(255,255,255,0) 55%),
+               linear-gradient(112deg,rgba(255,255,255,.12) 0 14%,rgba(255,255,255,0) 34% 62%,rgba(255,255,255,.09) 84%,rgba(255,255,255,0))}
+  .cc .n{position:relative;font-size:12.5px;font-weight:650;letter-spacing:-.01em}
+  .cc .m{position:relative;font-size:9px;opacity:.78;margin-top:3px}
+  .cc .b{position:relative;display:flex;align-items:center;gap:6px}
+  .cc .num{font-size:9.5px;letter-spacing:.08em;opacity:.92;font-variant-numeric:tabular-nums}
+  .cc .chipic{width:19px;height:14px;border-radius:3.5px;flex:0 0 19px;margin-left:auto;
+    background:linear-gradient(135deg,#F0E3B4,#C9A94E 46%,#EFE2B2);box-shadow:inset 0 0 0 .5px rgba(0,0,0,.22);position:relative}
+  .cc .chipic::before{content:"";position:absolute;left:0;right:0;top:50%;height:.5px;background:rgba(0,0,0,.15)}
+  .cc .net{font-size:7px;font-weight:700;letter-spacing:.08em;opacity:.72}
+  .cc.on{box-shadow:0 10px 22px -10px rgba(29,28,26,.55),0 0 0 2px var(--ink)}
+  .cc:not(.on){opacity:.66;transform:scale(.95)}
+
+  /* 归属行 */
+  .from{display:flex;align-items:center;gap:8px;padding:0 2px 10px;flex:0 0 auto;flex-wrap:wrap}
+  .from .k{font-size:12px;color:var(--sub)}
+  .from b{font-size:13px;font-weight:650}
+  .from .pill{font-size:10px;font-weight:650;color:#3A6EA5;background:#EAF2FF;border-radius:6px;padding:4px 8px}
+
+  /* 金额 */
+  .amtrow{display:flex;align-items:baseline;justify-content:flex-end;gap:5px;padding:2px 4px 12px;flex:0 0 auto;cursor:text}
+  .amtrow .cur{font-size:20px;color:var(--faint);font-weight:500}
+  .amtrow .num{font-size:46px;font-weight:700;letter-spacing:-.03em;line-height:1;
+    font-variant-numeric:tabular-nums;color:var(--ink)}
+  .amtrow .caret{width:2px;height:.8em;background:var(--ink);display:inline-block;align-self:center;
+    animation:blink 1.1s step-end infinite;margin-left:1px}
+  @keyframes blink{50%{opacity:0}}
+
+  /* 分类：一级横滑 */
+  .catzone{position:relative;flex:0 0 auto}
+  .cats{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:none}
+  .cats::-webkit-scrollbar{display:none}
+  .cat{flex:0 0 auto;width:56px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer}
+  .cat .tile{width:52px;height:52px;border-radius:16px;background:#fff;display:grid;place-items:center;font-size:24px;
+    box-shadow:0 1px 2px rgba(29,28,26,.05);transition:.15s}
+  .cat.on .tile{background:var(--accent);box-shadow:0 6px 14px -7px var(--accent)}
+  .cat span{font-size:10.5px;color:var(--sub);white-space:nowrap}
+  .cat.on span{color:var(--ink);font-weight:650}
+
+  /* 二级浮层 */
+  .subpop{position:absolute;left:0;right:0;top:100%;margin-top:6px;background:#fff;border-radius:20px;
+    padding:14px 10px 12px;box-shadow:0 16px 40px rgba(29,28,26,.16),0 0 0 1px rgba(29,28,26,.04);
+    z-index:30;display:none;animation:pop .18s cubic-bezier(.32,.72,0,1) both}
+  .subpop.on{display:block}
+  @keyframes pop{from{opacity:0;transform:translateY(-6px) scale(.98)}}
+  .subpop .sh{display:flex;align-items:center;justify-content:space-between;padding:0 6px 10px}
+  .subpop .sh b{font-size:11px;color:var(--ink2);font-weight:650}
+  .subpop .sh button{border:0;background:transparent;font:inherit;font-size:11px;color:var(--faint);cursor:pointer}
+  .subgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px 0}
+  .sub{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;padding:2px 0}
+  .sub i{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:21px;
+    background:#F6F4EF;font-style:normal;transition:.15s}
+  .sub span{font-size:10px;color:var(--ink2);white-space:nowrap}
+  .sub.on i{background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent)}
+  .sub.on span{color:var(--ink);font-weight:650}
+
+  /* 评分 */
+  .grades{display:flex;align-items:center;gap:7px;padding:12px 2px 10px;flex:0 0 auto}
+  .grades .gl{font-size:10.5px;color:var(--faint);margin-right:1px}
+  .g{border:0;background:#fff;color:var(--sub);font:inherit;font-size:11.5px;
+    padding:7px 11px;border-radius:999px;cursor:pointer;box-shadow:0 1px 2px rgba(29,28,26,.04)}
+  .g.on{background:var(--accent);color:#fff;font-weight:650;box-shadow:none}
+  .g.skip{margin-left:auto;background:transparent;box-shadow:none;color:var(--faint);padding-right:4px}
+
+  /* 备注 */
+  .note{display:flex;align-items:center;padding:12px 14px;background:#fff;border-radius:14px;
+    box-shadow:0 1px 2px rgba(29,28,26,.04);flex:0 0 auto;font-size:12.5px;color:var(--faint);cursor:pointer}
+  .note b{margin-left:auto;font-size:12px;color:var(--ink2);font-weight:600}
+
+  /* 余额预览 */
+  .after{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;margin-top:10px;
+    background:rgba(29,28,26,.045);border-radius:14px;flex:0 0 auto;font-size:11.5px;color:var(--sub)}
+  .after b{font-size:13.5px;font-weight:650;color:var(--ink);font-variant-numeric:tabular-nums}
+
+  /* 主按钮 */
+  .primary{margin-top:auto;border:0;height:54px;border-radius:18px;background:var(--accent);color:#fff;
+    font:inherit;font-size:15.5px;font-weight:650;cursor:pointer;flex:0 0 auto;
+    box-shadow:0 10px 22px -10px var(--accent)}
+  .primary:active{opacity:.86}
+
+  .toast{position:absolute;left:50%;bottom:120px;transform:translate(-50%,10px);z-index:40;
+    background:rgba(29,28,26,.92);color:#fff;font-size:12px;padding:9px 16px;border-radius:999px;
+    opacity:0;transition:.22s;pointer-events:none;white-space:nowrap}
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+
+  /* 说明 */
+  .notes{width:300px;flex:0 0 300px;max-height:calc(100% - 36px);overflow-y:auto;background:#fff;
+    border-radius:18px;padding:20px;box-shadow:0 8px 24px rgba(0,0,0,.06)}
+  .notes::-webkit-scrollbar{width:0}
+  .notes h2{margin:0 0 10px;font-size:16px;font-weight:650}
+  .notes p{margin:0 0 12px;font-size:12px;line-height:1.8;color:#4A4741}
+  .notes p b{color:#1D1C1A;font-weight:650}
+  .notes h4{margin:15px 0 6px;font-size:10px;letter-spacing:.12em;color:#9A968D;font-weight:700}
+  .notes ul{margin:0;padding-left:15px;font-size:11.5px;line-height:1.85;color:#4A4741}
+  .notes ul li{margin-bottom:2px}
+  .notes .box{font-size:11px;line-height:1.75;color:#6B6862;background:#FAF8F4;border-radius:12px;padding:10px 12px;margin-top:10px}
+  .notes .box b{color:#1D1C1A}
+  .notes .cost{background:#FAF2EF;color:#8A4A3A;border:1px solid #F3DED7}
+  .notes .cost b{color:#A3422F}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="t">DooDoo <small>记一笔 · 先选卡 + 二级分类</small></div>
+  <div class="accs">
+    <span class="lbl">主色</span>
+    <span class="dot on" data-acc="ink" style="background:#1D1C1A"></span>
+    <span class="dot" data-acc="green" style="background:#2FB344"></span>
+    <span class="dot" data-acc="blue" style="background:#4A6CF7"></span>
+    <span class="dot" data-acc="orange" style="background:#E09B2D"></span>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="devwrap" id="devwrap"><div class="device" id="dev"></div></div>
+  <div class="notes">
+    <h2>先选卡 + 二级分类</h2>
+    <p>C 版的骨架（先确认这笔从哪张卡出），换成你给的参考图那套视觉：大圆角色块、彩色卡面、主色强调。</p>
+
+    <h4>这版改了什么</h4>
+    <ul>
+      <li>卡面加<b>高光 / 光带 / 金属芯片</b>，用代码画，不贴位图</li>
+      <li>分类改<b>两级</b>：一级横滑 8 类，点开二级浮层（5 列 2 行）</li>
+      <li>金额右对齐 46pt，选中分类填主色</li>
+      <li>保留「记下后余额预览」——账务透明，比任何装饰都有用</li>
+    </ul>
+
+    <h4>卡面为什么不用位图</h4>
+    <p>17 个账户 × 每个品牌一张图 = 换色、换主题、加账户全要返工。<b>渐变 + 高光 + 芯片用代码画</b>，品牌只存 2 个色值，加账户零成本。</p>
+
+    <div class="box cost"><b>真代价</b>：卡面要从「纯渐变」升级成「渐变 + 径向高光 + 斜向光带 + 芯片 + 0.5pt 内描边」，这是 <code>CardFace.swift</code> 的重写，不是加一张图。</div>
+
+    <div class="box"><b>二级分类的代价</b>：PRD 的「8 类定死」作废，`Category` 要加 <code>parent</code>，统计口径不变（仍按一级汇总）。这属于结构性变更，PRD 要升 v2.3。</div>
+  </div>
+</div>
+
+<script>
+var CATS = [
+  {k:'吃', e:'🥐', subs:[['早餐','🥐'],['午餐','🍱'],['晚餐','🍜'],['夜宵','🍢'],['咖啡','☕️'],['饮料','🧋'],['零食','🍪'],['买菜','🥬']]},
+  {k:'穿', e:'👕', subs:[['上衣','👕'],['裤子','👖'],['鞋','👟'],['配饰','💍'],['理发','💇']]},
+  {k:'住', e:'🏠', subs:[['房租','🛏'],['水电','💡'],['物业','🏢'],['家居','🪑'],['维修','🔧']]},
+  {k:'行', e:'🚇', subs:[['地铁','🚇'],['公交','🚌'],['打车','🚕'],['加油','⛽️'],['停车','🅿️']]},
+  {k:'乐', e:'🎮', subs:[['电影','🎬'],['游戏','🎮'],['聚会','🍻'],['旅行','✈️'],['订阅','📺']]},
+  {k:'医', e:'💊', subs:[['药品','💊'],['门诊','🏥'],['体检','🩺'],['牙科','🦷']]},
+  {k:'情', e:'🐱', subs:[['礼物','🎁'],['宠物','🐱'],['红包','🧧'],['人情','🤝']]},
+  {k:'其他', e:'✨', subs:[['手续费','🏦'],['杂项','📦'],['罚款','🚨']]}
+];
+var CARDS = [
+  {n:'花呗', m:'信用 · 还款日 25', num:'•••• 0312', c1:'#4C8DF6', c2:'#1D4ED8', net:'UNIONPAY'},
+  {n:'建行 5044', m:'储蓄', num:'•••• 5044', c1:'#0E5FA8', c2:'#123B2F', net:'UNIONPAY'},
+  {n:'京东白条', m:'信用 · 还款日 8', num:'•••• 8891', c1:'#E0483C', c2:'#8E1B1B', net:''},
+  {n:'余额宝', m:'储蓄', num:'•••• 2076', c1:'#F2A93B', c2:'#DD6B22', net:''}
+];
+var GRADES = ['夯','飘','拉','NPC'];
+var S = {type:'expense', ci:0, cat:'吃', sub:'早餐', grade:'夯', amount:'32.00', open:null, toast:false};
+
+function catOf(k){ for(var i=0;i<CATS.length;i++){ if(CATS[i].k===k) return CATS[i]; } return CATS[0]; }
+function cardOf(){ return CARDS[S.ci]; }
+function amtText(){ return S.amount === '' ? '0' : S.amount; }
+
+function segHTML(){
+  var list = [['expense','支出'],['income','收入'],['repay','还款'],['transfer','转账']];
+  return '<div class="seg">' + list.map(function(t){
+    return '<button data-act="type" data-val="' + t[0] + '" class="' + (S.type === t[0] ? 'on' : '') + '">' + t[1] + '</button>';
+  }).join('') + '</div>';
+}
+function deckHTML(){
+  return '<div class="deckrow">' + CARDS.map(function(c, i){
+    return '<div class="cc ' + (i === S.ci ? 'on' : '') + '" data-act="card" data-val="' + i + '">'
+      + '<span class="bg" style="background:linear-gradient(142deg,' + c.c1 + ',' + c.c2 + ')"></span>'
+      + '<span class="hi"></span>'
+      + '<div><div class="n">' + c.n + '</div><div class="m">' + c.m + '</div></div>'
+      + '<div class="b"><span class="num">' + c.num + '</span>'
+        + (c.net ? '<span class="chipic"></span><span class="net">' + c.net + '</span>' : '')
+      + '</div></div>';
+  }).join('') + '</div>';
+}
+function fromHTML(){
+  var c = cardOf();
+  var pill = c.m.indexOf('信用') >= 0
+    ? '<span class="pill">账单期 11/15–12/14 · 计入 12 月</span>'
+    : '<span class="pill">储蓄账户 · 立即扣款</span>';
+  return '<div class="from"><span class="k">从</span><b>' + c.n + '</b>' + pill + '</div>';
+}
+function catsHTML(){
+  var c = catOf(S.cat);
+  return '<div class="catzone">'
+    + '<div class="cats">' + CATS.map(function(x){
+        return '<div class="cat ' + (S.cat === x.k ? 'on' : '') + '" data-act="cat" data-val="' + x.k + '">'
+          + '<span class="tile">' + x.e + '</span><span>' + x.k + '</span></div>';
+      }).join('') + '</div>'
+    + '<div class="subpop ' + (S.open ? 'on' : '') + '">'
+      + '<div class="sh"><b>' + c.k + ' · 具体是哪一笔</b><button data-act="closeSub">收起</button></div>'
+      + '<div class="subgrid">' + c.subs.map(function(s){
+          return '<div class="sub ' + (S.sub === s[0] ? 'on' : '') + '" data-act="sub" data-val="' + s[0] + '">'
+            + '<i>' + s[1] + '</i><span>' + s[0] + '</span></div>';
+        }).join('') + '</div>'
+    + '</div>'
+  + '</div>';
+}
+function gradesHTML(){
+  return '<div class="grades"><span class="gl">这笔</span>' + GRADES.map(function(g){
+    return '<button class="g ' + (S.grade === g ? 'on' : '') + '" data-act="grade" data-val="' + g + '">' + g + '</button>';
+  }).join('') + '<button class="g skip" data-act="grade" data-val="">跳过</button></div>';
+}
+function bodyHTML(){
+  return '<div class="sb"><span>9:41</span><span class="batt"></span></div>'
+    + '<div class="panel">'
+      + '<div class="headrow"><span class="h">记一笔</span><button class="x" data-act="close">×</button></div>'
+      + segHTML()
+      + deckHTML()
+      + fromHTML()
+      + '<div class="amtrow" data-act="kb"><span class="cur">¥</span><span class="num">' + amtText() + '</span><i class="caret"></i></div>'
+      + catsHTML()
+      + gradesHTML()
+      + '<div class="note" data-act="note"><span>备注</span><b>加一句 ›</b></div>'
+      + '<div class="after"><span>记下后 · ' + cardOf().n + ' 欠款</span><b>¥3,217.42</b></div>'
+      + '<button class="primary" data-act="save">记下这笔</button>'
+    + '</div>'
+    + '<div class="toast' + (S.toast ? ' on' : '') + '" id="toast">已记下 · ' + S.cat + ' · ¥' + amtText() + '</div>';
+}
+
+var dev = document.getElementById('dev');
+function render(){ dev.innerHTML = bodyHTML(); fit(); }
+function fit(){
+  var s = Math.min((window.innerHeight - 52 - 24) / 844, (window.innerWidth - 340) / 390, 1);
+  s = Math.max(s, 0.55);
+  var w = document.getElementById('devwrap');
+  w.style.width = (390 * s) + 'px';
+  w.style.height = (844 * s) + 'px';
+  dev.style.transform = 'scale(' + s + ')';
+}
+window.addEventListener('resize', fit);
+
+function save(){
+  S.toast = true; render();
+  setTimeout(function(){
+    S.toast = false;
+    var t = document.getElementById('toast');
+    if(t) t.classList.remove('on');
+  }, 1500);
+}
+function key(k){
+  var a = S.amount;
+  if(k === 'del'){ S.amount = a.slice(0, -1); render(); return; }
+  if(k === '.'){ if(a.indexOf('.') < 0) S.amount = (a || '0') + '.'; render(); return; }
+  var parts = a.split('.');
+  if(parts[1] && parts[1].length >= 2) return;
+  S.amount = (a === '' || a === '0') ? k : a + k;
+  render();
+}
+
+document.addEventListener('click', function(e){
+  var el = e.target.closest('[data-act]');
+  if(!el) return;
+  var act = el.dataset.act, val = el.dataset.val;
+
+  if(act === 'type'){ S.type = val; render(); return; }
+  if(act === 'card'){ S.ci = +val; S.open = null; render(); return; }
+  if(act === 'cat'){
+    if(S.cat === val){ S.open = S.open ? null : val; }
+    else { S.cat = val; S.open = val; S.sub = ''; }
+    render(); return;
+  }
+  if(act === 'sub'){ S.sub = val; S.open = null; render(); return; }
+  if(act === 'closeSub'){ S.open = null; render(); return; }
+  if(act === 'grade'){ S.grade = val; render(); return; }
+  if(act === 'save'){ save(); return; }
+  if(act === 'close'){ S.open = null; render(); return; }
+  if(act === 'note'){ return; }
+  return;
+});
+
+document.querySelectorAll('.dot').forEach(function(d){
+  d.addEventListener('click', function(){
+    var key2 = d.dataset.acc;
+    var map = {
+      ink:    ['#1D1C1A', 'rgba(29,28,26,.08)'],
+      green:  ['#2FB344', 'rgba(47,179,68,.12)'],
+      blue:   ['#4A6CF7', 'rgba(74,108,247,.12)'],
+      orange: ['#E09B2D', 'rgba(224,155,45,.12)']
+    };
+    dev.style.setProperty('--accent', map[key2][0]);
+    dev.style.setProperty('--accent-soft', map[key2][1]);
+    document.querySelectorAll('.dot').forEach(function(x){ x.classList.toggle('on', x === d); });
+  });
+});
+
+render();
+</script>
+</body>
+</html>

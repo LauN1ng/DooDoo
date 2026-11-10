@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>doodoo · 按 PRD 画的原型</title>
+<style>
+:root{
+  --bg:#F7F6F3; --card:#FFFFFF; --ink:#141414;
+  --ink2:#6E6A63; --ink3:#A8A399; --line:#EDEAE4;
+  --green:#2E7D4F; --blue:#3A6EA5; --red:#D93025; --gray:#8C887F;
+}
+*{box-sizing:border-box;-webkit-font-smoothing:antialiased;}
+body{
+  margin:0;padding:34px 24px 56px;background:#E9E6E0;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue","PingFang SC","Microsoft YaHei UI",sans-serif;
+  color:var(--ink);
+}
+header{max-width:1330px;margin:0 auto 26px;}
+header h1{margin:0 0 8px;font-size:19px;font-weight:600;letter-spacing:-.4px;}
+header p{margin:0;font-size:13px;line-height:1.7;color:#6B6558;max-width:880px;}
+header p b{color:#2A251E;font-weight:600;}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:11.5px;color:#6B6558;}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:1px;}
+
+.row{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;max-width:1340px;margin:0 auto 26px;}
+.col{width:302px;display:flex;flex-direction:column;gap:9px;}
+.cap{font-size:11px;color:#6B6558;line-height:1.55;}
+.cap b{color:#2A251E;font-weight:600;}
+
+.ph{
+  width:302px;height:648px;border-radius:44px;overflow:hidden;position:relative;
+  background:var(--bg);display:flex;flex-direction:column;
+  box-shadow:0 24px 54px rgba(60,48,30,.17), 0 2px 6px rgba(60,48,30,.05);
+}
+.notch{position:absolute;top:9px;left:50%;transform:translateX(-50%);width:54px;height:15px;background:#141414;border-radius:10px;z-index:20;}
+.sb{height:32px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:10.5px;font-weight:600;z-index:19;}
+
+.body{flex:1;overflow:hidden;padding:0 18px;}
+
+/* 顶部 */
+.top{display:flex;align-items:center;justify-content:space-between;padding:6px 2px 10px;}
+.top .t{font-size:16px;font-weight:600;letter-spacing:-.3px;}
+.top .t span{font-size:10.5px;color:var(--ink3);font-weight:400;margin-left:6px;}
+.iconbtn{width:26px;height:26px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.06);font-size:11px;color:var(--ink2);}
+
+/* 日期头 */
+.dhead{display:flex;align-items:flex-end;justify-content:space-between;padding:8px 2px 7px;}
+.dhead .d{font-size:12px;font-weight:600;letter-spacing:.02em;}
+.dhead .d em{font-style:normal;color:var(--ink3);font-weight:400;font-size:10.5px;margin-left:5px;}
+.dhead .s{text-align:right;}
+.dhead .s b{font-size:19px;font-weight:600;letter-spacing:-.7px;font-variant-numeric:tabular-nums;}
+.dhead .s span{display:block;font-size:9.5px;color:var(--ink3);margin-top:1px;}
+
+/* 流水行 */
+.tx{display:flex;align-items:center;gap:11px;padding:8px 2px;}
+.tx + .tx{border-top:1px solid var(--line);}
+.ic{width:38px;height:38px;flex:none;border-radius:12px;display:flex;align-items:center;justify-content:center;position:relative;background:#FFF;}
+.ic img{width:30px;height:30px;object-fit:contain;}
+.ic .fb{display:none;font-size:19px;}
+.ic .fb.on{display:block;}
+.mid{flex:1;min-width:0;}
+.nm{font-size:13px;font-weight:500;letter-spacing:-.1px;display:flex;align-items:center;gap:5px;}
+.tag{font-size:9px;padding:1px 4px;border-radius:3px;font-weight:600;letter-spacing:.02em;}
+.tag.repay{background:#EAF0F7;color:var(--blue);}
+.tag.trans{background:#F1EFEB;color:var(--gray);}
+.meta{font-size:10px;color:var(--ink3);margin-top:2px;}
+.amt{font-size:13.5px;font-weight:600;letter-spacing:-.3px;font-variant-numeric:tabular-nums;}
+.amt.in{color:var(--green);}
+.amt.rp{color:var(--blue);}
+.amt.tr{color:var(--gray);}
+
+.sep{height:1px;background:#E3DFD8;margin:9px 2px;}
+
+/* 底部导航 */
+.nav{
+  position:absolute;left:0;right:0;bottom:0;height:58px;display:flex;align-items:center;
+  background:rgba(247,246,243,.94);backdrop-filter:blur(14px);
+  border-top:.5px solid #E6E2DA;padding-bottom:12px;
+}
+.nav div{flex:1;text-align:center;font-size:11.5px;color:var(--ink3);letter-spacing:.02em;}
+.nav div.on{color:var(--ink);font-weight:600;}
+
+.fab{
+  position:absolute;right:18px;bottom:72px;width:50px;height:50px;border-radius:50%;
+  background:#141414;color:#fff;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 20px rgba(20,20,20,.26);
+}
+
+/* 记一笔 */
+.navrow{display:flex;align-items:center;justify-content:space-between;height:38px;font-size:13px;padding:0 2px;}
+.navrow .mut{color:var(--ink3);}
+.navrow .go{font-weight:600;}
+.navrow .ttl{font-size:10.5px;color:var(--ink3);}
+
+.seg{display:flex;background:#EFECE6;border-radius:10px;padding:3px;margin:4px 0 0;}
+.seg div{flex:1;text-align:center;font-size:11.5px;padding:6px 0;border-radius:8px;color:var(--ink2);}
+.seg div.on{background:#fff;color:var(--ink);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.07);}
+
+.amtin{text-align:center;padding:18px 0 10px;}
+.amtin .cur{font-size:17px;color:var(--ink3);margin-right:2px;vertical-align:5px;}
+.amtin .num{font-size:44px;font-weight:600;letter-spacing:-2.2px;font-variant-numeric:tabular-nums;line-height:1;}
+
+.plabel{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);font-weight:600;padding:14px 2px 8px;}
+.picks{display:flex;gap:7px;overflow:hidden;}
+.pick{
+  flex:none;display:flex;align-items:center;gap:6px;background:#fff;border-radius:18px;
+  padding:4px 11px 4px 5px;font-size:11px;color:var(--ink2);border:1.5px solid transparent;
+  box-shadow:0 1px 3px rgba(0,0,0,.05);
+}
+.pick.on{border-color:#141414;color:var(--ink);font-weight:600;}
+.pick .ic{width:24px;height:24px;border-radius:8px;}
+.pick .ic img{width:19px;height:19px;}
+.pick .ic .fb{font-size:13px;}
+
+.cats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.cat{
+  background:#fff;border-radius:14px;padding:9px 0 7px;display:flex;flex-direction:column;
+  align-items:center;gap:5px;font-size:9.5px;color:var(--ink2);border:1.5px solid transparent;
+  box-shadow:0 1px 3px rgba(0,0,0,.04);
+}
+.cat.on{border-color:#141414;color:var(--ink);font-weight:600;}
+.cat .ic{width:30px;height:30px;border-radius:9px;}
+.cat .ic img{width:24px;height:24px;}
+.cat .ic .fb{font-size:16px;}
+
+.keypad{
+  position:absolute;left:0;right:0;bottom:0;background:#EDE9E2;padding:6px 6px 22px;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:6px;
+}
+.key{height:40px;background:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 1px 1.5px rgba(0,0,0,.08);font-variant-numeric:tabular-nums;}
+.key.fn{background:#DED9D0;font-size:12.5px;color:var(--ink2);}
+
+/* 还款 */
+.bignum{font-size:38px;font-weight:600;letter-spacing:-2px;line-height:1;font-variant-numeric:tabular-nums;padding:6px 2px 0;}
+.bigsub{font-size:10.5px;color:var(--ink3);padding:6px 2px 0;}
+
+.alert{
+  margin-top:14px;background:#FCEEEC;border-radius:14px;padding:11px 13px;
+  display:flex;gap:9px;align-items:flex-start;
+}
+.alert .dot{width:6px;height:6px;border-radius:50%;background:var(--red);margin-top:5px;flex:none;}
+.alert .txt{font-size:12px;color:#8C2B21;line-height:1.5;font-weight:500;}
+.alert .txt b{font-weight:600;}
+
+.mrow{display:flex;align-items:center;gap:11px;padding:10px 2px;}
+.mrow + .mrow{border-top:1px solid var(--line);}
+.date{width:34px;flex:none;text-align:center;}
+.date b{display:block;font-size:13px;font-weight:600;letter-spacing:-.3px;font-variant-numeric:tabular-nums;}
+.date span{display:block;font-size:8.5px;color:var(--ink3);margin-top:1px;}
+.mrow .info{flex:1;min-width:0;}
+.mrow .n{font-size:12.5px;font-weight:500;}
+.mrow .m{font-size:9.5px;color:var(--ink3);margin-top:2px;}
+.mrow .v{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.3px;}
+.mrow.od .n{color:var(--red);}
+.mrow.od .v{color:var(--red);}
+.mrow.soon .date b{color:#B07000;}
+
+/* 资产 */
+.netbig{font-size:36px;font-weight:600;letter-spacing:-1.9px;font-variant-numeric:tabular-nums;padding:8px 2px 2px;}
+.split2{display:flex;gap:9px;margin-top:12px;}
+.box{flex:1;background:#fff;border-radius:14px;padding:11px 13px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.box .k{font-size:9.5px;color:var(--ink3);letter-spacing:.06em;}
+.box .v{font-size:17px;font-weight:600;letter-spacing:-.6px;margin-top:4px;font-variant-numeric:tabular-nums;}
+.box .v.b{color:var(--blue);}
+.box .v.g{color:var(--green);}
+
+.arow{display:flex;align-items:center;gap:11px;padding:9px 2px;}
+.arow + .arow{border-top:1px solid var(--line);}
+.arow .info{flex:1;min-width:0;}
+.arow .n{font-size:12.5px;font-weight:500;}
+.arow .m{font-size:9.5px;color:var(--ink3);margin-top:2px;}
+.arow .v{text-align:right;}
+.arow .v b{display:block;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.3px;}
+.arow .v b.w{color:var(--red);}
+.arow .v span{display:block;font-size:9px;color:var(--ink3);margin-top:2px;}
+
+.bar{height:3px;background:#EEEAE3;border-radius:2px;margin-top:6px;overflow:hidden;}
+.bar i{display:block;height:100%;border-radius:2px;background:#141414;}
+.bar i.w{background:var(--red);}
+.bar i.o{background:#E0A030;}
+
+.glabel{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);font-weight:600;padding:16px 2px 4px;}
+
+/* 详情 */
+.detailhead{display:flex;align-items:center;gap:8px;padding:6px 2px 12px;font-size:12px;color:var(--ink3);}
+.dcard{background:#fff;border-radius:16px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.dcard .r{display:flex;justify-content:space-between;font-size:11.5px;padding:5px 0;}
+.dcard .r span{color:var(--ink3);}
+.dcard .r b{font-weight:600;font-variant-numeric:tabular-nums;}
+
+.inst{display:flex;align-items:center;gap:9px;padding:8px 2px;font-size:11.5px;}
+.inst + .inst{border-top:1px solid var(--line);}
+.inst .p{width:26px;color:var(--ink3);font-size:9.5px;}
+.inst .d{width:56px;color:var(--ink2);}
+.inst .a{flex:1;text-align:right;font-variant-numeric:tabular-nums;font-weight:500;}
+.inst .s{width:18px;text-align:right;font-size:9px;color:var(--ink3);}
+.inst.paid{opacity:.4;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>doodoo · 按 PRD 画的原型</h1>
+  <p>六屏全部从 PRD 推出来，不是从灵感来。<b>最关键的约束是：流水里必须能一眼分出消费、收入、还款、转账四种</b>，因为还款不能计入消费统计——这是前六版原型全都没处理的问题。数据取自你的真实账单。</p>
+  <div class="legend">
+    <span><i style="background:#141414"></i>消费</span>
+    <span><i style="background:#2E7D4F"></i>收入</span>
+    <span><i style="background:#3A6EA5"></i>还款</span>
+    <span><i style="background:#8C887F"></i>转账</span>
+    <span><i style="background:#D93025"></i>逾期</span>
+  </div>
+</header>
+
+<div class="row">
+
+  <!-- 1 首页 -->
+  <div class="col">
+    <div class="cap"><b>1 首页 · 流水</b><br>打开就看到今天。四种类型靠金额颜色区分，还款带蓝色标签。</div>
+    <div class="ph">
+      <div class="notch"></div>
+      <div class="sb"><span>7:19</span><span>●●● ⌁ ▮</span></div>
+      <div class="body">
+        <div class="top"><div class="t">11 月<span>2026</span></div><div class="iconbtn">⋯</div></div>
+
+        <div class="dhead">
+          <div class="d">今天<em>周二</em></div>
+          <div class="s"><b>−268</b><span>4 笔</span></div>
+        </div>
+
+        <div class="tx">
+          <span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Cooked%20rice/3D/cooked_rice_3d.png" alt=""><span class="fb">🍚</span></span>
+          <div class="mid"><div class="nm">午饭</div><div class="meta">微信支付 · 餐饮</div></div>
+          <div class="amt">−32</div>
+        </div>
+        <div class="tx">
+          <span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Hot%20beverage/3D/hot_beverage_3d.png" alt=""><span class="fb">☕</span></span>
+          <div class="mid"><div class="nm">咖啡</div><div class="meta">余额宝 · 餐饮</div></div>
+          <div class="amt">−22</div>
+        </div>
+        <div class="tx">
+          <span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Automobile/3D/automobile_3d.png" alt=""><span class="fb">🚗</span></span>
+          <div class="mid"><div class="nm">打车</div><div class="meta">花呗 · 交通</div></div>
+          <div class="amt">−28</div>
+        </div>
+        <div class="tx">
+          <span class="ic" style="background:#EAF0F7"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Credit%20card/3D/credit_card_3d.png" alt=""><span class="fb">💳</span></span>
+          <div class="mid"><div class="nm">还款<span class="tag repay">不计支出</span></div><div class="meta">建行储蓄卡 → 招行信用卡</div></div>
+          <div class="amt rp">−186</div>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="dhead" style="padding-top:2px;">
+          <div class="d">昨天<em>周一</em></div>
+          <div class="s"><b style="color:#2E7D4F;">+12,495</b><span>2 笔</span></div>
+        </div>
+
+        <div class="tx">
+          <span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Money%20bag/3D/money_bag_3d.png" alt=""><span class="fb">💰</span></span>
+          <div class="mid"><div class="nm">工资</div><div class="meta">招行储蓄卡 · 收入</div></div>
+          <div class="amt in">+12,540</div>
+        </div>
+        <div class="tx">
+          <span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Steaming%20bowl/3D/steaming_bowl_3d.png" alt=""><span class="fb">🍜</span></span>
+          <div class="mid"><div class="nm">外卖</div><div class="meta">支付宝 · 餐饮</div></div>
+          <div class="amt">−45</div>
+        </div>
+      </div>
+      <div class="fab">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </div>
+      <div class="nav"><div class="on">流水</div><div>还款</div><div>资产</div></div>
+    </div>
+  </div>
+
+  <!-- 2 记一笔-支出 -->
+  <div class="col">
+    <div class="cap"><b>2 记一笔 · 支出</b><br>四类型切换在最上面。金额最大，账户和分类都能记住上次。</div>
+    <div class="ph">
+      <div class="notch"></div>
+      <div class="sb"><span>7:19</span><span>●●● ⌁ ▮</span></div>
+      <div class="body" style="padding-bottom:206px;">
+        <div class="navrow"><span class="mut">取消</span><span class="ttl">11月4日 · 今天</span><span class="go">保存</span></div>
+
+        <div class="seg">
+          <div class="on">支出</div><div>收入</div><div>还款</div><div>转账</div>
+        </div>
+
+        <div class="amtin"><span class="cur">¥</span><span class="num">32</span></div>
+
+        <div class="plabel">账户</div>
+        <div class="picks">
+          <div class="pick on"><span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Bank/3D/bank_3d.png" alt=""><span class="fb">🏦</span></span>建行 5044</div>
+          <div class="pick"><span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Credit%20card/3D/credit_card_3d.png" alt=""><span class="fb">💳</span></span>招行信用卡</div>
+          <div class="pick"><span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Money%20bag/3D/money_bag_3d.png" alt=""><span class="fb">💰</span></span>花呗</div>
+        </div>
+
+        <div class="plabel">分类</div>
+        <div class="cats">
+          <div class="cat on"><span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Cooked%20rice/3D/cooked_rice_3d.png" alt=""><span class="fb">🍚</span></span>餐饮</div>
+          <div class="cat"><span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Automobile/3D/automobile_3d.png" alt=""><span class="fb">🚗</span></span>交通</div>
+          <div class="cat"><span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Shopping%20cart/3D/shopping_cart_3d.png" alt=""><span class="fb">🛒</span></span>购物</div>
+          <div class="cat"><span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Video%20game/3D/video_game_3d.png" alt=""><span class="fb">🎮</span></span>娱乐</div>
+          <div class="cat"><span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/House/3D/house_3d.png" alt=""><span class="fb">🏠</span></span>居住</div>
+          <div class="cat"><span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Pill/3D/pill_3d.png" alt=""><span class="fb">💊</span></span>医疗</div>
+          <div class="cat"><span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Wrapped%20gift/3D/wrapped_gift_3d.png" alt=""><span class="fb">🎁</span></span>人情</div>
+          <div class="cat"><span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Receipt/3D/receipt_3d.png" alt=""><span class="fb">🧾</span></span>其他</div>
+        </div>
+      </div>
+      <div class="keypad">
+        <div class="key">1</div><div class="key">2</div><div class="key">3</div>
+        <div class="key">4</div><div class="key">5</div><div class="key">6</div>
+        <div class="key">7</div><div class="key">8</div><div class="key">9</div>
+        <div class="key fn">.</div><div class="key">0</div><div class="key fn">⌫</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="row">
+
+  <!-- 3 记一笔-还款 -->
+  <div class="col">
+    <div class="cap"><b>3 记一笔 · 还款</b><br>切到还款，分类消失，换成「还哪张卡」。同时显示这笔还款属于哪期。</div>
+    <div class="ph">
+      <div class="notch"></div>
+      <div class="sb"><span>7:19</span><span>●●● ⌁ ▮</span></div>
+      <div class="body" style="padding-bottom:206px;">
+        <div class="navrow"><span class="mut">取消</span><span class="ttl">11月4日 · 今天</span><span class="go">保存</span></div>
+
+        <div class="seg">
+          <div>支出</div><div>收入</div><div class="on">还款</div><div>转账</div>
+        </div>
+
+        <div class="amtin"><span class="cur">¥</span><span class="num">665<span style="font-size:26px;color:#A8A399;">.36</span></span></div>
+
+        <div class="plabel">从哪扣</div>
+        <div class="picks">
+          <div class="pick on"><span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Bank/3D/bank_3d.png" alt=""><span class="fb">🏦</span></span>建行 5044</div>
+          <div class="pick"><span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Bank/3D/bank_3d.png" alt=""><span class="fb">🏦</span></span>招行 0361</div>
+        </div>
+
+        <div class="plabel">还哪张卡</div>
+        <div class="cats" style="grid-template-columns:repeat(3,1fr);">
+          <div class="cat on"><span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Credit%20card/3D/credit_card_3d.png" alt=""><span class="fb">💳</span></span>招行信用卡</div>
+          <div class="cat"><span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Money%20bag/3D/money_bag_3d.png" alt=""><span class="fb">💰</span></span>花呗</div>
+          <div class="cat"><span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Receipt/3D/receipt_3d.png" alt=""><span class="fb">🧾</span></span>京东白条</div>
+        </div>
+
+        <div style="margin-top:14px;background:#fff;border-radius:14px;padding:12px 13px;box-shadow:0 1px 3px rgba(0,0,0,.04);">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:#6E6A63;">
+            <span>8 月账单 · 已逾期 3 天</span><b style="color:#D93025;">665.36</b>
+          </div>
+          <div style="font-size:10px;color:#A8A399;margin-top:5px;line-height:1.5;">含违约金 16.05 · 循环利息 9.12<br>这笔不进本月消费统计</div>
+        </div>
+      </div>
+      <div class="keypad">
+        <div class="key">1</div><div class="key">2</div><div class="key">3</div>
+        <div class="key">4</div><div class="key">5</div><div class="key">6</div>
+        <div class="key">7</div><div class="key">8</div><div class="key">9</div>
+        <div class="key fn">.</div><div class="key">0</div><div class="key fn">⌫</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 还款 -->
+  <div class="col">
+    <div class="cap"><b>4 还款</b><br>逾期置顶并标红。每笔显示日期、卡名、期数，按月分组。</div>
+    <div class="ph">
+      <div class="notch"></div>
+      <div class="sb"><span>7:19</span><span>●●● ⌁ ▮</span></div>
+      <div class="body">
+        <div class="top"><div class="t">还款<span>11 月</span></div><div class="iconbtn">⋯</div></div>
+
+        <div class="bignum">5,865</div>
+        <div class="bigsub">本月要还 · 7 笔 · 还有 21 天发工资</div>
+
+        <div class="alert">
+          <span class="dot"></span>
+          <div class="txt"><b>1 笔已逾期</b>　招行信用卡 8 月账单，逾期 3 天<br>已产生违约金 16.05、循环利息 9.12</div>
+        </div>
+
+        <div class="glabel">逾期</div>
+        <div class="mrow od">
+          <div class="date"><b>08/14</b><span>逾期3天</span></div>
+          <div class="info"><div class="n">招行信用卡 · 8 月账单</div><div class="m">含违约金与利息</div></div>
+          <div class="v">665.36</div>
+        </div>
+
+        <div class="glabel">本月</div>
+        <div class="mrow soon">
+          <div class="date"><b>11/25</b><span>21 天</span></div>
+          <div class="info"><div class="n">花呗 · 11 月账单</div><div class="m">总计 1,806.82 退 172.74</div></div>
+          <div class="v">1,634.08</div>
+        </div>
+        <div class="mrow">
+          <div class="date"><b>11/25</b><span>21 天</span></div>
+          <div class="info"><div class="n">京东白条</div><div class="m">上月还 613.16</div></div>
+          <div class="v">259.53</div>
+        </div>
+        <div class="mrow">
+          <div class="date"><b>11/19</b><span>15 天</span></div>
+          <div class="info"><div class="n">消费分期 · 中移金科</div><div class="m">第 12/24 期</div></div>
+          <div class="v">279.13</div>
+        </div>
+        <div class="mrow">
+          <div class="date"><b>11/25</b><span>21 天</span></div>
+          <div class="info"><div class="n">抖音月付</div><div class="m">账单周期 10/16–11/15</div></div>
+          <div class="v">412.00</div>
+        </div>
+      </div>
+      <div class="nav"><div>流水</div><div class="on">还款</div><div>资产</div></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="row">
+
+  <!-- 5 负债账户详情 -->
+  <div class="col">
+    <div class="cap"><b>5 负债账户详情</b><br>额度、已用比例、逐期还款计划。已还的划掉，未来期数灰着。</div>
+    <div class="ph">
+      <div class="notch"></div>
+      <div class="sb"><span>7:19</span><span>●●● ⌁ ▮</span></div>
+      <div class="body">
+        <div class="detailhead">‹　还款</div>
+        <div style="display:flex;align-items:center;gap:11px;padding:0 2px 12px;">
+          <span class="ic" style="width:44px;height:44px;border-radius:14px;background:#EAF0F7;"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Credit%20card/3D/credit_card_3d.png" alt="" style="width:34px;height:34px;"><span class="fb">💳</span></span>
+          <div>
+            <div style="font-size:16px;font-weight:600;letter-spacing:-.3px;">招行信用卡</div>
+            <div style="font-size:10px;color:#A8A399;margin-top:2px;">招商银行 · 尾号 8857</div>
+          </div>
+        </div>
+
+        <div class="bignum" style="font-size:32px;">−3,850</div>
+        <div class="bigsub">当前欠款 · 额度 4,600</div>
+
+        <div class="bar" style="margin:12px 2px 0;height:4px;"><i class="w" style="width:84%"></i></div>
+        <div style="display:flex;justify-content:space-between;font-size:9.5px;color:#A8A399;padding:5px 2px 0;">
+          <span>已用 84%</span><span>原额度 9,000（已被下调）</span>
+        </div>
+
+        <div class="dcard" style="margin-top:14px;">
+          <div class="r"><span>账单周期</span><b>每月 15 日 – 次月 14 日</b></div>
+          <div class="r"><span>还款日</span><b>每月 25 日</b></div>
+          <div class="r"><span>本期应还</span><b>525.72</b></div>
+          <div class="r"><span>最低还款</span><b>291.46</b></div>
+          <div class="r"><span>循环利息</span><b style="color:#D93025;">9.12 / 月</b></div>
+        </div>
+
+        <div class="glabel">分期还款计划</div>
+        <div class="inst paid"><span class="p">1/24</span><span class="d">2025-10-19</span><span class="a">279.13</span><span class="s">✓</span></div>
+        <div class="inst paid"><span class="p">10/24</span><span class="d">2026-07-19</span><span class="a">279.13</span><span class="s">✓</span></div>
+        <div class="inst"><span class="p">11/24</span><span class="d">2026-08-19</span><span class="a">279.13</span><span class="s">✓</span></div>
+        <div class="inst"><span class="p">12/24</span><span class="d">2026-09-19</span><span class="a">279.13</span><span class="s"></span></div>
+        <div class="inst"><span class="p">13/24</span><span class="d">2026-10-19</span><span class="a">279.13</span><span class="s"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6 资产 -->
+  <div class="col">
+    <div class="cap"><b>6 资产</b><br>PRD 要求净资产独立成页。上方总览，下方账户按资产/负债分组。</div>
+    <div class="ph">
+      <div class="notch"></div>
+      <div class="sb"><span>7:19</span><span>●●● ⌁ ▮</span></div>
+      <div class="body">
+        <div class="top"><div class="t">资产</div><div class="iconbtn">＋</div></div>
+
+        <div style="font-size:10px;color:#A8A399;padding-left:2px;">净资产</div>
+        <div class="netbig">−28,604</div>
+
+        <div class="split2">
+          <div class="box"><div class="k">总资产</div><div class="v">8,042</div></div>
+          <div class="box"><div class="k">总负债</div><div class="v b">36,646</div></div>
+        </div>
+
+        <div class="glabel">负债 · 10 个</div>
+        <div class="arow">
+          <span class="ic" style="background:#FCF0EE;"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Credit%20card/3D/credit_card_3d.png" alt=""><span class="fb">💳</span></span>
+          <div class="info"><div class="n">招行信用卡</div><div class="m">额度用 84% · 25 日还</div><div class="bar"><i class="w" style="width:84%"></i></div></div>
+          <div class="v"><b class="w">−3,850</b><span>逾期</span></div>
+        </div>
+        <div class="arow">
+          <span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Money%20bag/3D/money_bag_3d.png" alt=""><span class="fb">💰</span></span>
+          <div class="info"><div class="n">花呗</div><div class="m">含 58 笔分期 · 25 日还</div><div class="bar"><i style="width:66%"></i></div></div>
+          <div class="v"><b>−4,120</b><span>欠款</span></div>
+        </div>
+        <div class="arow">
+          <span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Receipt/3D/receipt_3d.png" alt=""><span class="fb">🧾</span></span>
+          <div class="info"><div class="n">京东白条</div><div class="m">月还波动大</div><div class="bar"><i style="width:22%"></i></div></div>
+          <div class="v"><b>−618</b><span>欠款</span></div>
+        </div>
+        <div class="arow">
+          <span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Handshake/3D/handshake_3d.png" alt=""><span class="fb">🤝</span></span>
+          <div class="info"><div class="n">父母借款</div><div class="m">无息 · 每月还 1,000</div><div class="bar"><i style="width:30%"></i></div></div>
+          <div class="v"><b>−14,000</b><span>欠款</span></div>
+        </div>
+
+        <div class="glabel">资产 · 8 个</div>
+        <div class="arow">
+          <span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Bank/3D/bank_3d.png" alt=""><span class="fb">🏦</span></span>
+          <div class="info"><div class="n">建行储蓄卡 5044</div><div class="m">主支付渠道</div></div>
+          <div class="v"><b>5,200</b><span>可用</span></div>
+        </div>
+        <div class="arow">
+          <span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Coin/3D/coin_3d.png" alt=""><span class="fb">🪙</span></span>
+          <div class="info"><div class="n">余额宝</div><div class="m">随时可取</div></div>
+          <div class="v"><b>2,842</b><span>可用</span></div>
+        </div>
+      </div>
+      <div class="nav"><div>流水</div><div>还款</div><div class="on">资产</div></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+document.querySelectorAll('.ic img').forEach(function(img){
+  var path = img.getAttribute('src').replace(/^https?:\/\/[^\/]+/, '');
+  var hosts = ['https://fastly.jsdelivr.net','https://gcore.jsdelivr.net']; var i=0;
+  img.addEventListener('error', function(){
+    if (i < hosts.length) { img.src = hosts[i++] + path; return; }
+    img.style.display='none';
+    var fb = img.nextElementSibling;
+    if (fb) fb.classList.add('on');
+  });
+});
+</script>
+</body>
+</html>

@@ -1,23 +1,74 @@
 # ============================================================
-# DooDoo 仓库：只提交代码
-# 策略：忽略一切，只显式放行代码目录（白名单）
-# 这样新增原型 / 文档 / 素材 / 临时截图永远不会被误提交
+# DooDoo 仓库：代码 + 规格文档
+# 策略：忽略一切，只显式放行（白名单）
+#
+# 2026-11-10 策略变更：文档与冻结快照入库。
+# 原因：各模块 README 都写「视觉数值一律来自 docs/design/spec」，
+# M3 的分期与账单期规格全在 docs/ 里。不入库就只能靠猜。
+#
+# 仍然不入库（体积大且可重新生成，不进版本历史）：
+#   assets/            66MB  美术素材，只入 README 清单
+#   design/**/*.png    4.7MB 原型截图，随时可重跑 tools/screenshot
+#   research/          16MB  调研原始截图（webp/png），只入结论 md
+#   cat-fluent3d*      101 张美术生成源文件
+#
+# 注意：Git 不进入被排除的目录，因此必须先放行目录（!/x/），
+# 再排除其下的大文件（/x/**/*.png），顺序写反会失效。
 # ============================================================
 
 /*
+
+# ---------- 仓库自身 ----------
 !/.gitignore
 !/.gitattributes
+
+# ---------- 代码 ----------
 !/app/
 !/.github/
+!/tools/
 
-# app/README.md、各模块 README 与 assets 一起入库（工程的一部分）
+# app/README.md、各模块 README 入库（工程的一部分）
 # .xcodeproj 由 project.yml 生成，不入库
 /app/*.xcodeproj
 /app/build/
 /app/build.log
 
+# ---------- 文档与规格（唯一实现依据） ----------
+# docs/ 全部 548K，无二进制，整份入库：
+#   product/   PRD v2.3
+#   design/spec/    已冻结规格（资产页 / 首页 / 记一笔）
+#   design/pending/ 待定案
+#   design/history/ 推演与否决记录
+#   art/ reference/ archive/
+!/docs/
+
+# design/ 只入 html 与 md（1.3MB），截图 png（4.7MB）排除
+!/design/
+/design/**/*.png
+
+# ---------- 工作区规则 ----------
+!/AGENTS.md
+!/PROGRESS.md
+!/README.md
+!/CLAUDE.md
+
+# ---------- 素材：只入清单，不入图 ----------
+!/assets/
+/assets/*
+!/assets/README.md
+
+# ---------- 调研：只入结论，不入原始截图 ----------
+!/research/
+/research/*
+!/research/*.md
+
 # ------------------------------------------------------------
 # 放行记录（每加一行都是一次决策）
-# 2026-11-07 !/app/          首推，只含 app/
-# 2026-11-08 !/.github/      进 M0，CI workflow 入库
+# 2026-11-07 !/app/           首推，只含 app/
+# 2026-11-08 !/.github/       进 M0，CI workflow 入库
+# 2026-11-10 !/docs/          策略变更，规格文档入库（M3 前置）
+# 2026-11-10 !/design/ 去 png 冻结快照 html 入库（冻结契约的一部分）
+# 2026-11-10 !/AGENTS.md !/PROGRESS.md !/README.md !/CLAUDE.md
+# 2026-11-10 !/tools/         原型截图脚本入库
+# 2026-11-10 !/assets/README.md !/research/*.md  只入清单与结论
 # ------------------------------------------------------------

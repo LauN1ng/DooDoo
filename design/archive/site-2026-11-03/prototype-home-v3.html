@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FFFFFF">
+<title>DooDoo · 今天</title>
+<style>
+  :root{
+    --green:#34C759; --green-d:#12803A;
+    --ink:#111114; --i2:#5C5C63; --i3:#96969E;
+    --line:#EEEEF2; --bg:#FFFFFF;
+  }
+  *{box-sizing:border-box;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:#E9E8E4;overflow:hidden;
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+
+  .app{position:relative;margin:0 auto;background:var(--bg);
+    width:100%;max-width:430px;height:100dvh;overflow-y:auto;overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;display:flex;flex-direction:column}
+  @media (min-width:520px){
+    body{display:flex;align-items:center;justify-content:center;padding:24px}
+    .app{height:min(920px, calc(100dvh - 48px));border-radius:44px;
+      box-shadow:0 2px 6px rgba(0,0,0,.07),0 30px 70px -30px rgba(0,0,0,.4);border:1px solid #DEDDD8}
+  }
+
+  .top{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 0;flex:0 0 auto}
+  .daynav{display:flex;align-items:center;gap:2px}
+  .arrow{width:30px;height:30px;border:0;background:transparent;display:flex;align-items:center;justify-content:center;
+    border-radius:50%;cursor:pointer;padding:0}
+  .arrow:active{background:#F4F4F6}
+  .arrow.off{opacity:.25}
+  .datestr{font-size:15.5px;font-weight:600;letter-spacing:-.2px;min-width:112px;text-align:center}
+  .datestr em{font-style:normal;font-size:11.5px;color:var(--i3);font-weight:400;margin-left:4px}
+
+  .sum{padding:22px 20px 0;flex:0 0 auto}
+  .sum .k{font-size:11.5px;color:var(--i3);letter-spacing:.02em}
+  .sum .v{font-size:45px;font-weight:600;letter-spacing:-1.8px;line-height:1.06;margin-top:3px;
+    font-variant-numeric:tabular-nums}
+  .sum .v .cur{font-size:26px;letter-spacing:-.6px;margin-right:1px}
+  .sum .v .dec{font-size:27px}
+  .sum .m{font-size:12.5px;color:var(--i3);margin-top:4px}
+  .sum .m b{color:var(--i2);font-weight:500}
+
+  .tl{position:relative;margin:26px 20px 0;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  .tl::before{content:"";position:absolute;left:60px;top:8px;bottom:12px;width:1px;background:var(--line)}
+
+  .item{position:relative;display:grid;grid-template-columns:52px 18px 1fr;gap:0;align-items:start;
+    padding-bottom:30px;cursor:pointer}
+  .item .tm{font-size:11.5px;color:var(--i3);padding-top:2px;font-variant-numeric:tabular-nums}
+  .item .dotwrap{display:flex;justify-content:center;padding-top:5px;position:relative;z-index:1}
+  .item .dot{width:7px;height:7px;border-radius:50%;background:#fff;border:1.8px solid #C9C9D2}
+  .item.hang .dot{border-color:var(--green)}
+  .item .body{padding-left:12px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .item .nm{font-size:15px;font-weight:500;letter-spacing:-.1px;color:var(--ink)}
+  .item .sub{font-size:11.5px;color:var(--i3);margin-top:3px}
+  .item .am{font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.3px;white-space:nowrap}
+  .item .am.in{color:var(--green-d)}
+
+  .now{display:grid;grid-template-columns:52px 18px 1fr;align-items:center;margin-top:auto;margin-bottom:18px}
+  .now .tm{font-size:11.5px;color:var(--i3);font-variant-numeric:tabular-nums}
+  .now .dotwrap{display:flex;justify-content:center}
+  .now .pill{height:9px;border-radius:5px;background:var(--green);width:9px;position:relative}
+  .now .pill::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:1px solid rgba(52,199,89,.32)}
+  .now .lbl{font-size:11px;color:var(--green-d);padding-left:12px;letter-spacing:.02em}
+
+  .add{display:grid;grid-template-columns:52px 18px 1fr;align-items:center;cursor:pointer;padding-bottom:24px}
+  .add .tm{font-size:11.5px;color:transparent}
+  .add .dotwrap{display:flex;justify-content:center}
+  .add .circ{width:22px;height:22px;border-radius:50%;border:1.5px dashed #D2D2DA;display:flex;align-items:center;justify-content:center;margin-left:-2px}
+  .add .tx{font-size:13.5px;color:var(--i3);padding-left:10px}
+  .add:active .tx{color:var(--i2)}
+
+  .tabbar{flex:0 0 auto;height:calc(62px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);
+    background:rgba(255,255,255,.98);border-top:1px solid rgba(0,0,0,.055);
+    display:flex;align-items:center;justify-content:space-around}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:9.5px;color:#A6A6AE}
+  .tab.on{color:var(--ink);font-weight:600}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="top">
+    <div class="daynav">
+      <button class="arrow" id="prev" aria-label="前一天">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="#6B6B73" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <span class="datestr">11 月 5 日<em>周三</em></span>
+      <button class="arrow off" id="next" aria-label="后一天">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="#6B6B73" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+    <button class="arrow" aria-label="更多">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.6" fill="#A6A6AE"/><circle cx="12" cy="12" r="1.6" fill="#A6A6AE"/><circle cx="19" cy="12" r="1.6" fill="#A6A6AE"/></svg>
+    </button>
+  </div>
+
+  <div class="sum">
+    <div class="k">今天花了</div>
+    <div class="v"><span class="cur">¥</span>224<span class="dec">.40</span></div>
+    <div class="m"><b>3 笔</b> · 早上那杯咖啡是夯</div>
+  </div>
+
+  <div class="tl">
+    <div class="item">
+      <span class="tm">08:05</span>
+      <div class="dotwrap"><span class="dot"></span></div>
+      <div class="body">
+        <div>
+          <div class="nm">地铁</div>
+          <div class="sub">固定支出 · NPC</div>
+        </div>
+        <span class="am">−6.00</span>
+      </div>
+    </div>
+
+    <div class="item hang">
+      <span class="tm">09:12</span>
+      <div class="dotwrap"><span class="dot"></span></div>
+      <div class="body">
+        <div>
+          <div class="nm">星巴克</div>
+          <div class="sub">弹性支出 · 夯</div>
+        </div>
+        <span class="am">−32.00</span>
+      </div>
+    </div>
+
+    <div class="item">
+      <span class="tm">12:40</span>
+      <div class="dotwrap"><span class="dot"></span></div>
+      <div class="body">
+        <div>
+          <div class="nm">盒马鲜生</div>
+          <div class="sub">生活所需 · 飘</div>
+        </div>
+        <span class="am">−186.40</span>
+      </div>
+    </div>
+
+    <div class="now">
+      <span class="tm">22:23</span>
+      <div class="dotwrap"><span class="pill"></span></div>
+      <span class="lbl">现在</span>
+    </div>
+
+    <div class="add">
+      <span class="tm">·</span>
+      <div class="dotwrap"><span class="circ"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#B8B8C2" stroke-width="2.4" stroke-linecap="round"/></svg></span></div>
+      <span class="tx">记一笔</span>
+    </div>
+  </div>
+
+  <nav class="tabbar">
+    <span class="tab on"><svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M4 10.5L12 4l8 6.5V20a1 1 0 0 1-1 1h-4v-5H9v5H5a1 1 0 0 1-1-1z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>今天</span>
+    <span class="tab"><svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M5 6h14M5 12h14M5 18h9" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>账单</span>
+    <span class="tab"><svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M5 19V11M12 19V5M19 19v-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>排行</span>
+    <span class="tab"><svg width="21" height="21" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9" r="3.4" stroke="currentColor" stroke-width="1.9"/><path d="M5 20c1.2-3.5 3.8-5.2 7-5.2s5.8 1.7 7 5.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>我的</span>
+  </nav>
+</div>
+</body>
+</html>

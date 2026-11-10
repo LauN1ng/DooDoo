@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>单日多笔 · 三版对照</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#EDEAE4;font-family:-apple-system,"PingFang SC",sans-serif;color:#1D1C1A;padding:22px 24px 30px}
+  h1{font-size:19px;margin:0 0 4px;letter-spacing:-.3px}
+  .sub{font-size:12.5px;color:#6F6B63;line-height:1.75;margin:0 0 18px;max-width:1180px}
+  .row{display:flex;gap:22px;align-items:flex-start}
+  .col{width:390px;flex:0 0 390px}
+  .hd{display:flex;align-items:baseline;gap:7px;margin-bottom:8px}
+  .hd b{font-size:13px}
+  .hd em{font-style:normal;font-size:11px;color:#8A867D}
+  .tag{font-size:10px;padding:2px 7px;border-radius:999px;font-weight:600}
+  .bad{background:#FBEDEB;color:#B4443A}
+  .mid{background:#FAF0DF;color:#8A6410}
+  .ok{background:#EAF3EC;color:#2F7A48}
+  img{width:390px;display:block;border-radius:10px;box-shadow:0 8px 22px rgba(0,0,0,.10)}
+  .note{font-size:11.5px;line-height:1.65;color:#6F6B63;margin-top:9px}
+  .note b{color:#1D1C1A}
+  table{width:100%;max-width:1180px;border-collapse:collapse;margin-top:26px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+  th,td{border-bottom:1px solid #EFECE5;padding:9px 12px;font-size:12px;text-align:left;vertical-align:top}
+  th{background:#FAF9F6;font-weight:600;font-size:11.5px;color:#5F5E5A}
+  td:first-child{color:#5F5E5A;width:120px}
+  tr:last-child td{border-bottom:none}
+  .fix{margin-top:24px;background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 6px 18px rgba(0,0,0,.06);max-width:1180px}
+  .fix h2{font-size:14px;margin:0 0 8px}
+  .fix li{font-size:12px;line-height:1.75;color:#6F6B63;margin-left:16px}
+  .fix code{background:#F1EFE8;border-radius:4px;padding:1px 5px;font-size:11.5px}
+</style>
+</head>
+<body>
+<h1>单日多笔 · 三版对照（今天 14 笔）</h1>
+<p class="sub">真实量级：支付宝 3 个月 331 笔 ≈ 3.7 笔/天，<b>14 笔是极端日</b>。当前卡片一屏装 9 笔（rows 可视 601pt ÷ 每行 64pt = 9.4 行），第 10 笔露头。便签按新口径改为「本月 ↘12.4%」。</p>
+
+<div class="row">
+  <div class="col">
+    <div class="hd"><b>A</b><em>卡内滚动（现状）</em><span class="tag bad">不可接受</span></div>
+    <img src="ov-a.png" alt="A 方案">
+    <div class="note">内容溢出 <b>340pt</b>，底部第 9 笔被<b>硬切</b>，没有任何"下面还有"的提示。用户要么以为这就是全部，要么反复上下滑试探。<br>这是现状，也是问题本身。</div>
+  </div>
+  <div class="col">
+    <div class="hd"><b>B</b><em>滚动 + 渐隐 + 计数</em><span class="tag ok">推荐</span></div>
+    <img src="ov-b.png" alt="B 方案">
+    <div class="note">三层：<b>①</b> 底部 34pt 渐隐 → 软收尾，读成"下面被盖住了"而不是"被切断了"；<b>②</b> 固定一行「下面还有 <b>5</b> 笔 · 看全部 ›」→ 明确告知还有多少；<b>③</b> 隐藏原生滚动条 → 只留一条渐隐，不出现系统滚动条。<br>溢出仍 340pt，但用户知道存在、知道还剩多少。</div>
+  </div>
+  <div class="col">
+    <div class="hd"><b>C</b><em>按分类折叠</em><span class="tag bad">更差</span></div>
+    <img src="ov-c.png" alt="C 方案">
+    <div class="note">分组头 64pt 本身就要一行，6 个分类 = 6 个头 + 14 个明细 = <b>944pt</b>，比 B 版还多 28pt。<br>折叠<b>没有省空间，反而更费</b>——因为"分组头 + 明细"两行才等于原来的一行加一个头。且「情」分组被墨键导航整组盖住。</div>
+  </div>
+</div>
+
+<table>
+  <tr><th>对比项</th><th>A 现状</th><th>B 渐隐 + 计数</th><th>C 分类折叠</th></tr>
+  <tr><td>内容总高 / 可视高</td><td>944 / 604</td><td>944 / 604</td><td>944 / 576</td></tr>
+  <tr><td>溢出量</td><td>340pt</td><td>340pt</td><td><b>368pt（更差）</b></td></tr>
+  <tr><td>底部收尾</td><td>硬切</td><td>渐隐软收尾 + 计数行</td><td>硬切</td></tr>
+  <tr><td>用户知道还有内容吗</td><td>不知道</td><td>知道，还知道剩 5 笔</td><td>不知道</td></tr>
+  <tr><td>横向翻卡手势</td><td>卡内可滚会抢手势</td><td>同 A，需明确轴向仲裁</td><td>同 A</td></tr>
+  <tr><td>结论</td><td>否</td><td><b>推荐</b></td><td>否</td></tr>
+</table>
+
+<div class="fix">
+  <h2>顺带暴露的两个实现约束</h2>
+  <ul>
+    <li><b>卡片下内边距必须 ≥52pt</b>。墨键导航浮在卡上（距屏底 52~88pt）、FAB（47~93pt），内容底 = 卡片底 46 + padding-bottom，必须高于 FAB 顶 93pt ⇒ padding ≥ 47pt，取 52pt。否则最后一行被导航整行压住（B/C 两版都是这个毛病，截图才看出来）。</li>
+    <li><b>原生滚动条必须隐藏</b>：<code>scrollbar-width:none</code> + <code>::-webkit-scrollbar{width:0}</code>。留系统滚动条会把这张"纸"读成网页容器，与纸卡语言冲突。</li>
+    <li><b>卡内滚动 vs 横向翻卡的手势仲裁</b>：卡内纵向可滚 + 卡堆横向翻页，两者在同一区域。必须"首 8pt 按位移主轴判定方向"，纵向优先给滚动、横向给翻卡；否则翻卡会误触发滚动。</li>
+  </ul>
+</div>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DooDoo · A 版降密度 · 优化前后</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#EFECE7;color:#1D1C1A;
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;padding:26px 28px 44px}
+  .head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:22px;flex-wrap:wrap}
+  h1{margin:0;font-size:22px;font-weight:650;letter-spacing:-.02em}
+  .sub{font-size:12px;color:#8A867D;margin-top:8px;line-height:1.7;max-width:760px}
+  .sub b{color:#1D1C1A;font-weight:650}
+  .tip{font-size:11.5px;color:#6B6862;background:#fff;border:1px solid #E2DFD9;
+    border-radius:999px;padding:8px 14px;white-space:nowrap}
+  .tip b{color:#1D1C1A}
+
+  .gallery{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap}
+  figure{margin:0;width:320px;flex:0 0 320px;background:#fff;border-radius:18px;padding:10px 10px 15px;
+    box-shadow:0 1px 2px rgba(29,28,26,.03),0 8px 22px rgba(29,28,26,.05)}
+  figure img{width:300px;display:block;border-radius:10px}
+  figcaption{padding:11px 4px 0}
+  .tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.08em;padding:3px 8px;border-radius:6px}
+  .tag.before{background:#F1EFE9;color:#8A867D}
+  .tag.after{background:#E7F1E4;color:#3B6E43}
+  .nm{font-size:13.5px;font-weight:650;margin-left:8px}
+  .desc{font-size:11.5px;color:#6B6862;line-height:1.65;margin-top:8px}
+
+  .panel{width:320px;flex:0 0 320px;background:#fff;border-radius:18px;padding:16px 18px;
+    box-shadow:0 1px 2px rgba(29,28,26,.03),0 8px 22px rgba(29,28,26,.05)}
+  .panel h3{margin:0 0 12px;font-size:13px;font-weight:650}
+  .panel .big{font-size:34px;font-weight:650;letter-spacing:-.03em;line-height:1}
+  .panel .bigu{font-size:12px;color:#8A867D;margin-top:6px}
+  .panel .bar{height:8px;border-radius:99px;background:#F1EFE9;margin:14px 0 6px;overflow:hidden}
+  .panel .bar i{display:block;height:100%;width:64%;background:#1D1C1A;border-radius:99px}
+  .panel .note{font-size:11px;color:#6B6862;line-height:1.7;margin-top:12px}
+
+  .tablewrap{margin-top:24px;background:#fff;border-radius:18px;padding:18px 20px 8px;
+    box-shadow:0 1px 2px rgba(29,28,26,.03),0 8px 22px rgba(29,28,26,.05)}
+  .tablewrap h2{margin:0 0 12px;font-size:14px;font-weight:650}
+  table{width:100%;border-collapse:collapse;font-size:12px;min-width:700px}
+  th{text-align:left;font-size:10px;letter-spacing:.1em;color:#9A968D;font-weight:700;
+    padding:0 10px 9px 0;border-bottom:1px solid #EAE7E0;text-transform:uppercase;white-space:nowrap}
+  td{padding:10px 10px 10px 0;border-bottom:1px solid #F1EFE9;color:#4A4741;line-height:1.55;vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  td:first-child{color:#9A968D;width:26px;font-weight:600}
+  td:nth-child(3){color:#3B6E43;font-weight:650;white-space:nowrap}
+  .sum td{background:#F7F9F5;color:#1D1C1A;font-weight:650}
+
+  .keep{margin-top:20px;background:#fff;border-radius:18px;padding:16px 20px;
+    box-shadow:0 1px 2px rgba(29,28,26,.03),0 8px 22px rgba(29,28,26,.05);
+    font-size:12px;color:#4A4741;line-height:1.8}
+  .keep b{color:#1D1C1A;font-weight:650}
+  .keep .h{display:block;font-size:10px;letter-spacing:.12em;font-weight:700;color:#9A968D;margin-bottom:6px}
+
+  .rec{margin-top:20px;background:#F0F3EC;border:1px solid #DDE6D5;border-radius:18px;padding:16px 20px;
+    font-size:12.5px;line-height:1.8;color:#3C5238}
+  .rec b{color:#1D1C1A;font-weight:650}
+  .rec .h{display:block;font-size:10px;letter-spacing:.12em;font-weight:700;color:#5A7850;margin-bottom:6px}
+  .rec .risk{color:#A3422F}
+</style>
+</head>
+<body>
+<div class="head">
+  <div>
+    <h1>A 版降密度 · 优化前后</h1>
+    <div class="sub">结论先行：<b>字段一个没藏</b>。没有把分类/账户/评分折叠进二级页，也没有改成 B 那种默认带出。<br>
+      只减<b>容器、边框、冗余标题行和独立 label 行</b>，腾出的空间还给金额字号与行距——「挤」的根源是「多且贴」，不是「多」。</div>
+  </div>
+  <div class="tip">可交互原型：<b>entry-options.html</b>　·　四版对比：<b>entry-compare.html</b></div>
+</div>
+
+<div class="gallery">
+  <figure>
+    <img src="_e-a-before.png">
+    <figcaption><span class="tag before">BEFORE</span><span class="nm">原 A · 一屏 6 组控件</span>
+      <div class="desc">灰底 segmented、三条独立 label 行、带框药丸、三个带框 chip、50px 金额，全部贴在一起，卡片刚好塞满无余量。</div></figcaption>
+  </figure>
+  <figure>
+    <img src="_e-a.png">
+    <figcaption><span class="tag after">AFTER</span><span class="nm">优化 A · 62px 金额当主角</span>
+      <div class="desc">类型变无容器文字 tab，三组字段改「行首窄标签 + 轻量控件」，meta 收成一行纯文字，中下部自然留出约 90pt 空白。</div></figcaption>
+  </figure>
+  <div class="panel">
+    <h3>空间账</h3>
+    <div class="big">≈120pt</div>
+    <div class="bigu">净还给留白（390 × 844 屏）</div>
+    <div class="bar"><i></i></div>
+    <div class="note">腾出约 143pt，其中 22pt 用于把金额从 50px 放大到 62px、拉开金额上下 padding；其余全部给行距、卡片内边距和键盘上方留白。<br><br>
+      键盘仍是 4×4，没动；完成键仍是黑色跨列键。</div>
+  </div>
+</div>
+
+<div class="tablewrap">
+  <h2>具体减了什么</h2>
+  <table>
+    <tr><th>#</th><th>改动</th><th>腾出</th><th>为什么不算「藏字段」</th></tr>
+    <tr><td>1</td><td>删掉「记一笔 + 今天」标题行，日期并入类型行右端</td><td>≈40pt</td><td>日期仍可见可点，只是不再单独占一行</td></tr>
+    <tr><td>2</td><td>灰底四类型 segmented → 无容器文字 tab（选中加下划线）</td><td>≈12pt</td><td>四个类型一个不少，仍可直接点</td></tr>
+    <tr><td>3</td><td>3 条独立 label 行 → 行首 38pt 窄标签，与控件同一行</td><td>≈60pt</td><td>「分类 / 账户 / 值不值」语义全保留</td></tr>
+    <tr><td>4</td><td>药丸去边框、分类方块 46→42、评分胶囊→34pt 圆点</td><td>≈8pt</td><td>控件尺寸变小，数量与可选值不变</td></tr>
+    <tr><td>5</td><td>备注 / 日期 / 分期 三个带框 chip → 一行纯文字 + 圆点分隔</td><td>≈14pt</td><td>三项仍可点，分期内联开关还在</td></tr>
+    <tr><td>6</td><td>键盘键高 46→44、gap 6→5</td><td>≈11pt</td><td>16 个键一个不少</td></tr>
+    <tr><td>7</td><td>金额 50→62px，上下 padding 12→16/18</td><td>−22pt</td><td>把省下的空间花在视觉主角上</td></tr>
+    <tr class="sum"><td></td><td>净效果</td><td>≈120pt</td><td>控件总数不变，标签行数 −3，带框容器 −5</td></tr>
+  </table>
+</div>
+
+<div class="keep">
+  <span class="h">刻意没动的东西</span>
+  <b>纸卡层叠几何</b>（top 96 / 后层露 16pt / 26px 圆角）、<b>首页与资产页视觉 token</b>（暖白 #F7F5F1、白卡、极轻双层阴影、Emoji 浅底容器、红绿克制色、黑色动作键）、<b>四类型切换后的字段差异</b>（还款 = 账单期 + 不计支出；转账 = 双金额 + 手续费）、<b>评分四档夯/飘/拉/NPC 可跳过</b>、<b>PRD 字段全集</b>。<br>
+  优化只作用于 A，B / C / D 三版未改。
+</div>
+
+<div class="rec">
+  <span class="h">验收与仍有代价</span>
+  浏览器逐版截图 + 计算样式核对（完成键 <code>rgb(29,28,26)</code>、选中药丸同为墨黑，没被覆盖成白底）+ 交互脚本全通过：还款/转账字段切换、分类点选、键盘输入、保存 toast 都正常。<br>
+  <span class="risk"><b>两个仍在的代价</b>：① 行首 38pt 标签占了宽度，分类横滑一屏可见从 6–7 个降到 5 个；② 键盘 4×4 在 390pt 宽里仍偏小，这是「一屏录完」的固有成本。</span><br>
+  如果还嫌挤，下一步只能动<b>控件数量</b>（把分类/账户/评分折叠成一行摘要、点击展开）——但那就接近 B 了，需要你先拍板。
+</div>
+</body>
+</html>

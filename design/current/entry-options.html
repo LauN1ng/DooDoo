@@ -1,0 +1,758 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DooDoo · 记一笔录入方案（四版）</title>
+<style>
+  :root{
+    --bg:#F7F5F1; --card:#fff; --ink:#1D1C1A; --ink2:#6B6862; --ink3:#9A968D; --ink4:#B0ACA3;
+    --line:#EFECE5; --line2:#EAE7E0; --red:#C0392B; --green:#2E7D4F; --blue:#4C8DF6;
+    --shadow:0 1px 2px rgba(29,28,26,.03),0 10px 28px rgba(29,28,26,.05);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden}
+  body{background:#EFECE7;color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased}
+
+  /* ============ 外壳 ============ */
+  .bar{height:56px;display:flex;align-items:center;gap:14px;padding:0 20px;
+    border-bottom:1px solid #E2DFD9;background:#F4F1EC;position:relative;z-index:20}
+  .brand{font-size:13px;font-weight:650;white-space:nowrap;letter-spacing:.01em}
+  .brand small{font-weight:400;color:#8A867D;font-size:11px;margin-left:8px}
+  .chips{display:flex;gap:6px;flex:0 0 auto}
+  .chip{border:1px solid #DEDAD2;background:#FBFAF7;color:#4A4741;font:inherit;font-size:12px;
+    padding:6px 12px;border-radius:999px;cursor:pointer;transition:.16s;white-space:nowrap}
+  .chip.on{background:#1D1C1A;color:#fff;border-color:#1D1C1A}
+  .modebtn{margin-left:auto;border:1px solid #DEDAD2;background:#FBFAF7;color:#4A4741;font:inherit;
+    font-size:12px;padding:6px 14px;border-radius:999px;cursor:pointer;white-space:nowrap}
+  .modebtn.on{background:#1D1C1A;color:#fff;border-color:#1D1C1A}
+  .hint{font-size:11.5px;color:#8A867D;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:430px}
+
+  .stage{height:calc(100% - 56px);position:relative;overflow:hidden}
+  .single{height:100%;display:flex;align-items:center;justify-content:center;gap:34px}
+  .devwrap{position:relative;flex:0 0 auto}
+  .device{width:390px;height:844px;border-radius:44px;background:var(--bg);position:relative;overflow:hidden;
+    box-shadow:0 0 0 1px #DAD6CE,0 30px 70px rgba(0,0,0,.16);transform-origin:top left}
+
+  .sb{height:52px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 8px;
+    font-size:13px;font-weight:600;position:relative;z-index:12}
+  .sb .batt{width:22px;height:11px;border:1px solid rgba(29,28,26,.35);border-radius:3px;position:relative}
+  .sb .batt::after{content:"";position:absolute;left:1.5px;top:1.5px;bottom:1.5px;width:70%;background:var(--ink);border-radius:1.5px}
+
+  .v{position:absolute;left:0;right:0;top:52px;bottom:0;display:flex;flex-direction:column;overflow:hidden}
+  .v .close{width:28px;height:28px;border:0;border-radius:50%;background:rgba(29,28,26,.06);color:var(--ink2);
+    font:inherit;font-size:14px;line-height:1;display:grid;place-items:center;cursor:pointer;flex:0 0 28px}
+  .v .close:active{background:rgba(29,28,26,.12)}
+  .v .hd{display:flex;align-items:center;justify-content:space-between;padding:0 20px 12px;flex:0 0 auto}
+
+  /* 类型切换 */
+  .segs{display:flex;background:#F1EEE8;border-radius:12px;padding:3px;flex:0 0 auto}
+  .segs button{flex:1;border:0;background:transparent;font:inherit;font-size:12px;color:var(--ink2);
+    padding:8px 2px;border-radius:9px;cursor:pointer;font-weight:500}
+  .segs button.on{background:#fff;color:var(--ink);font-weight:650;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+
+  /* 金额 */
+  .amt{display:flex;align-items:baseline;gap:7px;flex:0 0 auto;cursor:text}
+  .amt .cur{font-size:20px;color:var(--ink4);font-weight:500}
+  .amt .num{font-size:50px;font-weight:600;letter-spacing:-.035em;line-height:1.05;
+    font-variant-numeric:tabular-nums;white-space:nowrap}
+  .amt .caret{width:2px;height:.78em;background:var(--ink);display:inline-block;animation:blink 1.1s step-end infinite;
+    align-self:center;margin-left:1px}
+  @keyframes blink{50%{opacity:0}}
+  .amt.sm .num{font-size:44px}
+  .amt.lg .num{font-size:74px}
+
+  /* 分类 / 账户 / 评分通用件 */
+  .lbl{font-size:10px;color:var(--ink3);letter-spacing:.09em;font-weight:600;text-transform:uppercase;flex:0 0 auto}
+  .catstrip{display:flex;gap:9px;overflow-x:auto;padding:2px 0 4px;flex:0 0 auto;scrollbar-width:none}
+  .catstrip::-webkit-scrollbar{display:none}
+  .catitem{flex:0 0 auto;width:52px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer}
+  .catitem .box{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-size:22px;
+    box-shadow:inset 0 0 0 1px rgba(29,28,26,.04);transition:.15s}
+  .catitem.on .box{box-shadow:inset 0 0 0 2px var(--ink)}
+  .catitem span{font-size:10.5px;color:var(--ink2)}
+  .catitem.on span{color:var(--ink);font-weight:650}
+  .catgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px 6px;flex:0 0 auto}
+  .catgrid .catitem{width:100%}
+  .catgrid .box{width:48px;height:48px}
+
+  .pills{display:flex;gap:7px;overflow-x:auto;flex:0 0 auto;scrollbar-width:none;padding-bottom:2px}
+  .pills::-webkit-scrollbar{display:none}
+  .pill{border:1px solid var(--line2);background:#FBFAF7;border-radius:999px;padding:7px 12px;
+    font:inherit;font-size:11.5px;color:var(--ink2);cursor:pointer;white-space:nowrap;transition:.15s}
+  .pill.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:600}
+  .grades{display:flex;gap:6px;align-items:center;flex:0 0 auto}
+  .grade{border:1px solid var(--line2);background:#FBFAF7;border-radius:999px;padding:6px 10px;
+    font:inherit;font-size:11px;color:var(--ink2);cursor:pointer;white-space:nowrap;transition:.15s}
+  .grade.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:600}
+  .grade.skip{border:0;background:transparent;color:var(--ink4);margin-left:auto;font-size:10.5px}
+  .tagmini{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:650;color:#3A6EA5;
+    background:#EAF2FF;border-radius:6px;padding:3px 7px;letter-spacing:.02em}
+  .fieldrow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;flex:0 0 auto}
+  .fieldrow .k{font-size:11px;color:var(--ink3)}
+  .fieldrow .val{font-size:12.5px;font-weight:600;cursor:pointer}
+  .thin{height:1px;background:var(--line);flex:0 0 auto}
+
+  /* 键盘 */
+  .kb{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;flex:0 0 auto}
+  .kb button{height:48px;border:0;border-radius:12px;background:#F3F0EA;color:var(--ink);
+    font:inherit;font-size:19px;font-weight:500;cursor:pointer;transition:.12s;font-variant-numeric:tabular-nums}
+  .kb button:active{transform:scale(.95)}
+  .kb button[data-val="del"],.kb button[data-val="C"]{font-size:15px;color:var(--ink2);background:#EDEAE3}
+  .kb .ok{grid-column:span 2;background:var(--ink);color:#fff;font-size:15px;font-weight:650;display:flex;
+    align-items:center;justify-content:center;gap:7px}
+  .kb .ok span{font-size:16px;opacity:.65}
+
+  /* ============ A 纸卡续写（降密度版） ============ */
+  .va{background:rgba(20,18,15,.22)}
+  .va .ghost{position:absolute;left:16px;right:16px;top:16px;height:170px;background:#fff;border-radius:24px;
+    padding:16px 18px;opacity:.92;filter:blur(.3px)}
+  .va .ghost .gd{font-size:30px;font-weight:600;color:#C9C5BC}
+  .va .ghost .gr{margin-top:14px;height:8px;border-radius:4px;background:#F0EEE8;width:62%}
+  .va .ghost .gr.s{width:42%;margin-top:9px}
+  .va .lay{position:absolute;left:24px;right:24px;top:104px;bottom:10px;background:#fff;border-radius:26px;
+    box-shadow:0 1px 0 rgba(29,28,26,.10)}
+  .va .lay.l2{left:28px;right:28px;top:108px;bottom:2px;transform:rotate(-.7deg)}
+  .va .paper{position:absolute;left:14px;right:14px;top:96px;bottom:14px;background:#fff;border-radius:26px;
+    box-shadow:0 10px 40px rgba(29,28,26,.18);padding:0 20px 22px;display:flex;flex-direction:column;z-index:2}
+
+  /* 抓手行：× 绝对定位到右侧，抓手仍居中 */
+  .va .grabrow{display:flex;align-items:center;justify-content:center;position:relative;height:28px;flex:0 0 auto}
+  .va .grab{width:38px;height:4px;border-radius:99px;background:#E4E1DA}
+  .va .grabrow .close{position:absolute;right:0;top:1px}
+
+  /* 类型从灰底 segmented 改成无容器文字 tab，日期并入右端 */
+  .va .kinds{display:flex;align-items:center;justify-content:space-between;margin:2px 0 14px;flex:0 0 auto}
+  .va .ktabs{display:flex;gap:16px}
+  .va .ktabs button{border:0;background:transparent;font:inherit;font-size:12px;color:var(--ink4);
+    padding:2px 0 6px;cursor:pointer;position:relative}
+  .va .ktabs button.on{color:var(--ink);font-weight:650}
+  .va .ktabs button.on::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--ink);border-radius:2px}
+  .va .kdate{font-size:10.5px;color:var(--ink4)}
+
+  /* 金额放大成唯一主角 */
+  .va .amt{padding:16px 0 18px;border-bottom:1px solid var(--line);margin-bottom:16px}
+  .va .amt .num{font-size:62px}
+  .va .amt .cur{font-size:22px}
+
+  /* 三组字段改为「行首窄标签 + 同行控件」，省掉三条独立 label 行 */
+  .va .frow{display:flex;align-items:center;gap:8px;padding:8px 0;flex:0 0 auto}
+  .va .fk{flex:0 0 38px;font-size:10px;color:var(--ink3);letter-spacing:.04em;line-height:1.3}
+  .va .fv{flex:1;min-width:0}
+  .va .tagline{font-size:10.5px;color:var(--ink2);line-height:1.5}
+
+  /* 控件全部去边框、去灰底，视觉重量降一档 */
+  .va .catstrip{gap:8px;padding:0}
+  .va .catitem{width:48px;gap:4px}
+  .va .catitem .box{width:42px;height:42px;border-radius:13px;font-size:20px}
+  .va .catitem span{font-size:10px}
+  .va .pills .pill{border:0;background:#F3F0EA;padding:7px 11px;font-size:11.5px;color:var(--ink2)}
+  .va .pills .pill.on{background:var(--ink);color:#fff}
+  .va .gdots{display:flex;gap:7px;align-items:center}
+  .va .gdot{width:34px;height:34px;border-radius:50%;border:1px solid var(--line2);background:#FBFAF7;
+    font:inherit;font-size:14px;line-height:1;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .va .gdot b{font-size:7.5px;color:var(--ink3);font-weight:650;margin-top:1px}
+  .va .gdot.on{background:var(--ink);border-color:var(--ink)}
+  .va .gdot.on b{color:#fff}
+  .va .gskip{margin-left:auto;border:0;background:transparent;font:inherit;font-size:10.5px;color:var(--ink4);cursor:pointer}
+
+  /* 备注/日期/分期 从三个带框 chip 改成一行纯文字 */
+  .va .meta{display:flex;align-items:center;gap:9px;font-size:10.5px;color:var(--ink3);
+    padding:10px 0 2px;flex:0 0 auto}
+  .va .meta span{cursor:pointer;white-space:nowrap}
+  .va .meta i{width:2px;height:2px;border-radius:50%;background:var(--ink4);flex:0 0 2px}
+
+  /* 键盘留白：键更矮、间隙更小；完成键必须显式保持黑色 */
+  .va .kb{margin-top:auto;gap:5px}
+  .va .kb button{height:44px;background:#F5F3EE;border-radius:11px;font-size:18px}
+  .va .kb button[data-val="del"],.va .kb button[data-val="C"]{background:#EDEAE3}
+  .va .kb .ok{background:var(--ink);color:#fff}
+
+  /* ============ B 全屏金额优先 ============ */
+  .vb{padding:0 22px 18px}
+  .vb .top{display:flex;align-items:center;justify-content:space-between;padding-top:8px;flex:0 0 auto}
+  .vb .top .d{font-size:12px;color:var(--ink3);letter-spacing:.02em}
+  .vb .types{display:flex;gap:18px;padding:16px 2px 0;flex:0 0 auto}
+  .vb .types button{border:0;background:transparent;font:inherit;font-size:12.5px;color:var(--ink4);
+    padding:0 0 7px;cursor:pointer;position:relative}
+  .vb .types button.on{color:var(--ink);font-weight:650}
+  .vb .types button.on::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--ink);border-radius:2px}
+  .vb .mid{flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;min-height:0}
+  .vb .amt{padding-left:2px;padding-bottom:14px;border-bottom:1px solid var(--line);margin-bottom:2px}
+  .vb .amt .num{font-weight:600}
+  .vb .prev{font-size:10.5px;color:var(--ink4);letter-spacing:.02em;padding-left:3px;flex:0 0 auto}
+  .vb .quick{display:flex;align-items:center;gap:9px;padding:10px 12px;border:1px solid var(--line2);
+    border-radius:14px;background:#fff;box-shadow:var(--shadow);cursor:pointer;flex:0 0 auto}
+  .vb .quick .qi{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;font-size:18px;flex:0 0 34px}
+  .vb .quick .qt{font-size:13px;font-weight:600}
+  .vb .quick .qs{font-size:10.5px;color:var(--ink4);margin-top:2px}
+  .vb .quick .arw{margin-left:auto;color:var(--ink4);font-size:15px}
+  .vb .qhint{font-size:10.5px;color:var(--ink4);padding-left:3px}
+  .vb .ctx{display:flex;align-items:baseline;justify-content:space-between;padding:12px 2px 0;margin-top:4px;
+    border-top:1px solid var(--line);font-size:11px;color:var(--ink4);flex:0 0 auto}
+  .vb .ctx b{font-size:13px;color:var(--ink2);font-weight:600;font-variant-numeric:tabular-nums}
+  .vb .gline{display:flex;align-items:center;gap:9px;padding:10px 2px 14px;flex:0 0 auto}
+  .vb .gline .g{width:42px;height:42px;border-radius:50%;border:1px solid var(--line2);background:#fff;
+    font:inherit;font-size:17px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:.15s}
+  .vb .gline .g b{font-size:8.5px;font-weight:600;color:var(--ink3);margin-top:1px}
+  .vb .gline .g.on{background:var(--ink);border-color:var(--ink)}
+  .vb .gline .g.on b{color:#fff}
+  .vb .gline .gl{font-size:10px;color:var(--ink4);margin-left:4px;letter-spacing:.05em}
+  .vb .kb{background:#F1EEE8;padding:8px;border-radius:20px;gap:7px}
+  .vb .kb button{height:56px;background:#fff;border-radius:14px;font-size:21px;box-shadow:0 1px 1px rgba(29,28,26,.03)}
+  .vb .kb button[data-val="del"],.vb .kb button[data-val="C"]{background:#E9E6DF}
+  .vb .kb .ok{height:56px;border-radius:14px;background:var(--ink);color:#fff;box-shadow:none}
+
+  /* ============ C 彩卡驱动 ============ */
+  .vc{padding:0 18px 18px}
+  .vc .hd{padding:6px 2px 12px}
+  .vc .hd b{font-size:19px;font-weight:650;letter-spacing:-.02em}
+  .vc .segs{margin-bottom:14px}
+  .vc .deckwrap{flex:0 0 auto;position:relative;height:142px;margin:0 -18px 10px;overflow:hidden}
+  .vc .deck{display:flex;gap:10px;height:100%;overflow-x:auto;padding:6px 18px 10px;scrollbar-width:none;align-items:center}
+  .vc .deck::-webkit-scrollbar{display:none}
+  .vc .bankcard{flex:0 0 158px;height:100px;border-radius:15px;padding:11px 12px;color:#fff;position:relative;overflow:hidden;
+    display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;transition:.2s;
+    background:linear-gradient(142deg,var(--c1),var(--c2));
+    box-shadow:0 8px 18px -8px rgba(29,28,26,.45),inset 0 .5px 0 rgba(255,255,255,.30),inset 0 0 0 .5px rgba(255,255,255,.10)}
+  .vc .bankcard::before{content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(120% 92% at 10% -8%,rgba(255,255,255,.24),rgba(255,255,255,0) 56%),
+               linear-gradient(112deg,rgba(255,255,255,.10) 0 16%,rgba(255,255,255,0) 36% 60%,rgba(255,255,255,.08) 82%,rgba(255,255,255,0) 100%)}
+  .vc .bankcard.on{flex:0 0 176px;height:118px;box-shadow:0 14px 26px -8px rgba(29,28,26,.48),inset 0 .5px 0 rgba(255,255,255,.35),0 0 0 2px var(--ink)}
+  .vc .bankcard:not(.on){opacity:.62;transform:scale(.94)}
+  .vc .bankcard .bname{font-size:11.5px;font-weight:650;letter-spacing:-.01em;position:relative}
+  .vc .bankcard .bmeta{font-size:9px;opacity:.78;margin-top:3px;position:relative;letter-spacing:.02em}
+  .vc .bankcard .bbot{display:flex;align-items:center;gap:6px;position:relative}
+  .vc .bankcard .bnum{font-size:9.5px;letter-spacing:.09em;opacity:.92}
+  .vc .chipic{width:19px;height:14px;border-radius:3.5px;flex:0 0 19px;position:relative;
+    background:linear-gradient(135deg,#F0E3B4 0%,#C9A94E 46%,#EFE2B2 100%);box-shadow:inset 0 0 0 .5px rgba(0,0,0,.22)}
+  .vc .chipic::before,.vc .chipic::after{content:"";position:absolute;background:rgba(0,0,0,.15)}
+  .vc .chipic::before{left:0;right:0;top:50%;height:.5px}
+  .vc .chipic::after{top:3px;bottom:3px;left:50%;width:.5px}
+  .vc .bankcard .net{margin-left:auto;font-size:7.5px;font-weight:700;letter-spacing:.09em;opacity:.7}
+  .vc .from{display:flex;align-items:center;gap:8px;flex:0 0 auto;margin-bottom:10px}
+  .vc .from .t{font-size:12px;color:var(--ink2)}
+  .vc .from b{font-size:12.5px;font-weight:650}
+  .vc .amt{justify-content:flex-end;padding:2px 2px 12px;border-bottom:1px solid var(--line);margin-bottom:12px}
+  .vc .amt .num{font-size:46px}
+  .vc .blk{margin-bottom:12px;flex:0 0 auto}
+  .vc .blk .lbl{display:block;margin-bottom:9px}
+  .vc .after{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:12px;
+    background:#F3F0EA;font-size:11px;color:var(--ink2);margin:2px 0 12px;flex:0 0 auto}
+  .vc .after b{font-size:13px;color:var(--ink);font-weight:650;font-variant-numeric:tabular-nums}
+  .vc .save{width:100%;border:0;border-radius:16px;background:var(--ink);color:#fff;padding:14px;
+    font:inherit;font-size:14.5px;font-weight:650;cursor:pointer;margin-top:auto;flex:0 0 auto}
+  .vc .save:active{opacity:.85}
+  .vc .kbfloat{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:24px 24px 0 0;
+    padding:12px 16px 20px;box-shadow:0 -10px 40px rgba(29,28,26,.16);z-index:9;animation:up .26s cubic-bezier(.32,.72,0,1) both}
+  .vc .kbfloat .kh{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--ink3);margin-bottom:10px}
+  .vc .kbfloat .kh button{border:0;background:transparent;font:inherit;font-size:11px;color:var(--ink2);cursor:pointer}
+
+  /* ============ D 小票账本 ============ */
+  .vd{padding:0 24px 20px;background:#FBFAF7}
+  .vd .serif{font-family:Georgia,"Songti SC","STSong","SimSun",serif}
+  .vd .top{display:flex;align-items:flex-start;justify-content:space-between;padding:14px 0 12px;flex:0 0 auto}
+  .vd .daywrap{display:flex;align-items:baseline;gap:10px}
+  .vd .day{font-size:60px;font-weight:600;letter-spacing:-.04em;line-height:.9}
+  .vd .mon{font-size:10px;color:var(--ink3);letter-spacing:.16em;font-weight:600;line-height:1.6}
+  .vd .kindtag{font-size:9.5px;letter-spacing:.18em;font-weight:700;color:var(--ink2);
+    border:1px solid var(--ink2);padding:4px 8px;border-radius:2px;margin-top:4px;text-transform:uppercase}
+  .vd .rule{height:1.5px;background:var(--ink);flex:0 0 auto}
+  .vd .rnum{display:flex;justify-content:space-between;align-items:baseline;font-size:10px;color:var(--ink4);
+    letter-spacing:.1em;padding:7px 0 12px;flex:0 0 auto}
+  .vd .amt{justify-content:flex-end;padding:0 0 14px}
+  .vd .amt .num{font-weight:500;letter-spacing:-.02em}
+  .vd .amt .cur{font-size:18px}
+  .vd .rows{flex:0 0 auto}
+  .vd .lrow{display:flex;align-items:baseline;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);cursor:pointer}
+  .vd .lrow .k{font-size:11.5px;color:var(--ink3);white-space:nowrap}
+  .vd .lrow .dots{flex:1;border-bottom:1px dotted #CFCBC2;transform:translateY(-3px)}
+  .vd .lrow .val{font-size:12.5px;font-weight:600;white-space:nowrap}
+  .vd .lrow .val.dim{color:var(--ink4);font-weight:400}
+  .vd .receipt{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:20px 0 0;flex:0 0 auto}
+  .vd .rsum{flex:1;min-width:0}
+  .vd .rline{display:flex;align-items:baseline;justify-content:space-between;padding:6px 0;font-size:11.5px;color:var(--ink2)}
+  .vd .rline b{font-size:13px;color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+  .vd .tear{border-top:1px dashed #CFCBC2;margin:10px 0 8px}
+  .vd .rnote{font-size:10px;color:var(--ink4);letter-spacing:.02em;line-height:1.5}
+  .vd .stamp{position:relative;width:64px;height:64px;flex:0 0 64px;margin-top:4px;
+    border:2px solid rgba(192,57,43,.42);border-radius:50%;display:grid;place-items:center;
+    color:rgba(192,57,43,.55);font-size:22px;font-weight:700;transform:rotate(-14deg);pointer-events:none}
+  .vd .stamp::after{content:"";position:absolute;inset:4px;border:1px solid rgba(192,57,43,.28);border-radius:50%}
+  .vd .rlist{padding:22px 0 0;flex:0 0 auto}
+  .vd .rh{font-size:9.5px;letter-spacing:.14em;color:var(--ink4);font-weight:700;padding-bottom:6px}
+  .vd .ritem{display:flex;align-items:baseline;justify-content:space-between;padding:8px 0;
+    border-bottom:1px solid var(--line);font-size:11.5px;color:var(--ink2)}
+  .vd .ritem b{font-size:12px;color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+  .vd .foot{margin-top:auto;flex:0 0 auto}
+  .vd .save2{width:100%;border:0;border-radius:6px;background:var(--ink);color:#fff;padding:15px;
+    font:inherit;font-size:14px;font-weight:650;letter-spacing:.08em;cursor:pointer}
+  .vd .footnote{font-size:10px;color:var(--ink4);text-align:center;margin-top:10px;letter-spacing:.03em}
+  .vd .kbfloat{position:absolute;left:0;right:0;bottom:0;background:#FBFAF7;border-top:1.5px solid var(--ink);
+    padding:10px 20px 18px;z-index:9;animation:up .26s cubic-bezier(.32,.72,0,1) both}
+  .vd .kbfloat .kh{display:flex;justify-content:space-between;font-size:10px;color:var(--ink3);letter-spacing:.1em;margin-bottom:8px}
+  .vd .kbfloat .kh button{border:0;background:transparent;font:inherit;font-size:10px;color:var(--ink2);cursor:pointer}
+  .vd .kbfloat .kb{background:transparent;gap:0;border-top:1px solid var(--line)}
+  .vd .kbfloat .kb button{height:46px;background:transparent;border-radius:0;border-right:1px solid var(--line);
+    border-bottom:1px solid var(--line);font-family:Georgia,"Songti SC",serif;font-size:18px}
+  .vd .kbfloat .kb button:nth-child(4n){border-right:0}
+  .vd .kbfloat .kb .ok{background:var(--ink);color:#fff;font-family:inherit;border:0;border-radius:0}
+
+  @keyframes up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+
+  /* 浮层 / toast 共用 */
+  .toast{position:absolute;left:50%;top:70px;transform:translate(-50%,-12px);z-index:30;
+    background:var(--ink);color:#fff;border-radius:999px;padding:10px 18px;font-size:12px;font-weight:600;
+    box-shadow:0 8px 24px rgba(0,0,0,.22);opacity:0;pointer-events:none;transition:.25s;white-space:nowrap}
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+
+  /* ============ 右侧说明 ============ */
+  .notes{width:318px;flex:0 0 318px;max-height:calc(100% - 30px);overflow-y:auto;scrollbar-width:none}
+  .notes::-webkit-scrollbar{display:none}
+  .ncard{background:#fff;border-radius:20px;padding:18px 18px 16px;box-shadow:var(--shadow);margin-bottom:12px}
+  .ncard .kicker{font-size:10px;letter-spacing:.16em;color:var(--ink4);font-weight:700;text-transform:uppercase}
+  .ncard h2{margin:7px 0 6px;font-size:20px;font-weight:650;letter-spacing:-.02em}
+  .ncard .tag{font-size:12px;color:var(--ink2);line-height:1.6;margin:0 0 14px}
+  .ncard h4{margin:14px 0 7px;font-size:10.5px;letter-spacing:.1em;color:var(--ink4);font-weight:700;text-transform:uppercase}
+  .ncard ul{margin:0;padding-left:16px}
+  .ncard li{font-size:12px;color:var(--ink2);line-height:1.75;margin-bottom:3px}
+  .ncard .pc{display:flex;gap:8px;margin-top:4px}
+  .ncard .pc div{flex:1;border-radius:12px;padding:10px 11px;font-size:11px;line-height:1.6}
+  .ncard .pc .pro{background:#EFF6EF;color:#2E6B45}
+  .ncard .pc .con{background:#FDF0EE;color:#A3422F}
+  .ncard .pc b{display:block;font-size:10px;letter-spacing:.08em;margin-bottom:4px;opacity:.75}
+  .ncard .prd{margin-top:12px;border-top:1px solid var(--line);padding-top:11px;font-size:11px;color:var(--ink2);line-height:1.7}
+  .ncard .prd b{color:var(--ink);font-weight:650}
+  .quicktab{background:#fff;border-radius:20px;padding:14px 16px;box-shadow:var(--shadow)}
+  .quicktab h4{margin:0 0 9px;font-size:10.5px;letter-spacing:.1em;color:var(--ink4);font-weight:700;text-transform:uppercase}
+  .quicktab table{width:100%;border-collapse:collapse;font-size:11px}
+  .quicktab td{padding:6px 2px;border-bottom:1px solid var(--line);color:var(--ink2)}
+  .quicktab tr:last-child td{border-bottom:0}
+  .quicktab td:first-child{font-weight:700;color:var(--ink);width:26px}
+  .quicktab td:last-child{text-align:right;color:var(--ink4);font-size:10.5px}
+
+  /* ============ 并排对比 ============ */
+  .compare{height:100%;overflow:auto;padding:16px 22px 24px;display:none}
+  .compare.on{display:block}
+  .compare-inner{display:flex;gap:22px;width:max-content;margin:0 auto}
+  .mini{width:218px;flex:0 0 218px;margin:0}
+  .mini-stage{width:218px;height:473px;position:relative;overflow:hidden;border-radius:12px}
+  .mini .device{transform:scale(.56)}
+  .mini figcaption{padding:9px 2px 0}
+  .mini figcaption b{font-size:12.5px;font-weight:650}
+  .mini figcaption span{display:block;font-size:10.5px;color:#8A867D;margin-top:3px;line-height:1.5}
+  .mini .badge{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.08em;color:#fff;
+    background:var(--ink);border-radius:5px;padding:2px 6px;margin-right:6px;vertical-align:1px}
+  .comparehead{font-size:12px;color:#6B6862;margin:0 0 12px;line-height:1.6}
+  .comparehead b{color:var(--ink)}
+  .hide{display:none!important}
+</style>
+</head>
+<body>
+<div class="bar">
+  <div class="brand">记一笔 · 录入方案<small>沿用首页 / 资产页现有视觉基线</small></div>
+  <div class="chips" id="chips">
+    <button class="chip on" data-v="a">A 纸卡续写</button>
+    <button class="chip" data-v="b">B 金额优先</button>
+    <button class="chip" data-v="c">C 先选卡</button>
+    <button class="chip" data-v="d">D 小票账本</button>
+  </div>
+  <button class="modebtn" id="modeBtn">并排对比</button>
+  <div class="hint" id="hint"></div>
+</div>
+
+<div class="stage">
+  <div class="single" id="single">
+    <div class="devwrap" id="devwrap"><div class="device" id="dev"></div></div>
+    <aside class="notes" id="notes"></aside>
+  </div>
+  <div class="compare" id="compare">
+    <p class="comparehead"><b>四版用的是同一套视觉 token</b>（暖白底 / 白卡 / 极轻阴影 / 24–26px 圆角 / Emoji 浅底容器 / 红绿克制色 / 黑色动作键），变量只有<b>结构与录入顺序</b>。点任一版可切回单屏交互。</p>
+    <div class="compare-inner" id="compareInner"></div>
+  </div>
+</div>
+
+<script>
+/* ============ 数据：与 PRD v2.1 对齐 ============ */
+var CATS = [
+  {k:'吃', e:'🥐', bg:'#FFF1E6'}, {k:'穿', e:'👕', bg:'#FFEEF3'},
+  {k:'住', e:'🏠', bg:'#EFF7E8'}, {k:'行', e:'🚇', bg:'#EAF2FF'},
+  {k:'乐', e:'🎮', bg:'#F3EEFF'}, {k:'医', e:'💊', bg:'#E8F6F4'},
+  {k:'情', e:'🐱', bg:'#FFF8E4'}, {k:'其他', e:'✨', bg:'#F3F1EE'}
+];
+var INCOMES = [{k:'工资',e:'💰',bg:'#EFF7E8'},{k:'其他收入',e:'🎁',bg:'#FFF8E4'}];
+var ACCS = [
+  {n:'花呗',    c1:'#4C8DF6', c2:'#1D4ED8', num:'•••• 0312', meta:'信用 · 还款日 25'},
+  {n:'建行 5044', c1:'#0E5FA8', c2:'#123B2F', num:'•••• 5044', meta:'储蓄'},
+  {n:'京东白条', c1:'#E0483C', c2:'#8E1B1B', num:'•••• 8891', meta:'信用 · 还款日 8'},
+  {n:'余额宝',   c1:'#F2A93B', c2:'#DD6B22', num:'•••• 2076', meta:'储蓄'}
+];
+var GRADES = [{k:'夯',e:'🔥'},{k:'飘',e:'🍃'},{k:'拉',e:'🫠'},{k:'NPC',e:'😐'}];
+var TYPES = [{k:'expense',n:'支出'},{k:'income',n:'收入'},{k:'repay',n:'还款'},{k:'transfer',n:'转账'}];
+
+var S = {v:'a', type:'expense', cat:'吃', acc:'花呗', grade:'夯', amount:'32.00', kbOpen:false, saved:false};
+var MODE = 'single';
+
+/* ============ 通用片段 ============ */
+function typeName(){ for(var i=0;i<TYPES.length;i++){ if(TYPES[i].k===S.type) return TYPES[i].n; } return '支出'; }
+function curCat(){ var list = S.type==='income' ? INCOMES : CATS; for(var i=0;i<list.length;i++){ if(list[i].k===S.cat) return list[i]; } return list[0]; }
+
+function segsHTML(){
+  return '<div class="segs">' + TYPES.map(function(t){
+    return '<button data-act="type" data-val="'+t.k+'" class="'+(S.type===t.k?'on':'')+'">'+t.n+'</button>';
+  }).join('') + '</div>';
+}
+function amtHTML(size){
+  var cls = 'amt' + (size ? ' '+size : '');
+  var a = S.amount === '' ? '0' : S.amount;
+  return '<div class="'+cls+'" data-act="openkb" data-val="'+(S.v==='a'||S.v==='b'?'no':'yes')+'">'
+    + '<span class="cur">¥</span><span class="num">'+a+'</span><i class="caret"></i></div>';
+}
+function catStripHTML(){
+  var list = S.type==='income' ? INCOMES : CATS;
+  return '<div class="catstrip">' + list.map(function(c){
+    return '<div class="catitem '+(S.cat===c.k?'on':'')+'" data-act="cat" data-val="'+c.k+'">'
+      + '<div class="box" style="background:'+c.bg+'">'+c.e+'</div><span>'+c.k+'</span></div>';
+  }).join('') + '</div>';
+}
+function catGridHTML(){
+  var list = S.type==='income' ? INCOMES : CATS;
+  return '<div class="catgrid">' + list.map(function(c){
+    return '<div class="catitem '+(S.cat===c.k?'on':'')+'" data-act="cat" data-val="'+c.k+'">'
+      + '<div class="box" style="background:'+c.bg+'">'+c.e+'</div><span>'+c.k+'</span></div>';
+  }).join('') + '</div>';
+}
+function accPillsHTML(){
+  return '<div class="pills">' + ACCS.map(function(a){
+    return '<button class="pill '+(S.acc===a.n?'on':'')+'" data-act="acc" data-val="'+a.n+'">'+a.n+'</button>';
+  }).join('') + '</div>';
+}
+function gradesHTML(){
+  return '<div class="grades">' + GRADES.map(function(g){
+    return '<button class="grade '+(S.grade===g.k?'on':'')+'" data-act="grade" data-val="'+g.k+'">'+g.e+' '+g.k+'</button>';
+  }).join('') + '<button class="grade skip" data-act="grade" data-val="">跳过</button></div>';
+}
+function kbHTML(){
+  var rows = [['7','8','9','del'],['4','5','6','C'],['1','2','3','00'],['.','0','ok']];
+  var labels = {del:'⌫',C:'C'};
+  return '<div class="kb">' + rows.map(function(r){
+    return r.map(function(k){
+      if(k==='ok') return '<button class="ok" data-act="key" data-val="ok">完成 <span>↵</span></button>';
+      return '<button data-act="key" data-val="'+k+'">'+(labels[k]||k)+'</button>';
+    }).join('');
+  }).join('') + '</div>';
+}
+function bankHTML(){
+  return '<div class="deck">' + ACCS.map(function(a){
+    return '<div class="bankcard '+(S.acc===a.n?'on':'')+'" style="--c1:'+a.c1+';--c2:'+a.c2+'" data-act="acc" data-val="'+a.n+'">'
+      + '<div><div class="bname">'+a.n+'</div><div class="bmeta">'+a.meta+'</div></div>'
+      + '<div class="bbot"><span class="bnum">'+a.num+'</span><span class="chipic"></span><span class="net">UNIONPAY</span></div></div>';
+  }).join('') + '</div>';
+}
+function sbHTML(){
+  return '<div class="sb"><span>9:41</span><span class="batt"></span></div>';
+}
+function toastHTML(){
+  return '<div class="toast" id="toast">已记下 · '+typeName()+' ¥'+S.amount+'</div>';
+}
+
+/* ============ A 降密度专用片段 ============ */
+function kindsHTML(){
+  return '<div class="kinds"><div class="ktabs">' + TYPES.map(function(t){
+    return '<button data-act="type" data-val="'+t.k+'" class="'+(S.type===t.k?'on':'')+'">'+t.n+'</button>';
+  }).join('') + '</div><span class="kdate">今天 · 11/6</span></div>';
+}
+function gradeDotsHTML(){
+  return '<div class="gdots">' + GRADES.map(function(g){
+    return '<button class="gdot '+(S.grade===g.k?'on':'')+'" data-act="grade" data-val="'+g.k+'">'+g.e+'<b>'+g.k+'</b></button>';
+  }).join('') + '<button class="gskip" data-act="grade" data-val="">跳过</button></div>';
+}
+function rowA(label, inner){
+  return '<div class="frow"><span class="fk">'+label+'</span><div class="fv">'+inner+'</div></div>';
+}
+
+/* ============ 按类型变化的字段 ============ */
+function dynamicRowsA(){
+  if(S.type==='repay'){
+    return rowA('还哪张卡','<div class="pills"><button class="pill on">招行 8857</button><button class="pill">花呗</button><button class="pill">白条</button></div>')
+      + rowA('', '<span class="tagmini">不计支出 · 这笔属 11 月账单第 3 期</span>')
+      + rowA('扣款', accPillsHTML());
+  }
+  if(S.type==='transfer'){
+    return rowA('转出', '<div class="pills"><button class="pill on">微信余额 → 建行 5044</button></div>')
+      + rowA('', '<span class="tagline">转出 ¥1,000.00　到账 ¥999.90　<span style="color:var(--red)">手续费 ¥0.10</span> 自动记一笔支出</span>');
+  }
+  return rowA(S.type==='income'?'收入':'分类', catStripHTML())
+    + rowA(S.type==='income'?'存入':'账户', accPillsHTML())
+    + (S.type==='expense' ? rowA('值不值', gradeDotsHTML()) : '');
+}
+function dynamicRowsC(){
+  if(S.type==='repay') return '<div class="blk"><span class="lbl">还哪张卡 · 不计支出</span>'
+    + '<div class="pills"><button class="pill on">招行 8857 · 11 月账单</button><button class="pill">花呗</button></div></div>';
+  if(S.type==='transfer') return '<div class="blk"><span class="lbl">转到</span>'
+    + '<div class="pills"><button class="pill on">建行 5044</button><button class="pill">余额宝</button></div>'
+    + '<div style="font-size:11px;color:var(--ink2);margin-top:8px">到账 ¥999.90 · 手续费 ¥0.10 单独计支出</div></div>';
+  return '<div class="blk"><span class="lbl">'+(S.type==='income'?'收入分类':'分类 · PRD 定死 8 类')+'</span>'+catGridHTML()+'</div>'
+    + (S.type==='expense' ? '<div class="blk"><span class="lbl">这笔值不值 · 可跳过</span>'+gradesHTML()+'</div>' : '');
+}
+function dRows(){
+  var rows = [];
+  if(S.type==='repay'){
+    rows = [['还款对象','招行 8857'],['账单期','11 月 · 第 3 期'],['计入支出','不计'],['扣款账户','建行 5044']];
+  }else if(S.type==='transfer'){
+    rows = [['转出','微信余额 ¥1,000.00'],['到账','建行 5044 ¥999.90'],['手续费','¥0.10 自动记支出'],['日期','11 月 6 日']];
+  }else{
+    rows = [['分类',curCat().e+' '+(S.type==='income'?'收入 · ':'')+S.cat],['账户',S.acc],
+            ['日期','11 月 6 日'],['备注','加一笔'],['这笔值不值',S.type==='expense'?(S.grade||'跳过'):'—']];
+  }
+  return rows.map(function(r,i){
+    return '<div class="lrow" data-act="row" data-val="'+i+'"><span class="k">'+r[0]+'</span>'
+      + '<span class="dots"></span><span class="val'+(r[1]==='加一笔'?' dim':'')+'">'+r[1]+'</span></div>';
+  }).join('');
+}
+
+/* ============ 四版主体 ============ */
+function bodyA(){
+  return sbHTML() + '<div class="v va">'
+    + '<div class="ghost"><div class="gd">06</div><div class="gr"></div><div class="gr s"></div></div>'
+    + '<div class="lay"></div><div class="lay l2"></div>'
+    + '<div class="paper">'
+      + '<div class="grabrow"><span class="grab"></span><button class="close" data-act="close">×</button></div>'
+      + kindsHTML()
+      + amtHTML()
+      + dynamicRowsA()
+      + '<div class="meta"><span data-act="row" data-val="note">备注 · 加一笔</span><i></i>'
+        + '<span data-act="row" data-val="date">今天 · 可改</span><i></i>'
+        + '<span data-act="row" data-val="plan">分期 ✓</span></div>'
+      + kbHTML()
+    + '</div>' + toastHTML() + '</div>';
+}
+function bodyB(){
+  return sbHTML() + '<div class="v vb">'
+    + '<div class="top"><span class="d">今天 · 11 月 6 日 周五</span><button class="close" data-act="close">×</button></div>'
+    + '<div class="types">' + TYPES.map(function(t){
+        return '<button data-act="type" data-val="'+t.k+'" class="'+(S.type===t.k?'on':'')+'">'+t.n+'</button>';
+      }).join('') + '</div>'
+    + '<div class="mid">'
+      + '<div class="prev">上次 · 11/6 好利来 ¥32.00 · 花呗</div>'
+      + amtHTML('lg')
+      + '<div class="quick" data-act="row" data-val="quick"><div class="qi" style="background:'+curCat().bg+'">'+curCat().e+'</div>'
+        + '<div><div class="qt">'+curCat().k+' · '+S.acc+'</div><div class="qs">按分类记住上次选择，90% 的笔零点击</div></div>'
+        + '<span class="arw">›</span></div>'
+      + '<div class="qhint">'+(S.type==='repay'?'还款不计支出 · 这笔属 11 月账单第 3 期':
+          S.type==='transfer'?'转出 ¥1,000.00 → 到账 ¥999.90 · 手续费 ¥0.10 自动记支出':
+          S.type==='income'?'收入不参与消费评分':'金额空并聚焦，输完按 ↵ 直接回到流水')+'</div>'
+      + '<div class="ctx"><span>今日已记 3 笔 · 支出</span><b>¥165.00</b></div>'
+    + '</div>'
+    + '<div class="gline">' + GRADES.map(function(g){
+        return '<button class="g '+(S.type==='expense'&&S.grade===g.k?'on':'')+'" data-act="grade" data-val="'+g.k+'">'+g.e+'<b>'+g.k+'</b></button>';
+      }).join('') + '<span class="gl">'+(S.type==='expense'?'这笔值不值 · 可跳过':'还款 / 转账 / 收入不评分')+'</span></div>'
+    + kbHTML()
+    + toastHTML() + '</div>';
+}
+function bodyC(){
+  return sbHTML() + '<div class="v vc">'
+    + '<div class="hd"><b>记一笔</b><button class="close" data-act="close">×</button></div>'
+    + segsHTML()
+    + '<div class="deckwrap">'+bankHTML()+'</div>'
+    + '<div class="from"><span class="t">'+(S.type==='income'?'存进':S.type==='repay'?'还到':'从')+'</span><b>'+S.acc+'</b>'
+      + (S.type==='expense'?'<span class="tagmini">账单期 11/15–12/14 · 计入 12 月</span>':'')+'</div>'
+    + amtHTML()
+    + dynamicRowsC()
+    + '<div class="fieldrow" style="margin-top:2px"><span class="k">备注</span><span class="val" data-act="row" data-val="note">加一笔 ›</span></div>'
+    + '<div class="thin" style="margin:6px 0 12px"></div>'
+    + '<div class="after"><span>记下后 · '+S.acc+' 欠款</span><b>¥3,217.42</b></div>'
+    + '<button class="save" data-act="save">记下这笔</button>'
+    + (S.kbOpen ? '<div class="kbfloat"><div class="kh"><span>输入金额</span><button data-act="closekb">收起 ▾</button></div>'+kbHTML()+'</div>' : '')
+    + toastHTML() + '</div>';
+}
+function bodyD(){
+  return sbHTML() + '<div class="v vd">'
+    + '<div class="top"><div class="daywrap"><span class="day serif">06</span>'
+      + '<span class="mon">NOV<br>2026 · FRI</span></div>'
+      + '<span class="kindtag">'+typeName()+'</span></div>'
+    + '<div class="rule"></div>'
+    + '<div class="rnum"><span>DOODOO · DAILY LEDGER</span><span>NO. 0042</span></div>'
+    + amtHTML('sm')
+    + '<div class="rows">'+dRows()+'</div>'
+    + '<div class="receipt"><div class="rsum">'
+      + '<div class="rline"><span>今日 3 笔 · 支出</span><b>¥165.00</b></div>'
+      + '<div class="rline"><span>本月已花</span><b>¥4,286.00</b></div>'
+      + '<div class="tear"></div>'
+      + '<div class="rnote">余额由流水推导 · 不直接改余额</div></div>'
+      + '<div class="stamp serif">'+((S.type==='expense'&&S.grade)?S.grade:'记')+'</div></div>'
+    + '<div class="rlist"><div class="rh">同日流水 · 3 笔</div>'
+      + '<div class="ritem"><span>🥐 好利来 · 吃</span><b>−¥32.00</b></div>'
+      + '<div class="ritem"><span>🚇 地铁 · 行</span><b>−¥4.00</b></div>'
+      + '<div class="ritem"><span>🐱 麦富迪猫粮 · 情</span><b>−¥129.00</b></div></div>'
+    + '<div class="foot"><button class="save2" data-act="save">记 下 这 笔</button></div>'
+    + (S.kbOpen ? '<div class="kbfloat"><div class="kh"><span>AMOUNT</span><button data-act="closekb">收起 ▾</button></div>'+kbHTML()+'</div>' : '')
+    + toastHTML() + '</div>';
+}
+function bodyHTML(k){ return k==='a'?bodyA():k==='b'?bodyB():k==='c'?bodyC():bodyD(); }
+
+/* ============ 说明文案 ============ */
+var NOTES = {
+  a:{ name:'A · 纸卡续写', hint:'减掉约 120pt 的容器与边框，字段一个没藏：纸卡还是那张纸卡，只是不挤了。',
+    tag:'把现有 index.html 的半屏 sheet 升级成「和首页日卡同款」的白卡：同样的 26px 圆角、同样的层叠纸边、同样的极轻阴影。<b>降密度优化</b>后，62px 金额是唯一主角，其余字段全部降级为「行首窄标签 + 轻量控件」，底部仍是自定义数字键盘。',
+    points:['载体：盖在首页之上的第 4 张纸卡，背后仍能看到层叠纸边','顺序：类型 → 金额 → 分类横滑 → 账户 → 评分 → 键盘','<b>减法</b>：删标题行、拆掉灰底 segmented、3 条 label 内联成 38pt 窄标签','<b>减法</b>：药丸去边框、分类方块 46→42、评分改 34pt 圆点、meta 三 chip 改一行纯文字','四类型切换时字段真换：还款显示账单期 + 不计支出，转账显示双金额 + 手续费','备注 / 日期 / 分期开关收在同一行，分期内联不另开界面'],
+    pro:'与首页语言最连贯，点 + 的动效可以做成「抽卡」；信息最全且一屏录完不用跳；优化后行距与金额留白显著变宽。',
+    con:'控件数量仍比 B 多（分类/账户/评分都常驻），但已不贴在一起；键盘 4×4 在 390pt 宽里仍偏小。',
+    prd:'覆盖 <b>四类型 / 8 类分类 / 账户 / 日期可改 / 评分可跳过 / 分期内联 / 转账双金额</b>，是四版里字段最完整的一版，且优化没有隐藏任何字段。',
+    speed:'2 步 · 中速' },
+  b:{ name:'B · 金额优先', hint:'全屏只剩一个大数字和一个键盘，像按计算器而不是填表。',
+    tag:'去掉所有卡片与容器，暖白底上直接放金额；底部 44% 是常驻大键盘，↵ 键保存并立刻回到流水。分类与账户合并成一行「默认带出」，按分类记住上次选择。',
+    points:['载体：全屏无卡、无阴影，只有金额下方一条细线','顺序：金额 → ↵，其余字段默认带出，想改才点','74px 金额是画面唯一视觉重心，红色只给支出汇总不进录入','评分降级为键盘上方四个圆形小按钮，不打断主线','切换还款 / 转账时只换一行小字说明，控件数量不变'],
+    pro:'最快，最贴 PRD「不打断」；一屏一问，字号和留白能真正排准；和前六版被否的「白卡堆叠」彻底拉开。',
+    con:'取舍最狠：分类 / 账户 / 备注都藏进一行，改字段要多点一次；全屏盖掉首页，失去「纸卡」的连续感。',
+    prd:'覆盖 <b>金额 / 默认账户与分类 / 评分可跳过 / 四类型</b>；分期、双金额、备注需二次展开，属刻意延后。',
+    speed:'1 步 · 最快' },
+  c:{ name:'C · 先选卡', hint:'资产页的彩卡直接搬进录入页，先确认这笔从哪张卡出。',
+    tag:'复用资产页最有辨识度的渐变银行卡堆：横滑选卡、选中放大置顶，下方直接显示账单期归属。分类用 8 类 4×2 网格一次铺满，正好对应 PRD 定死的 8 类。',
+    points:['载体：彩色卡堆 + 白底表单，彩卡是画面唯一大面积色块','顺序：先选账户 → 金额 → 分类网格 → 评分 → 保存','选中卡下方显示「账单期 11/15–12/14 · 计入 12 月」，直接解决花呗跨期归属','8 类 4×2 网格一屏铺满，不用滚动找分类','金额区点击后按需弹键盘，默认态更完整'],
+    pro:'和资产页共用同一套卡面，风格统一度最高；把「账户余额对得上」这个第一痛点放到录入第一步。',
+    con:'你有 18 个账户，横滑找卡会慢；多一步选择，和「不打断」有张力；彩卡 + Emoji 网格同屏，颜色最多。',
+    prd:'覆盖 <b>账户 / 账单期自动判断 / 8 类分类 / 评分 / 四类型</b>；需配「最近使用置顶」才扛得住 18 个账户。',
+    speed:'3 步 · 较慢' },
+  d:{ name:'D · 小票账本', hint:'一张当天的小票：衬线日期、粗规线、点线引导，最不像记账 App。',
+    tag:'衬线大日期 + 1.5px 粗黑规线 + leader dots 点线引导字段 + 方角黑色按钮。呼应 Monarch 调研里的「衬线大标题 / 全大写宽字距小标签 / 只用极浅分隔线」，但整体是一张纸质单据。',
+    points:['载体：一张纸，没有卡片、没有药丸、没有容器','顺序：先看日期 → 金额右对齐 → 逐行核对字段 → 盖章记下','字段用点线引导，右对齐，像账本也像收据','衬线字体只给日期和金额，正文仍用系统无衬线','评分做成右上角旋转 -14° 的红色印章，是「可玩性」最轻的落点'],
+    pro:'辨识度最高，和市面记账 App 拉得最开；文本密度高但节奏清楚，印刷感耐看；和首页「日卡」的编辑排版气质相近。',
+    con:'最慢，逐行点字段不如直接选控件；中文衬线在 iOS 上字体依赖系统；方角按钮与现有黑色胶囊语言有分歧。',
+    prd:'覆盖 <b>四类型 / 分类 / 账户 / 日期 / 评分 / 双金额</b>；键盘按需弹出，字段逐行可改。',
+    speed:'3 步 · 最慢' }
+};
+var CAPS = {
+  a:['A 纸卡续写','延续首页日卡层叠，字段最全'],
+  b:['B 金额优先','全屏大数字 + 常驻键盘，最快'],
+  c:['C 先选卡','复用资产页彩卡，账户是主角'],
+  d:['D 小票账本','衬线日期 + 点线引导，最不像 App']
+};
+
+function notesHTML(){
+  var n = NOTES[S.v];
+  var qt = '<div class="quicktab"><h4>四版速览</h4><table>'
+    + ['a','b','c','d'].map(function(k){
+        return '<tr><td>'+k.toUpperCase()+'</td><td>'+NOTES[k].name.split(' · ')[1]+'</td><td>'+NOTES[k].speed+'</td></tr>';
+      }).join('') + '</table></div>';
+  return '<div class="ncard"><div class="kicker">VARIANT '+S.v.toUpperCase()+'</div>'
+    + '<h2>'+n.name+'</h2><p class="tag">'+n.tag+'</p>'
+    + '<h4>结构要点</h4><ul>'+n.points.map(function(p){return '<li>'+p+'</li>';}).join('')+'</ul>'
+    + '<h4>取舍</h4><div class="pc"><div class="pro"><b>好在哪</b>'+n.pro+'</div>'
+      + '<div class="con"><b>代价</b>'+n.con+'</div></div>'
+    + '<div class="prd"><b>PRD 覆盖</b>：'+n.prd+'</div>'
+    + '</div>' + qt;
+}
+
+/* ============ 渲染 ============ */
+var dev = document.getElementById('dev');
+var notes = document.getElementById('notes');
+var single = document.getElementById('single');
+var compare = document.getElementById('compare');
+var compareInner = document.getElementById('compareInner');
+var hint = document.getElementById('hint');
+
+function render(){
+  if(MODE==='single'){
+    dev.innerHTML = bodyHTML(S.v);
+    notes.innerHTML = notesHTML();
+    hint.textContent = NOTES[S.v].hint;
+  }else{
+    compareInner.innerHTML = ['a','b','c','d'].map(function(k){
+      var oldV = S.v, oldKb = S.kbOpen;
+      S.v = k; S.kbOpen = false;
+      var html = '<figure class="mini"><div class="mini-stage" data-mini="'+k+'"><div class="device">'+bodyHTML(k)+'</div></div>'
+        + '<figcaption><span class="badge">'+k.toUpperCase()+'</span><b>'+CAPS[k][0].slice(2)+'</b>'
+        + '<span>'+CAPS[k][1]+'</span></figcaption></figure>';
+      S.v = oldV; S.kbOpen = oldKb;
+      return html;
+    }).join('');
+    hint.textContent = '四版同屏：变量只有结构，视觉 token 完全一致。点顶部 A/B/C/D 回到单屏交互。';
+  }
+  fit();
+}
+function fit(){
+  var s = Math.min((window.innerHeight - 56 - 34)/844, 1);
+  document.getElementById('devwrap').style.width = (390*s)+'px';
+  document.getElementById('devwrap').style.height = (844*s)+'px';
+  dev.style.transform = 'scale('+s+')';
+}
+window.addEventListener('resize', fit);
+
+/* ============ 交互 ============ */
+function toast(){
+  var t = document.getElementById('toast'); if(!t) return;
+  t.classList.add('on');
+  setTimeout(function(){ var el=document.getElementById('toast'); if(el) el.classList.remove('on'); }, 1900);
+}
+function key(k){
+  var a = S.amount;
+  if(k==='ok'){ toast(); return; }
+  if(k==='C'){ S.amount=''; return; }
+  if(k==='del'){ S.amount = a.slice(0,-1); return; }
+  if(k==='.'){ if(a.indexOf('.')<0) S.amount = (a||'0')+'.'; return; }
+  var parts = a.split('.');
+  if(parts[1] && parts[1].length>=2) return;
+  if(k==='00'){
+    if(parts[1] && parts[1].length>=1) return;
+    S.amount = (a===''||a==='0') ? '0' : a+'00';
+    return;
+  }
+  S.amount = (a===''||a==='0') ? k : a+k;
+}
+document.addEventListener('click', function(e){
+  var m = e.target.closest('[data-mini]');
+  if(m && MODE==='compare'){
+    S.v = m.dataset.mini; S.kbOpen = false; MODE = 'single';
+    single.classList.remove('hide'); compare.classList.remove('on');
+    var mb = document.getElementById('modeBtn'); mb.classList.remove('on'); mb.textContent = '并排对比';
+    [].slice.call(document.getElementById('chips').children).forEach(function(c){
+      c.classList.toggle('on', c.dataset.v===S.v);
+    });
+    render(); return;
+  }
+  var el = e.target.closest('[data-act]'); if(!el) return;
+  var act = el.dataset.act, val = el.dataset.val;
+  if(act==='type'){ S.type=val; S.cat = val==='income' ? '工资' : '吃'; S.kbOpen=false; }
+  else if(act==='cat'){ S.cat=val; }
+  else if(act==='acc'){ S.acc=val; }
+  else if(act==='grade'){ S.grade=val; }
+  else if(act==='key'){
+    if(val==='ok'){ toast(); } else { key(val); render(); }
+    return;
+  }
+  else if(act==='save'){ toast(); return; }
+  else if(act==='close'){ toast(); return; }
+  else if(act==='openkb'){ if(val==='yes'){ S.kbOpen=true; } else { return; } }
+  else if(act==='closekb'){ S.kbOpen=false; }
+  else if(act==='row'){ return; }
+  render();
+});
+
+document.getElementById('chips').addEventListener('click', function(e){
+  var b = e.target.closest('.chip'); if(!b) return;
+  [].slice.call(this.children).forEach(function(c){ c.classList.toggle('on', c===b); });
+  S.v = b.dataset.v; S.kbOpen = false;
+  MODE = 'single';
+  single.classList.remove('hide'); compare.classList.remove('on');
+  document.getElementById('modeBtn').classList.remove('on');
+  document.getElementById('modeBtn').textContent = '并排对比';
+  render();
+});
+document.getElementById('modeBtn').addEventListener('click', function(){
+  MODE = MODE==='single' ? 'compare' : 'single';
+  var on = MODE==='compare';
+  this.classList.toggle('on', on);
+  this.textContent = on ? '返回单屏' : '并排对比';
+  single.classList.toggle('hide', on);
+  compare.classList.toggle('on', on);
+  render();
+});
+
+render();
+</script>
+</body>
+</html>

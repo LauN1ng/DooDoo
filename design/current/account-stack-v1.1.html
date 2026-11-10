@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>v1.1 freeze - 资产页 · 卡牌堆（全屏朦胧浮层）</title>
+<style>
+  :root{
+    --ink:#1D1C1A; --ink2:#6B6862; --ink3:#9A968D; --ink4:#B0ACA3;
+    --bg:#F7F5F1; --card:#fff; --line:#EAE7E0;
+    --red:#C0392B; --green:#2E9E6B; --blue:#4C8DF6;
+  }
+  *{box-sizing:border-box;-webkit-font-smoothing:antialiased}
+  html,body{margin:0;height:100%;width:100%;max-width:100%;overflow:hidden}
+  body{
+    background:#EFECE7;
+    font-family:-apple-system,"SF Pro Text","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    color:var(--ink);
+    display:flex;flex-direction:column;align-items:center;
+    overflow:hidden;
+  }
+  .bar{
+    width:100%;height:56px;flex:0 0 56px;display:flex;align-items:center;gap:16px;
+    padding:0 20px;border-bottom:1px solid #E2DFD9;background:#F4F1EC;position:relative;z-index:10;
+    overflow:hidden;
+  }
+  .brand{font-size:13px;font-weight:650;letter-spacing:.01em;white-space:nowrap}
+  .chips{display:flex;gap:6px;flex:0 0 auto}
+  .chip{
+    border:1px solid #DEDAD2;background:#FBFAF7;color:#4A4741;
+    font:inherit;font-size:12px;padding:6px 12px;border-radius:999px;cursor:pointer;
+    transition:.16s;white-space:nowrap;
+  }
+  .chip.on{background:#1D1C1A;color:#fff;border-color:#1D1C1A}
+  .hint{margin-left:auto;font-size:11.5px;color:#8A867D;text-align:right;line-height:1.4;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px}
+
+  .stage{flex:1;min-width:0;min-height:0;position:relative;width:100%;overflow:hidden}
+  .device{position:absolute;left:50%;top:20px;margin-left:-195px;width:390px;height:844px;transform-origin:top center}
+  .screen{
+    position:absolute;inset:0;overflow:hidden;border-radius:44px;background:var(--bg);
+    box-shadow:0 0 0 1px #DAD6CE,0 30px 70px rgba(0,0,0,.16);
+  }
+
+  /* ---- 手机内 ---- */
+  .statusbar{
+    height:52px;display:flex;align-items:flex-end;justify-content:space-between;
+    padding:0 26px 8px;font-size:13px;font-weight:600;
+  }
+  .statusbar .batt,.ovbar .batt{width:22px;height:11px;border-radius:3px;border:1px solid rgba(29,28,26,.35);position:relative}
+  .statusbar .batt::after,.ovbar .batt::after{content:"";position:absolute;left:1.5px;top:1.5px;bottom:1.5px;width:70%;background:var(--ink);border-radius:1.5px}
+
+  .scroll{position:absolute;left:0;right:0;top:52px;bottom:0;overflow-y:auto;padding:0 16px 32px}
+  .scroll::-webkit-scrollbar{display:none}
+
+  .pagetop{display:flex;align-items:center;justify-content:space-between;padding:2px 4px 10px}
+  .pagetop .lg{font-size:19px;font-weight:650;letter-spacing:-.02em}
+  /* 顶部 tab：与首页同一枚控件（详见 tab-top.html） */
+  .pagetop .tabx{display:flex;align-items:center;padding:2px;border-radius:17px;height:34px;background:#EBE7E0}
+  .pagetop .tabx span{width:36px;height:30px;border-radius:15px;display:grid;place-items:center;color:rgba(29,28,26,.38)}
+  .pagetop .tabx span.on{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 .5px rgba(29,28,26,.10),0 1px 2px rgba(29,28,26,.10)}
+
+  /* 汇总卡 */
+  .sum{
+    background:var(--card);border-radius:24px;padding:14px 14px 8px;
+    box-shadow:0 1px 2px rgba(29,28,26,.03),0 8px 22px rgba(29,28,26,.05);
+    margin-bottom:16px;
+  }
+  .sumtop{display:flex;gap:14px}
+  .sumcol{flex:1;min-width:0}
+  .sumcol .k{font-size:10px;color:var(--ink3);letter-spacing:.06em;display:flex;align-items:center;gap:5px}
+  .sumcol .k .dot{width:6px;height:6px;border-radius:50%}
+  .sumcol .v{font-size:20px;font-weight:600;letter-spacing:-.02em;margin-top:5px;font-variant-numeric:tabular-nums}
+  .sumcol .p{font-size:11px;margin-top:3px}
+  .up{color:var(--red)}
+  .down{color:var(--green)}
+  .chart{padding:8px 0 0}
+  .ranges{display:flex;gap:4px;padding:0 0 2px}
+  .rg{flex:1;border:0;background:transparent;font:inherit;font-size:10.5px;color:var(--ink3);
+    padding:5px 0;border-radius:999px;cursor:pointer}
+  .rg.on{background:#F3F0EA;color:var(--ink);font-weight:600}
+
+  /* 分组 */
+  .grp{margin-bottom:18px}
+  .grph{display:flex;align-items:center;gap:8px;padding:0 4px 10px}
+  .grph .nm{font-size:15px;font-weight:650;letter-spacing:-.01em}
+  .grph .tt{font-size:11px;color:#8A867D;font-weight:400;letter-spacing:.01em}
+  .grph .tg{
+    margin-left:auto;width:24px;height:24px;flex:0 0 24px;border:0;border-radius:50%;
+    background:#EBE7E0;color:#5C594F;font:inherit;font-size:15px;line-height:1;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;padding-bottom:1px;
+  }
+
+  .duebar{
+    display:flex;align-items:baseline;justify-content:space-between;
+    background:#fff;border-radius:12px;padding:10px 13px;margin-bottom:8px;
+    box-shadow:0 1px 2px rgba(0,0,0,.03);
+  }
+  .duebar .dl{font-size:10.5px;color:var(--ink3);margin-right:7px}
+  .duebar .dv{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+  .duebar .dn{font-size:10.5px;color:var(--ink3)}
+  .odstrip{
+    background:#FDECEC;color:#A32D2D;border-radius:12px;padding:8px 12px;
+    font-size:11px;line-height:1.5;margin-bottom:12px;
+  }
+  .odstrip b{font-weight:650}
+
+  /* ============ 聚合区：左卡牌堆 + 右汇总 ============ */
+  .agg{display:flex;align-items:center;gap:13px;padding:0 4px}
+
+  .hdeck{position:relative;width:146px;height:116px;flex:0 0 146px;cursor:pointer}
+  .hc{
+    position:absolute;left:50%;margin-left:-66px;width:132px;height:82px;border-radius:13px;
+    background:linear-gradient(135deg,var(--c1),var(--c2));
+    transform-origin:bottom center;
+    box-shadow:0 2px 7px rgba(29,28,26,.17),inset 0 0 0 .5px rgba(255,255,255,.16);
+  }
+  /* 后层也是账户真彩色，只压暗一档——资产卡不是白纸，一揝彩卡才是真实钱包的样子。
+     分层靠三样：亮度梯度、白色细描边、每层自己的投影 */
+  .hc.back{
+    border-radius:13px;
+    box-shadow:0 -1px 0 rgba(255,255,255,.50),
+               0 2px 6px rgba(29,28,26,.16),
+               inset 0 0 0 .5px rgba(255,255,255,.22);
+    filter:brightness(var(--bk,.88));
+  }
+  /* 散叠：每层降 16pt + 左右各偏 4pt + 微小反向旋转
+     16pt 是下限：11pt 小于卡的 13pt 圆角，露出的只是个月牙，读不成一层 */
+  .hc.k2{bottom:0;margin-left:-70px;transform:rotate(-1deg);z-index:1}
+  .hc.k1{bottom:16px;margin-left:-62px;transform:rotate(.8deg);z-index:2}
+  .hc.k0{bottom:32px;z-index:3;padding:10px 12px 0;display:flex;flex-direction:column;overflow:hidden}
+
+  .hcn{font-size:12.5px;font-weight:650;color:#fff;letter-spacing:-.01em;line-height:1.2}
+  .hcs{font-size:9.5px;color:rgba(255,255,255,.76);margin-top:3px;letter-spacing:.04em}
+  .hcf{margin-top:auto;display:flex;justify-content:flex-end;padding-bottom:7px}
+  .hcf .net{font-size:7pt;font-weight:700;letter-spacing:.08em;color:rgba(255,255,255,.55)}
+  /* 负债卡底部必须有还款进度 */
+  .hprog{height:2.5px;border-radius:2px;background:rgba(255,255,255,.32);margin-bottom:9px;flex:0 0 auto}
+  .hprog i{display:block;height:100%;background:rgba(255,255,255,.95);border-radius:2px}
+
+  /* 数量角标：压在最下层卡（k2）的右下角。k2 右缘在容器 135pt 处，所以不能再用 -2 贴容器边 */
+  .cnt{
+    position:absolute;right:9px;bottom:6px;z-index:9;
+    min-width:23px;height:23px;padding:0 6px;border-radius:999px;
+    background:#1D1C1A;color:#fff;font-size:11px;font-weight:650;letter-spacing:-.01em;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 1px 4px rgba(29,28,26,.30);
+  }
+
+  .aggr{flex:1;min-width:0}
+  .aggr .k{font-size:10.5px;color:var(--ink3);letter-spacing:.02em}
+  .aggr .v{
+    font-size:22px;font-weight:650;letter-spacing:-.03em;margin-top:4px;
+    font-variant-numeric:tabular-nums;line-height:1.05;white-space:nowrap;
+  }
+  .aggr .v.red{color:var(--red)}
+  .aggr .m{font-size:9.5px;color:var(--ink3);margin-top:7px;line-height:1.5;letter-spacing:.01em}
+  .aggr .m b{color:var(--ink2);font-weight:600}
+
+  .aggfoot{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 6px 0;font-size:10.5px;color:var(--ink3);cursor:pointer;
+  }
+  .aggfoot .arw{color:var(--ink4);font-size:12px}
+
+  /* ============ 覆盖层：全屏朦胧浮层。不是 sheet，不是新页面 ============ */
+  .ov{position:absolute;inset:0;z-index:60}
+
+  /* 整屏磨砂：底下的资产页被糊开，色块轮廓仍在、字读不出——这才是"浮在页面上"的证据 */
+  .ovfrost{
+    position:absolute;inset:0;
+    background:rgba(247,245,241,.42);
+    -webkit-backdrop-filter:blur(12px) saturate(1.16);
+    backdrop-filter:blur(12px) saturate(1.16);
+    animation:maskIn .26s ease both;
+  }
+  @keyframes maskIn{from{opacity:0}to{opacity:1}}
+
+  /* 状态栏压回磨砂层之上：读作「还在同一屏，只是被蒙住了」 */
+  .ovbar{
+    position:absolute;top:0;left:0;right:0;height:52px;
+    display:flex;align-items:flex-end;justify-content:space-between;
+    padding:0 26px 8px;font-size:13px;font-weight:600;
+    pointer-events:none;   /* 让这条也归入"点空白关闭" */
+  }
+  .ovcls{
+    position:absolute;top:53px;right:16px;z-index:4;
+    width:30px;height:30px;border:0;border-radius:50%;
+    background:rgba(29,28,26,.07);color:var(--ink2);
+    font:inherit;font-size:13px;line-height:1;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  }
+
+  .ovlist{
+    position:absolute;left:0;right:0;top:92px;bottom:0;
+    overflow-y:auto;padding:0 16px 34px;
+    animation:listIn .32s cubic-bezier(.32,.72,0,1) both;
+    /* 底部渐隐：最后一行不要被屏幕圆角"切一刀"，同时暗示可继续滚动 */
+    -webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 30px),transparent 100%);
+    mask-image:linear-gradient(to bottom,#000 calc(100% - 30px),transparent 100%);
+  }
+  @keyframes listIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  .ovlist::-webkit-scrollbar{display:none}
+
+  /* 明细行：左卡面 + 右两列 × 两行。信用与储蓄完全同一套结构（v7） */
+  .orow{display:flex;align-items:center;gap:13px;padding:10px 0;cursor:pointer}
+  .orow:active{opacity:.62}
+  .obc{
+    width:144px;height:96px;flex:0 0 144px;border-radius:15px;
+    position:relative;overflow:hidden;display:flex;flex-direction:column;
+    padding:11px 12px 0;
+    background:linear-gradient(135deg,var(--c1),var(--c2));
+    box-shadow:0 2px 7px rgba(29,28,26,.13),inset 0 0 0 .5px rgba(255,255,255,.16);
+  }
+  /* 逾期：白底红字小旗，贴右上角，被卡的 15pt 圆角裁成贴合形状 */
+  .oflag{
+    position:absolute;top:0;right:0;z-index:3;
+    background:#fff;color:#A32D2D;font-size:9.5px;font-weight:700;letter-spacing:.05em;
+    padding:4px 10px 5px;border-bottom-left-radius:12px;
+    box-shadow:0 1px 2px rgba(29,28,26,.10);
+  }
+  .onm{font-size:12.5px;font-weight:650;color:#fff;letter-spacing:-.01em;line-height:1.2}
+  .omt{font-size:9px;color:rgba(255,255,255,.76);margin-top:3px;letter-spacing:.01em}
+  .obot{
+    margin-top:auto;display:flex;align-items:center;gap:6px;padding-bottom:13px;
+    font-size:9px;color:rgba(255,255,255,.82);letter-spacing:.06em;
+  }
+  .onet{margin-left:auto;font-size:7.5px;font-weight:700;letter-spacing:.09em;opacity:.72}
+  /* 还款小白条：负债卡专用，内缩 10pt 离开圆角 */
+  .oprog{position:absolute;left:10px;right:10px;bottom:5px;height:3px;border-radius:2px;background:rgba(255,255,255,.30);z-index:2}
+  .oprog i{display:block;height:100%;background:rgba(255,255,255,.95);border-radius:2px}
+
+  .ocols{flex:1;display:flex;gap:8px;min-width:0}
+  .ocol{flex:1;min-width:0}
+  .ocol .k{font-size:10.5px;color:var(--ink3);letter-spacing:.02em}
+  .ocol .v{
+    font-size:16.5px;font-weight:650;letter-spacing:-.025em;margin-top:6px;
+    font-variant-numeric:tabular-nums;line-height:1.1;white-space:nowrap;
+  }
+  /* 第二列是「较上月」百分比：↘ 绿（降）、↗ 红（涨）。两组量纲与箭头完全一致（v8） */
+  .ocol .v.up{color:var(--red)}
+  .ocol .v.down{color:var(--green)}
+
+  .ovend{text-align:center;font-size:10.5px;color:var(--ink4);padding:22px 0 6px;letter-spacing:.02em}
+
+  /* ============ 账户详情页：真 push（从右滑入），不是浮层 ============ */
+  .dt{
+    position:absolute;inset:0;z-index:80;background:var(--bg);
+    display:flex;flex-direction:column;
+    animation:dtIn .34s cubic-bezier(.32,.72,0,1) both;
+  }
+  @keyframes dtIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
+  .dtbar{height:52px;flex:0 0 52px;display:flex;align-items:center;padding:0 6px 0 2px;gap:8px}
+  .dtback{
+    width:38px;height:38px;flex:0 0 38px;border:0;background:transparent;color:var(--ink);
+    font:inherit;font-size:19px;line-height:1;cursor:pointer;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .dtbar .tt{font-size:13.5px;font-weight:650;letter-spacing:-.01em}
+  .dtmore{
+    margin-left:auto;width:38px;height:38px;border:0;background:transparent;color:var(--ink3);
+    font:inherit;font-size:15px;cursor:pointer;border-radius:50%;
+  }
+  .dtscroll{flex:1;overflow-y:auto;padding:0 16px 40px}
+  .dtscroll::-webkit-scrollbar{display:none}
+
+  /* 放大卡面：224×141 是严格 1.586 比例 */
+  .dtcard{
+    width:224px;height:141px;border-radius:20px;margin:4px auto 0;
+    position:relative;overflow:hidden;display:flex;flex-direction:column;
+    padding:16px 17px 0;
+    background:linear-gradient(135deg,var(--c1),var(--c2));
+    box-shadow:0 12px 28px -10px rgba(29,28,26,.50),inset 0 0 0 .5px rgba(255,255,255,.18);
+  }
+  .dtcard .cn{font-size:15px;font-weight:650;color:#fff;letter-spacing:-.01em}
+  .dtcard .ct{font-size:10.5px;color:rgba(255,255,255,.76);margin-top:3px}
+  .dtcard .cb{margin-top:auto;display:flex;align-items:center;padding-bottom:15px}
+  .dtcard .cnum{font-size:11px;color:rgba(255,255,255,.86);letter-spacing:.1em;font-variant-numeric:tabular-nums}
+  .dtcard .cnet{margin-left:auto;font-size:8.5px;font-weight:700;letter-spacing:.1em;color:rgba(255,255,255,.70)}
+  .dtcard .cprog{position:absolute;left:17px;right:17px;bottom:7px;height:3px;border-radius:2px;background:rgba(255,255,255,.30)}
+  .dtcard .cprog i{display:block;height:100%;border-radius:2px;background:rgba(255,255,255,.95)}
+
+  .dtname{text-align:center;font-size:19px;font-weight:650;letter-spacing:-.025em;margin-top:18px}
+  .dtmeta{text-align:center;font-size:11px;color:var(--ink3);margin-top:6px}
+  .dtmeta.alarm{color:#A32D2D}
+
+  /* 两列主指标 */
+  .dtmets{display:flex;gap:10px;margin-top:18px}
+  .dtm{flex:1;min-width:0;text-align:center}
+  .dtm .k{font-size:10.5px;color:var(--ink3);letter-spacing:.05em}
+  .dtm .v{
+    font-size:21px;font-weight:650;letter-spacing:-.03em;margin-top:5px;
+    font-variant-numeric:tabular-nums;white-space:nowrap;
+  }
+  .dtm .v.up{color:var(--red)}
+  .dtm .v.down{color:var(--green)}
+  .dtm .s{font-size:10px;color:var(--ink4);margin-top:4px}
+
+  .dtchart{margin-top:16px}
+  .dtcap{font-size:10px;color:var(--ink4);line-height:1.6;margin-top:7px;padding:0 2px}
+  .dtfresh{text-align:center;font-size:10.5px;color:var(--ink3);margin:16px 0 2px}
+  .dtfresh b{color:var(--ink2);font-weight:600}
+
+  .dtsec{margin-top:20px}
+  .dtsech{display:flex;align-items:center;gap:7px;padding:0 2px 9px}
+  .dtsech .h{font-size:13px;font-weight:650;letter-spacing:-.01em}
+  .dtsech .c{font-size:10.5px;color:var(--ink3)}
+  /* 流水分段：本月 / 全部，同一块位置换内容，不跳页 */
+  .seg2{display:inline-flex;margin-left:auto;background:#F1EEE7;border-radius:99px;padding:2px}
+  .seg2 button{
+    border:0;background:transparent;font:inherit;font-size:10.5px;color:var(--ink3);
+    padding:4px 10px;border-radius:99px;cursor:pointer;letter-spacing:.01em;line-height:1.3;
+  }
+  .seg2 button.on{background:#fff;color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(29,28,26,.13)}
+  .txsum{font-size:10px;color:var(--ink3);padding:0 2px 9px;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+  .dtbox{
+    background:#fff;border-radius:16px;padding:13px 14px;
+    box-shadow:0 1px 2px rgba(29,28,26,.03),0 6px 18px rgba(29,28,26,.045);
+  }
+  .limtop{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+  .limtop .a{font-size:13px;font-weight:650;font-variant-numeric:tabular-nums}
+  .limtop .b{font-size:10.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+  .limtrack{height:5px;border-radius:3px;background:#F1EDE6;margin:11px 0 9px;overflow:hidden}
+  .limtrack i{display:block;height:100%;border-radius:3px;background:var(--ink)}
+  .limhist{font-size:10px;color:var(--ink4);line-height:1.55}
+
+  .inst{display:flex;align-items:center;gap:11px;padding:12px 2px;border-bottom:1px solid #F2EFE8}
+  .inst:last-of-type{border-bottom:0}
+  .ipi{
+    width:46px;height:27px;flex:0 0 46px;border-radius:8px;background:#F3F0EA;
+    display:flex;align-items:center;justify-content:center;gap:1px;
+    font-size:10px;font-weight:650;color:var(--ink2);font-variant-numeric:tabular-nums;
+  }
+  .ipi span{font-weight:400;color:var(--ink4)}
+  .iname{flex:1;min-width:0;font-size:12.5px;letter-spacing:-.01em}
+  .isub{font-size:9.5px;color:var(--ink3);margin-top:3px;font-variant-numeric:tabular-nums}
+  .iamt{text-align:right;font-size:13px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .instfoot{font-size:10px;color:var(--ink3);line-height:1.7;padding:11px 2px 0;border-top:1px solid #F2EFE8}
+  .instfoot .ok{color:var(--green);font-weight:600}
+
+  /* 近期消费：日期 / 名称+分类 / 金额，三列。行高 44，和系统列表一个手感 */
+  .txbox{padding:2px 14px 0}
+  .txr{display:flex;align-items:center;gap:9px;padding:11px 0;border-bottom:1px solid #F5F2EC}
+  .txr .td{
+    flex:0 0 38px;font-size:10px;color:var(--ink4);
+    font-variant-numeric:tabular-nums;letter-spacing:.01em;
+  }
+  .txr .tn{flex:1;min-width:0;font-size:12.5px;letter-spacing:-.01em;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .txr .tc{font-size:9.5px;color:var(--ink4);margin-left:6px;letter-spacing:0}
+  .txr .ta{font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .txall{
+    display:flex;align-items:center;justify-content:center;gap:4px;
+    width:100%;padding:12px 0 13px;border:0;background:transparent;
+    font:inherit;font-size:11.5px;color:var(--ink3);cursor:pointer;
+  }
+  .txall .arw{color:var(--ink4)}
+  .txall:active{opacity:.6}
+  .txmon{font-size:10px;color:var(--ink4);padding:9px 0 3px;letter-spacing:.04em}
+  .txmon:first-child{padding-top:5px}
+  .txr .ta.rep{color:var(--ink3);font-weight:500}
+  .txfoot{font-size:10px;color:var(--ink3);padding:11px 0 12px;line-height:1.6;border-top:1px solid #F2EFE8;letter-spacing:.01em}
+
+  .dtbtn{
+    display:block;width:100%;margin:22px 0 4px;padding:13px;border-radius:14px;
+    border:1px solid #E3DFD7;background:#fff;color:var(--ink);
+    font:inherit;font-size:13px;font-weight:600;cursor:pointer;
+  }
+  .dtbtn:active{opacity:.7}
+</style>
+</head>
+<body>
+<div class="bar">
+  <div class="brand">v1.1 freeze - 资产页 · 卡牌堆 / 全屏朦胧浮层</div>
+  <div class="hint" id="hint"></div>
+</div>
+<div class="stage"><div class="device" id="dev"><div class="screen"></div></div></div>
+
+<script>
+/* ===== 数据：账户数量 = 9 信用 / 8 储蓄（用户自定义，不造结清堆） ===== */
+/* 账户数据。后层不再挑色，`stack` 字段已随之删除（v1.1） */
+var CREDIT = [
+  { n:'招商银行', m:'信用卡', num:'•••• 8857', net:'UNIONPAY', c1:'#D4342B', c2:'#8C1410',
+    debt:'−3,120.00', delta:'↘ 28.4%', dcls:'down', due:'665.36', dd:'11/08', u:0, od:'逾期 92 天' },
+  { n:'花呗', m:'循环 + 分期 58 笔', num:'支付宝', net:'ALIPAY', c1:'#2C7BFF', c2:'#0B4FCC',
+    debt:'−7,842.50', delta:'↗ 4.3%', dcls:'up', due:'1,634.08', dd:'11/25', u:67 },
+  { n:'京东金融', m:'白条', num:'•••• 3078', net:'JD PAY', c1:'#E4393C', c2:'#9E1B1E',
+    debt:'−613.16', delta:'↘ 12.6%', dcls:'down', due:'613.16', dd:'12/02', u:33 },
+  { n:'平安银行', m:'信用卡', num:'•••• 2140', net:'UNIONPAY', c1:'#E8892B', c2:'#A6550D',
+    debt:'−4,800.00', delta:'↗ 14.3%', dcls:'up', due:'600.00', dd:'11/18', u:20 },
+  { n:'招商银行', m:'e招贷 · 17/24 期', num:'•••• 6612', net:'CMB', c1:'#3C3C43', c2:'#131316',
+    debt:'−6,670.93', delta:'↘ 6.2%', dcls:'down', due:'442.50', dd:'11/10', u:71 },
+  { n:'微信分付', m:'按日计息', num:'微信支付', net:'WECHAT', c1:'#12A08F', c2:'#06645A',
+    debt:'−218.40', delta:'↗ 9.0%', dcls:'up', due:'218.40', dd:'12/08', u:12 },
+  { n:'美团月付', m:'本月账单', num:'美团', net:'MEITUAN', c1:'#F5B32B', c2:'#B57A05',
+    debt:'−1,286.50', delta:'↘ 13.7%', dcls:'down', due:'1,286.50', dd:'11/09', u:0 },
+  { n:'中信银行', m:'信用卡', num:'•••• 9021', net:'UNIONPAY', c1:'#C0392B', c2:'#7A1C14',
+    debt:'−3,214.51', delta:'↘ 3.6%', dcls:'down', due:'1,020.00', dd:'11/22', u:45 },
+  { n:'抖音月付', m:'本月账单', num:'抖音', net:'DOUYIN', c1:'#2B2B33', c2:'#0A0A0F',
+    debt:'−700.00', delta:'↗ 15.9%', dcls:'up', due:'700.00', dd:'11/15', u:0 }
+];
+
+var SAVING = [
+  { n:'建设银行', m:'储蓄卡 · 主支付', num:'•••• 5044', net:'UNIONPAY', c1:'#1E6FBF', c2:'#0B3F78',
+    bal:'1,204.30', delta:'↘ 6.2%', dcls:'down', chg:'−79.60', chd:'10/31' },
+  { n:'余额宝', m:'货币基金', num:'支付宝', net:'ALIPAY', c1:'#12A08F', c2:'#06645A',
+    bal:'1,102.60', delta:'↗ 1.8%', dcls:'up', chg:'+19.50', chd:'10/31' },
+  { n:'微信零钱', m:'零钱账户', num:'微信支付', net:'WECHAT', c1:'#2E9E6B', c2:'#12603F',
+    bal:'498.30', delta:'↘ 2.4%', dcls:'down', chg:'−12.20', chd:'10/31' },
+  { n:'招商银行', m:'储蓄卡', num:'•••• 1102', net:'CMB', c1:'#D4342B', c2:'#8C1410',
+    bal:'42.00', delta:'↘ 12.4%', dcls:'down', chg:'−5.90', chd:'10/31' },
+  { n:'农业银行', m:'储蓄卡', num:'•••• 3391', net:'UNIONPAY', c1:'#0F8A5F', c2:'#065539',
+    bal:'168.80', delta:'↗ 4.1%', dcls:'up', chg:'+6.70', chd:'10/31' },
+  { n:'交通银行', m:'储蓄卡', num:'•••• 7726', net:'UNIONPAY', c1:'#2A4E8C', c2:'#122A54',
+    bal:'13.00', delta:'↘ 48.0%', dcls:'down', chg:'−12.00', chd:'10/31' },
+  { n:'现金', m:'手动记账', num:'不计入流水', net:'CASH', c1:'#8E8A80', c2:'#55524B',
+    bal:'68.00', delta:'↗ 36.0%', dcls:'up', chg:'+18.00', chd:'10/31' },
+  { n:'京东小金库', m:'货币基金', num:'京东金融', net:'JD PAY', c1:'#E4393C', c2:'#9E1B1E',
+    bal:'23.00', delta:'↗ 0.4%', dcls:'up', chg:'+0.10', chd:'10/31' }
+];
+
+var CREDIT_TOTAL = '28,466.00', SAVING_TOTAL = '3,120.00';
+
+/* 额度：详情页专属，列表/浮层不出现 */
+(function(){
+  var L = [4600, 12000, 3000, 8000, 25000, 2000, 1500, 6000, 1000];
+  for (var i = 0; i < CREDIT.length; i++) CREDIT[i].lim = L[i];
+  /* 招行 8857：额度降过（2026-08 由 9,000 下调至 4,600），保留历史 */
+  CREDIT[0].lim0 = 9000;
+  /* 招行 8857 的 3 笔分期：剩余本金合计 2,806.35，与欠款 3,120.00 差 313.65（本期未分期消费） */
+  CREDIT[0].instTotal = '2,806.35';
+  CREDIT[0].loopPart = '313.65';
+  CREDIT[0].inst = [
+    { n:'手机分期',  cur:13, tot:24, per:'128.00', left:'1,408.00', lft:11 },
+    { n:'家电分期',  cur:7,  tot:12, per:'216.67', left:'1,083.35', lft:5  },
+    { n:'眼镜分期',  cur:3,  tot:6,  per:'105.00', left:'315.00',   lft:3  }
+  ];
+  /* 欠款走势：每月 [账单日后, 还款日后]。8 月逾期后不再下降 */
+  CREDIT[0].tf = [
+    [2750,2320],[2980,2510],[3260,2790],[3520,3040],
+    [3810,3290],[4090,3560],[4180,3620],[4180,4180],
+    [4180,4180],[3950,3950],[3480,3480],[3120,3120]
+  ];
+
+  /* 手写流水：三个月，倒序。t:'repay' = 还款（transfer，不计支出） */
+  CREDIT[0].tx = [
+    { d:'11/06', n:'瑞幸咖啡', c:'餐饮', a:'15.90'  },
+    { d:'11/05', n:'美团外卖', c:'餐饮', a:'38.50'  },
+    { d:'11/03', n:'手机分期', c:'分期', a:'128.00' },
+    { d:'11/03', n:'家电分期', c:'分期', a:'216.67' },
+    { d:'11/03', n:'眼镜分期', c:'分期', a:'105.00' },
+    { d:'10/29', n:'盒马鲜生', c:'日用', a:'135.29' },
+    { d:'10/22', n:'滴滴出行', c:'交通', a:'26.00'  },
+    { d:'10/18', n:'建行5044', c:'还款', a:'980.00', t:'repay' },
+    { d:'10/18', n:'淘宝',     c:'购物', a:'189.00' },
+    { d:'10/12', n:'手机分期', c:'分期', a:'128.00' },
+    { d:'10/12', n:'家电分期', c:'分期', a:'216.67' },
+    { d:'10/12', n:'眼镜分期', c:'分期', a:'105.00' },
+    { d:'10/05', n:'永辉超市', c:'日用', a:'88.40'  },
+    { d:'09/26', n:'星巴克',   c:'餐饮', a:'42.00'  },
+    { d:'09/15', n:'建行5044', c:'还款', a:'1,020.00', t:'repay' },
+    { d:'09/12', n:'手机分期', c:'分期', a:'128.00' },
+    { d:'09/06', n:'拼多多',   c:'购物', a:'66.80'  }
+  ];
+  CREDIT[1].tx = [
+    { d:'11/06', n:'拼多多',   c:'购物', a:'39.90'    },
+    { d:'11/05', n:'淘宝',     c:'购物', a:'268.00'   },
+    { d:'11/04', n:'便利蜂',   c:'日用', a:'12.50'    },
+    { d:'11/03', n:'饿了么',   c:'餐饮', a:'32.68'    },
+    { d:'11/01', n:'花呗分期', c:'分期', a:'1,281.00' },
+    { d:'10/30', n:'美团外卖', c:'餐饮', a:'46.80'    },
+    { d:'10/25', n:'支付宝',   c:'还款', a:'1,410.00', t:'repay' },
+    { d:'10/22', n:'优衣库',   c:'购物', a:'199.00'   },
+    { d:'10/18', n:'花呗分期', c:'分期', a:'1,281.00' },
+    { d:'10/09', n:'蜜雪冰城', c:'餐饮', a:'8.00'     },
+    { d:'09/25', n:'支付宝',   c:'还款', a:'1,380.00', t:'repay' },
+    { d:'09/18', n:'花呗分期', c:'分期', a:'1,281.00' },
+    { d:'09/12', n:'淘宝',     c:'购物', a:'99.00'    }
+  ];
+  CREDIT[2].tx = [
+    { d:'11/06', n:'京东',     c:'购物', a:'199.00' },
+    { d:'11/02', n:'京东超市', c:'日用', a:'87.60'  },
+    { d:'10/30', n:'白条分期', c:'分期', a:'326.56' },
+    { d:'10/16', n:'建行5044', c:'还款', a:'480.00', t:'repay' },
+    { d:'10/12', n:'京东',     c:'购物', a:'226.00' },
+    { d:'09/16', n:'建行5044', c:'还款', a:'512.00', t:'repay' },
+    { d:'09/10', n:'白条分期', c:'分期', a:'326.56' }
+  ];
+  CREDIT[4].tx = [
+    { d:'11/01', n:'e招贷 第 17 期', c:'分期', a:'442.50' },
+    { d:'10/01', n:'e招贷 第 16 期', c:'分期', a:'442.50' },
+    { d:'09/01', n:'e招贷 第 15 期', c:'分期', a:'442.50' }
+  ];
+})();
+
+var state = { ov:null, page:null };
+
+/* ===== 资产页：卡牌堆 ===== */
+function hcard(a, isCredit){
+  /* bottom 由层数决定：1 层贴底（bottom:0），每多一层抬 16pt */
+  var b = (window.__deckBottom || 0);
+  return '<div class="hc k0" style="--c1:' + a.c1 + ';--c2:' + a.c2 + ';bottom:' + b + 'px">'
+    + '<div class="hcn">' + a.n + '</div>'
+    + '<div class="hcs">' + a.num + '</div>'
+    + '<div class="hcf"><span class="net">' + (a.net || '') + '</span></div>'
+    + (isCredit ? '<div class="hprog"><i style="width:' + a.u + '%"></i></div>' : '')
+    + '</div>';
+}
+
+/* 感知亮度：只用来决定深色卡该压暗还是提亮 */
+function lum(hex){
+  var r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return (r*0.299 + g*0.587 + b*0.114) / 255;
+}
+
+/* v1.2：后层回到账户真彩色（白纸方案作废——资产卡本来就是彩色的，白后层读成了"纸垫"）。
+   顺序由数据里的 stack 字段手动指定，不用色相距离算法：
+   算法会挑中暗橙，压暗后变棕、与红卡同族，读成"描边"而不是"另一张卡"。 */
+function deckHTML(list, isCredit, key){
+  var n = list.length;
+  /* 层数 = min(账户数, 3)：1 个账户就一张卡，不摆空层 */
+  var maxL = Math.min(n - 1, 2);
+  window.__deckBottom = 16 * maxL;
+  var deckH = 84 + 16 * maxL;   /* 3 层 = 116，与冻结规格一致 */
+  var h = '<div class="hdeck" data-open="' + key + '" style="height:' + deckH + 'px">';
+  for (var i = maxL; i >= 1; i--){
+    var b = null;
+    for (var j = 0; j < list.length; j++){ if (list[j].stack === i){ b = list[j]; break; } }
+    b = b || list[i] || list[0];
+    /* 后层亮度：浅色卡压暗出层次；深色卡（黑卡）已经没空间再暗，改提亮——
+       否则它和自身投影糊成一条，三层只能数出两层 */
+    var lv = lum(b.c1) < 0.30 ? 1.22 : (i === 1 ? 0.88 : 0.76);
+    h += '<div class="hc back k' + i + '" style="--c1:' + b.c1 + ';--c2:' + b.c2 + ';--bk:' + lv + '"></div>';
+  }
+  h += hcard(list[0], isCredit);
+  if (n > 1) h += '<span class="cnt">' + n + '</span>';
+  h += '</div>';
+  return h;
+}
+
+function groupBlock(key, title, list, total, isCredit){
+  var due = '';
+  if (isCredit){
+    due = '<div class="duebar"><div><span class="dl">本月要还</span><span class="dv">2,742.00</span></div>'
+        + '<div class="dn">3 笔 · 最近 11/08</div></div>'
+        + '<div class="odstrip"><b>招行 8857 逾期 92 天</b>：8 月账单 665.36 未还</div>';
+  }
+  var agg = '<div class="agg">'
+    + deckHTML(list, isCredit, key)
+    + '<div class="aggr">'
+    +   '<div class="k">' + (isCredit ? '欠款合计' : '余额合计') + '</div>'
+    +   '<div class="v' + (isCredit ? ' red' : '') + '">' + (isCredit ? '−' : '') + total + '</div>'
+    +   '<div class="m">' + (isCredit
+          ? '本月要还 <b>2,742.00</b> · 3 笔 · 最近 11/08'
+          : '较上月 <b class="down">↘ 4.8%</b> · 2 个在用')
+    +   '</div>'
+    + '</div></div>';
+  var foot = isCredit
+    ? '<div class="aggfoot" data-open="credit"><span>含逾期 1 个</span><span class="arw">›</span></div>'
+    : '<div class="aggfoot" data-open="saving"><span>含 2 个长期不动</span><span class="arw">›</span></div>';
+  return '<div class="grp">'
+    + '<div class="grph"><span class="nm">' + title + '</span>'
+    + '<span class="tt">' + list.length + ' 个 · ' + total + '</span>'
+    + '<button class="tg" data-open="' + key + '">+</button></div>'
+    + due + agg + foot + '</div>';
+}
+
+/* ===== 覆盖层明细行：信用 / 储蓄共用一套结构（v7 定稿）=====
+   左：卡面（名称 / 类型 / 卡号 / 网络 + 负债卡的小白条 + 逾期小旗）
+   右：**两列 × 两行** —— 第一列 主数值，第二列 较上月。
+   只有两行，和储蓄参考图一致；本期应还、账单日、本月变动等全部归详情页。 */
+function ovRow(a, isCredit, i, key){
+  return '<div class="orow" data-g="' + key + '" data-i="' + i + '">'
+    + '<div class="obc" style="--c1:' + a.c1 + ';--c2:' + a.c2 + '">'
+    +   (isCredit ? '<div class="oprog"><i style="width:' + a.u + '%"></i></div>' : '')
+    +   (a.od ? '<div class="oflag">逾期</div>' : '')
+    +   '<div class="onm">' + a.n + '</div>'
+    +   '<div class="omt">' + a.m + '</div>'
+    +   '<div class="obot"><span>' + a.num + '</span>'
+    +     '<span class="onet">' + (a.net || (isCredit ? 'CREDIT' : 'DEBIT')) + '</span></div>'
+    + '</div>'
+    + '<div class="ocols">'
+    +   '<div class="ocol"><div class="k">' + (isCredit ? '欠款' : '余额') + '</div>'
+    +     '<div class="v">' + (isCredit ? a.debt : a.bal) + '</div></div>'
+    +   '<div class="ocol"><div class="k">较上月</div>'
+    +     '<div class="v ' + (a.dcls || '') + '">' + a.delta + '</div></div>'
+    + '</div></div>';
+}
+
+function overlayHTML(key){
+  var isCredit = key === 'credit';
+  var list = isCredit ? CREDIT : SAVING;
+  var rows = list.map(function(a, i){ return ovRow(a, isCredit, i, key); }).join('');
+  /* 头部不重复资产页已有的 合计 / 本月要还 / 逾期提醒——那三样就长在下面的资产页上，
+     覆盖层只负责"这一堆里有哪些"，别的都归详情页 */
+  return '<div class="ov">'
+    + '<div class="ovfrost" data-close="1"></div>'
+    + '<div class="ovbar"><span>9:41</span><span class="batt"></span></div>'
+    + '<button class="ovcls" data-close="1">✕</button>'
+    + '<div class="ovlist">' + rows
+    +   '<div class="ovend">点任一账户进入详情</div>'
+    + '</div>'
+    + '</div>';
+}
+
+/* ===== 账户详情页 ===== */
+function parseAmt(s){ return parseFloat(String(s).replace(/[^\d.]/g, '')) || 0; }
+function fmt(n){
+  var s = Math.abs(n).toFixed(2).split('.');
+  return s[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '.' + s[1];
+}
+/* 没有真实走势的账户：按「较上月」的方向反推起点，再掺月度波动，
+   否则 12 个点等距爬升会渲成一条直线，看着像渲染出错 */
+function trendFor(v, rising, seed){
+  var rnd = lcg(seed * 3301 + 17);
+  var start = rising ? 0.62 : 1.44;
+  var out = [];
+  for (var i = 0; i < 12; i++){
+    var base = v * (start + (1 - start) * (i / 11));
+    out.push(Math.max(0.01, +(base * (1 + (rnd() - 0.48) * 0.20)).toFixed(2)));
+  }
+  out[11] = v;
+  return out;
+}
+
+/* 平滑折线：Catmull-Rom 转三次贝塞尔，tension 0.84（=0.28 系数）刚好没有折角也不过冲 */
+function smoothD(pts, lo, hi){
+  var cl = function(v){ return Math.max(lo, Math.min(hi, v)); };
+  var d = 'M' + pts[0][0].toFixed(1) + ' ' + pts[0][1].toFixed(1);
+  for (var i = 0; i < pts.length - 1; i++){
+    var p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || pts[i + 1];
+    var c1x = p1[0] + (p2[0] - p0[0]) * 0.28, c1y = cl(p1[1] + (p2[1] - p0[1]) * 0.28);
+    var c2x = p2[0] - (p3[0] - p1[0]) * 0.28, c2y = cl(p2[1] - (p3[1] - p1[1]) * 0.28);
+    d += ' C' + c1x.toFixed(1) + ' ' + c1y.toFixed(1) + ' '
+       + c2x.toFixed(1) + ' ' + c2y.toFixed(1) + ' '
+       + p2[0].toFixed(1) + ' ' + p2[1].toFixed(1);
+  }
+  return d;
+}
+
+/* 月余额曲线。series 是每个「还款日之后」的余额，markIdx 处点红点（逾期起点） */
+function chartSVG(series, markIdx){
+  var W = 358, H = 118, padX = 7, top = 15, bot = 15;
+  var maxV = Math.max.apply(null, series), minV = Math.min.apply(null, series);
+  var span = (maxV - minV) || 1;
+  var hi = maxV + span * 0.20, lo = minV - span * 0.12;
+  var y = function(v){ return top + (hi - v) / (hi - lo) * (H - top - bot); };
+  var n = series.length;
+  var pts = series.map(function(v, i){ return [padX + i / (n - 1) * (W - padX * 2), y(v)]; });
+  var line = smoothD(pts, top - 4, H - bot + 4);
+  var area = line + ' L ' + pts[n - 1][0].toFixed(1) + ' ' + (H - bot + 3)
+           + ' L ' + pts[0][0].toFixed(1) + ' ' + (H - bot + 3) + ' Z';
+  var mark = markIdx >= 0 ? pts[markIdx] : null;
+  var last = pts[n - 1];
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="' + H + '" preserveAspectRatio="none">'
+    + '<defs><linearGradient id="gfill" x1="0" y1="0" x2="0" y2="1">'
+    +   '<stop offset="0" stop-color="#1D1C1A" stop-opacity=".085"/>'
+    +   '<stop offset="1" stop-color="#1D1C1A" stop-opacity="0"/>'
+    + '</linearGradient></defs>'
+    + '<path d="' + area + '" fill="url(#gfill)"/>'
+    + '<path d="' + line + '" fill="none" stroke="#1D1C1A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>'
+    + (mark ? '<circle cx="' + mark[0].toFixed(1) + '" cy="' + mark[1].toFixed(1) + '" r="3.6" fill="#C0392B"/>' : '')
+    + '<circle cx="' + last[0].toFixed(1) + '" cy="' + last[1].toFixed(1) + '" r="3.4" fill="#fff" stroke="#1D1C1A" stroke-width="1.8" vector-effect="non-scaling-stroke"/>'
+    + '</svg>';
+}
+
+/* ===== 每个账户的近期消费 =====
+   信用账户的金额合计对齐「本期应还」，用户一眼就能和对账单核上；
+   没手写流水的账户按 seed 生成，末笔吃掉舍入差，合计同样精确。
+   每个商户带自己的金额区间，不然会造出「一杯瑞幸 96 块」。 */
+var TX_POOL = [
+  ['瑞幸咖啡','餐饮',  12, 38], ['星巴克','餐饮',   28, 56], ['美团外卖','餐饮', 18, 68],
+  ['饿了么','餐饮',    15, 52], ['滴滴出行','交通',  9, 46],  ['地铁','交通',     4, 12],
+  ['盒马鲜生','日用',  28, 180], ['便利蜂','日用',    6, 32],  ['永辉超市','日用', 35, 210],
+  ['拼多多','购物',    19, 160], ['淘宝','购物',      39, 320], ['京东','购物',     59, 420],
+  ['话费充值','通讯',  30, 100], ['电影票','娱乐',    35, 78]
+];
+function lcg(seed){
+  return function(){ seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+}
+/* 今天是 11/07。流水按三个月攒：本月 / 上月 / 上上月，倒序。
+   信用账户每月补一条「还款」（transfer，不是支出），所以「全部」里能看到
+   这个账户被还过几次、每次多少——「本月」看不到，本月只有消费。 */
+var CUR_MONTH = '11';
+function genTx(a, isCredit, i){
+  var rnd = lcg(i * 7919 + 131);
+  var pool = TX_POOL.slice();
+  var pick = function(){ return pool.splice(Math.floor(rnd() * pool.length), 1)[0] || TX_POOL[0]; };
+  var spec = [
+    { pre:'11', days:['11/06','11/05','11/04','11/02','11/01'], n:4 },
+    { pre:'10', days:['10/30','10/26','10/22','10/18','10/12'], n:5 },
+    { pre:'09', days:['09/27','09/21','09/15','09/09'],           n:4 }
+  ];
+  var out = [], prevSum = 0;
+  for (var mi = spec.length - 1; mi >= 0; mi--){
+    var s = spec[mi], rows = [], sum = 0, k, p;
+    for (k = 0; k < s.n; k++){
+      p = pick();
+      /* 储蓄账户：按商户自己的价格区间给，别造出「一笔花掉四分之一存款」 */
+      var v = p[2] + rnd() * (p[3] - p[2]);
+      sum += v;
+      rows.push({ d: s.days[k], n: p[0], c: p[1], a: v.toFixed(2) });
+    }
+    if (isCredit && prevSum > 0){
+      rows.push({ d: s.pre + '/08', n: '建行5044', c: '还款', a: fmt(prevSum * (0.78 + rnd() * 0.2)), t: 'repay' });
+    }
+    prevSum = sum;
+    out = rows.concat(out);
+  }
+  return out;
+}
+function txOf(a, isCredit, i){
+  return a.tx || genTx(a, isCredit, i);
+}
+
+function detailHTML(g, i){
+  var isCredit = g === 'credit';
+  var a = (isCredit ? CREDIT : SAVING)[i];
+  var amt = parseAmt(isCredit ? a.debt : a.bal);
+  var lim = a.lim || 0;
+  var avail = Math.max(0, lim - amt);
+  var use = lim ? Math.round(amt / lim * 100) : 0;
+  var series = a.tf ? a.tf.map(function(p){ return p[1]; })
+                    : trendFor(amt, a.dcls !== 'down', i);
+  var tail = (String(a.num).match(/\d{4}/) || [''])[0];
+  var title = a.n + (tail ? ' ' + tail : '');
+
+  /* 两列主指标：信用看"还能刷多少 / 这期要还多少"，储蓄看"有多少 / 变多少" */
+  var m1k = isCredit ? '可用额度' : '余额';
+  var m1v = isCredit ? fmt(avail) : a.bal;
+  var m1s = isCredit ? ('额度 ' + fmt(lim)) : (a.chd ? '截至 ' + a.chd : '');
+  var m2k = isCredit ? '本期应还' : '较上月';
+  var m2v = isCredit ? (a.due || '0.00') : a.delta;
+  var m2c = isCredit ? '' : ' ' + (a.dcls || '');
+  var m2s = isCredit ? (a.dd + (a.od ? ' · 已逾期' : ''))
+                     : (a.chg ? (a.chg + ' · ' + a.chd) : '');
+
+  var limsec = '';
+  if (isCredit && lim){
+    limsec = '<div class="dtsec">'
+      + '<div class="dtsech"><span class="h">额度</span><span class="c">已用 ' + use + '%</span></div>'
+      + '<div class="dtbox">'
+      +   '<div class="limtop"><span class="a">' + fmt(amt) + ' / ' + fmt(lim) + '</span>'
+      +     '<span class="b">可用 ' + fmt(avail) + '</span></div>'
+      +   '<div class="limtrack"><i style="width:' + Math.min(use, 100) + '%"></i></div>'
+      +   (a.lim0 ? '<div class="limhist">2026-08 由 ' + fmt(a.lim0) + ' 下调至 ' + fmt(lim) + '</div>' : '')
+      + '</div></div>';
+  }
+
+  var instsec = '';
+  if (a.inst){
+    instsec = '<div class="dtsec">'
+      + '<div class="dtsech"><span class="h">分期</span><span class="c">'
+      +   a.inst.length + ' 笔 · 剩余本金 ' + a.instTotal + '</span></div>'
+      + '<div class="dtbox" style="padding:2px 14px">'
+      +   a.inst.map(function(x){
+            return '<div class="inst">'
+              + '<div class="ipi"><b>' + x.cur + '</b><span>/' + x.tot + '</span></div>'
+              + '<div class="iname">' + x.n + '<div class="isub">每期 ' + x.per + '</div></div>'
+              + '<div class="iamt">' + x.left + '<div class="isub">剩 ' + x.lft + ' 期</div></div>'
+              + '</div>';
+          }).join('')
+      + '</div>'
+      + '<div class="instfoot">各期本金合计 = 初始本金 <span class="ok">已校验 ✓</span><br>'
+      +   '另 ' + a.loopPart + ' 为本期未分期消费</div>'
+      + '</div>';
+  }
+
+  /* 流水：本月 / 全部 分段，同一块位置换内容，不跳页。
+     首页只管最近 7 天，这里补上「这个账户这个月」和「从头到现在」两个半径。 */
+  var allTx = txOf(a, isCredit, i);
+  var mode = (state.page && state.page.mode) || 'cur';
+  var shown = (state.page && state.page.more) || 10;
+  var curRows = allTx.filter(function(x){ return x.d.split('/')[0] === CUR_MONTH; });
+  var list = mode === 'cur' ? curRows : allTx.slice(0, shown);
+  var sumCur = 0, sumInst = 0;
+  curRows.forEach(function(x){
+    var v = parseAmt(x.a);
+    if (x.t === 'repay') return;
+    sumCur += v;
+    if (x.c === '分期') sumInst += v;
+  });
+  var tsub = mode === 'cur'
+    ? (curRows.length + ' 笔 · 合计 ' + fmt(sumCur))
+    : ('共 ' + allTx.length + ' 笔');
+  var trows = '', lastMon = '';
+  list.forEach(function(x){
+    var mon = x.d.split('/')[0];
+    if (mode === 'all' && mon !== lastMon){
+      trows += '<div class="txmon">' + parseInt(mon, 10) + ' 月</div>';
+      lastMon = mon;
+    }
+    var rep = x.t === 'repay';
+    trows += '<div class="txr">'
+      + '<span class="td">' + x.d + '</span>'
+      + '<span class="tn">' + x.n + '<span class="tc">' + x.c + '</span></span>'
+      + '<span class="ta' + (rep ? ' rep' : '') + '">' + (rep ? '+' : '−') + x.a + '</span>'
+      + '</div>';
+  });
+  var tfoot = '';
+  if (mode === 'cur'){
+    var iline = (isCredit && sumInst > 0)
+      ? ('其中分期 ' + fmt(sumInst) + '，新消费 ' + fmt(sumCur - sumInst) + '<br>')
+      : '';
+    tfoot = '<div class="txfoot">' + iline
+          + (isCredit ? '还款记录在「全部」里'
+                     : ('点「全部」看更早的 ' + (allTx.length - curRows.length) + ' 笔')) + '</div>';
+  } else if (allTx.length > list.length){
+    tfoot = '<button class="txall" data-txmore="1">显示更多</button>';
+  } else {
+    tfoot = '<div class="txfoot">已到最早一笔</div>';
+  }
+  var txsec = '<div class="dtsec">'
+    + '<div class="dtsech"><span class="h">流水</span>'
+    +   '<span class="seg2">'
+    +     '<button data-txmode="cur" class="' + (mode === 'cur' ? 'on' : '') + '">本月</button>'
+    +     '<button data-txmode="all" class="' + (mode === 'all' ? 'on' : '') + '">全部</button>'
+    +   '</span></div>'
+    + '<div class="txsum">' + tsub + '</div>'
+    + '<div class="dtbox txbox">' + trows + tfoot + '</div>'
+    + '</div>';
+
+  return '<div class="dt">'
+    + '<div class="dtbar">'
+    +   '<button class="dtback" data-dclose="1">‹</button>'
+    +   '<span class="tt">' + title + '</span>'
+    +   '<button class="dtmore">⋯</button>'
+    + '</div>'
+    + '<div class="dtscroll">'
+    +   '<div class="dtcard" style="--c1:' + a.c1 + ';--c2:' + a.c2 + '">'
+    +     '<div class="cn">' + a.n + '</div><div class="ct">' + a.m + '</div>'
+    +     '<div class="cb"><span class="cnum">' + a.num + '</span><span class="cnet">' + (a.net || '') + '</span></div>'
+    +     (isCredit ? '<div class="cprog"><i style="width:' + (a.u || 0) + '%"></i></div>' : '')
+    +   '</div>'
+    +   '<div class="dtname">' + title + '</div>'
+    +   '<div class="dtmeta' + (a.od ? ' alarm' : '') + '">' + (a.od ? a.od + ' · 8 月账单 665.36 未还' : a.m) + '</div>'
+    +   '<div class="dtmets">'
+    +     '<div class="dtm"><div class="k">' + m1k + '</div><div class="v">' + m1v + '</div><div class="s">' + m1s + '</div></div>'
+    +     '<div class="dtm"><div class="k">' + m2k + '</div><div class="v' + m2c + '">' + m2v + '</div><div class="s">' + m2s + '</div></div>'
+    +   '</div>'
+    +   '<div class="dtchart">' + chartSVG(series, a.od ? 7 : -1) + '</div>'
+    +   '<div class="dtcap">' + (isCredit ? '每月还款后的欠款余额。' : '每月末余额。')
+    +     (a.od ? '红点是 8 月账单漏还的开始——那 665.36 一直挂着，其余照常还。' : '') + '</div>'
+    +   '<div class="ranges" style="margin-top:10px">'
+    +     '<button class="rg">1周</button><button class="rg">1月</button>'
+    +     '<button class="rg">3月</button><button class="rg">今年</button><button class="rg on">1年</button></div>'
+    +   '<div class="dtfresh">最后对账 <b>昨天 22:58</b></div>'
+    +   limsec + instsec + txsec
+    +   '<button class="dtbtn">编辑账户</button>'
+    + '</div></div>';
+}
+
+function screenHTML(){
+  var C = CREDIT, S = SAVING;
+  var h = ''
+    + '<div class="statusbar"><span>9:41</span><span class="batt"></span></div>'
+    + '<div class="scroll">'
+    +   '<div class="pagetop"><span class="lg">DooDoo</span>'
+    +     '<span class="tabx" id="tabx">'
+    +       '<span data-tab="flow"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></span>'
+    +       '<span class="on" data-tab="assets"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="6" width="18" height="13" rx="3.5"/><path d="M3 10.5h18M16 15h2"/></svg></span>'
+    +       '<span data-tab="settings"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 3.6v2M12 18.4v2M3.6 12h2M18.4 12h2M6.1 6.1l1.4 1.4M16.5 16.5l1.4 1.4M17.9 6.1l-1.4 1.4M7.5 16.5l-1.4 1.4"/></svg></span>'
+    +     '</span></div>'
+    +   '<div class="sum">'
+    +     '<div class="sumtop">'
+    +       '<div class="sumcol"><div class="k"><span class="dot" style="background:#3A9E6B"></span>我有</div>'
+    +         '<div class="v">3,120.00</div><div class="p down">↘ 2.3%</div></div>'
+    +       '<div class="sumcol"><div class="k"><span class="dot" style="background:#E8734A"></span>我欠</div>'
+    +         '<div class="v">28,466.00</div><div class="p up">↗ 4.1%</div></div>'
+    +     '</div>'
+    +     '<div class="chart"><svg viewBox="0 0 320 44" width="100%" height="44" preserveAspectRatio="none">'
+    +       '<polyline points="2,33 40,33 80,32 120,29 160,30 200,27 240,25 280,22 316,21" fill="none" stroke="#4C8DF6" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>'
+    +       '<polyline points="2,12 40,13 80,13 120,16 160,15 200,18 240,17 280,20 316,19" fill="none" stroke="#E8734A" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>'
+    +     '</svg></div>'
+    +     '<div class="ranges"><button class="rg">1周</button><button class="rg">1月</button>'
+    +       '<button class="rg">3月</button><button class="rg">今年</button><button class="rg on">1年</button></div>'
+    +   '</div>'
+    +   groupBlock('credit', '信用', C, CREDIT_TOTAL, true)
+    +   groupBlock('saving', '储蓄', S, SAVING_TOTAL, false)
+    + '</div>';
+  if (state.ov) h += overlayHTML(state.ov);
+  if (state.page) h += detailHTML(state.page.g, state.page.i);
+  return h;
+}
+
+var screenEl = document.getElementById('dev').querySelector('.screen');
+var hintEl = document.getElementById('hint');
+
+function render(){
+  /* 重绘前记住两个滚动位置：外层资产页、详情页。否则切「本月/全部」会跳回顶部 */
+  var old = screenEl.querySelector('.scroll');
+  var keep = old ? old.scrollTop : 0;
+  var odt = screenEl.querySelector('.dtscroll');
+  var keepDt = odt ? odt.scrollTop : 0;
+  screenEl.innerHTML = screenHTML();
+  var nw = screenEl.querySelector('.scroll');
+  if (nw) nw.scrollTop = keep;
+  var ndt = screenEl.querySelector('.dtscroll');
+  if (ndt) ndt.scrollTop = keepDt;
+  hintEl.textContent = state.page
+    ? '账户详情页 · push 进来的新页，点 ‹ 返回浮层'
+    : (state.ov
+      ? '覆盖层 · 全屏朦胧浮层（非 sheet、非新页面），点 ✕ 或背景返回'
+      : '点左侧卡牌堆 → 全屏朦胧浮层（不跳转）');
+}
+
+screenEl.addEventListener('click', function(e){
+  if (e.target.closest('[data-dclose]')){
+    state.page = null; render(); return;
+  }
+  if (e.target.closest('[data-close]')){
+    state.ov = null; state.page = null; render(); return;
+  }
+  var tm = e.target.closest('[data-txmode]');
+  if (tm && state.page){
+    state.page.mode = tm.dataset.txmode;
+    state.page.more = 10;
+    if (state.page.mode === 'cur') state.page.more = 0;
+    render(); return;
+  }
+  var tmore = e.target.closest('[data-txmore]');
+  if (tmore && state.page){
+    state.page.more = ((state.page.more) || 10) + 10;
+    render(); return;
+  }
+  var row = e.target.closest('[data-g]');
+  if (row){
+    state.page = { g: row.dataset.g, i: +row.dataset.i }; render(); return;
+  }
+  var op = e.target.closest('[data-open]');
+  if (op){ state.ov = op.dataset.open; state.page = null; render(); }
+});
+
+function fit(){
+  var s = Math.min((window.innerWidth - 40) / 390, (window.innerHeight - 56 - 40) / 844, 1);
+  document.getElementById('dev').style.transform = 'scale(' + s + ')';
+}
+window.addEventListener('resize', fit);
+fit();
+render();
+</script>
+</body>
+</html>

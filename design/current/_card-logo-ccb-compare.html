@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>建设银行 · 卡面 Logo 形式 A/B/C 对比</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 40px 32px 48px;
+    background: #F6F4EF;
+    font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    color: #2E2C28;
+    -webkit-font-smoothing: antialiased;
+  }
+  .head { margin-bottom: 30px; }
+  .kicker { font-size: 11px; letter-spacing: .18em; color: #9A958B; text-transform: uppercase; margin-bottom: 10px; }
+  h1 { font-size: 25px; font-weight: 600; margin: 0 0 10px; letter-spacing: -.01em; }
+  .sub { font-size: 13px; color: #7A756B; line-height: 1.7; }
+  .sub b { color: #0066B3; font-weight: 600; }
+  .swatch { display: inline-block; width: 11px; height: 11px; border-radius: 3px; vertical-align: -1px; margin-right: 5px; border: 1px solid rgba(0,0,0,.08); }
+
+  .row { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+  .col { width: 296px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 11px; font-weight: 600; letter-spacing: .06em;
+    color: #6B6862; margin-bottom: 12px;
+  }
+  .badge .dot { width: 18px; height: 18px; border-radius: 6px; background: #E7E3DA; display: grid; place-items: center; font-size: 10px; color: #55514A; }
+  .badge.rec .dot { background: #0066B3; color: #fff; }
+  .badge.rec { color: #0066B3; }
+
+  /* ---------- 卡面 ---------- */
+  .card {
+    width: 296px; height: 186px; border-radius: 28px; position: relative; overflow: hidden;
+    background: linear-gradient(135deg, var(--c1), var(--c2));
+    box-shadow: 0 10px 26px rgba(28, 34, 42, .16), 0 2px 6px rgba(28, 34, 42, .08);
+    color: #fff;
+  }
+  .sheen { position: absolute; inset: 0; background: radial-gradient(circle at 0% 0%, rgba(255,255,255,.30), rgba(255,255,255,0) 62%); }
+  .band  { position: absolute; inset: 0; background: linear-gradient(35deg, transparent 40%, rgba(255,255,255,.10) 49%, transparent 58%); }
+  .edge  { position: absolute; inset: .5px; border: 1px solid rgba(255,255,255,.22); border-radius: 27.5px; pointer-events: none; }
+
+  .chip {
+    position: absolute; left: 24px; top: 30px; width: 34px; height: 26px; border-radius: 6px;
+    background: linear-gradient(135deg, #E8D7A8, #C9AE74 50%, #9C8347);
+    box-shadow: inset 0 0 0 .5px rgba(0,0,0,.28);
+  }
+  .chip::before { content:""; position:absolute; left:0; right:0; top:34%; height:.5px; background:rgba(0,0,0,.20); box-shadow:0 8px 0 rgba(0,0,0,.20); }
+  .chip::after  { content:""; position:absolute; top:0; bottom:0; left:50%; width:.5px; background:rgba(0,0,0,.20); }
+
+  /* 右上 logo 位：四张卡同一位置，只换内容 */
+  .logoslot { position: absolute; right: 24px; top: 26px; height: 34px; display: flex; align-items: center; justify-content: flex-end; }
+  .logoslot img { display: block; }
+  .mark-white { width: 34px; height: 34px; }
+  .mark-commons { width: 34px; height: 34px; }
+  .full-plate { background: #fff; border-radius: 6px; padding: 5px 7px; height: 30px; display: flex; align-items: center; }
+  .full-plate img { height: 20px; width: auto; }
+  .nettext { font-size: 9.5px; font-weight: 600; letter-spacing: 1.5px; opacity: .60; }
+
+  .brand-en { position: absolute; left: 24px; bottom: 44px; font-size: 17px; font-weight: 600; letter-spacing: 1.6px; }
+  .brand-cn { position: absolute; left: 24px; bottom: 22px; font-size: 12px; opacity: .66; letter-spacing: .8px; }
+  .net      { position: absolute; right: 24px; bottom: 48px; font-size: 8px; font-weight: 600; letter-spacing: 1.4px; opacity: .45; }
+  .last4    { position: absolute; right: 24px; bottom: 22px; font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 13px; letter-spacing: 1.4px; opacity: .88; }
+
+  /* ---------- 说明 ---------- */
+  .cap { margin-top: 16px; }
+  .cap h2 { font-size: 14px; font-weight: 600; margin: 0 0 8px; }
+  .cap ul { margin: 0; padding-left: 16px; }
+  .cap li { font-size: 11.5px; line-height: 1.75; color: #6B6862; }
+  .cap li b { color: #2E2C28; font-weight: 600; }
+  .flag { color: #B4462F; font-weight: 600; }
+  .ok { color: #1E7A4B; font-weight: 600; }
+
+  .foot {
+    margin-top: 34px; padding-top: 18px; border-top: 1px solid #E3DFD5;
+    font-size: 12px; line-height: 1.9; color: #6B6862; max-width: 1290px;
+  }
+  .foot b { color: #2E2C28; }
+  .rec-box {
+    margin-top: 14px; padding: 13px 16px; border-radius: 12px;
+    background: #EAF2F9; border: 1px solid #D3E3F1; color: #1C4C74; font-size: 12.5px; line-height: 1.8;
+  }
+  .rec-box b { color: #0B3E68; }
+</style>
+</head>
+<body>
+
+<div class="head">
+  <div class="kicker">卡面美术资源 · Logo 形式定案对比</div>
+  <h1>建设银行 · 卡面 Logo 形式 A / B / C</h1>
+  <div class="sub">
+    四张卡<b>同一版式、同一位置</b>，只换右上角 logo 的内容；芯片一律保留。<br>
+    官网实测主色 <span class="swatch" style="background:#0066B3"></span><b>#0066B3</b>（建行官网 CSS 出现 165 次 + 官网 logo 像素双确认），
+    渐变另一端按同色系压暗至 #003B6E。基线卡保留旧的近似色 <span class="swatch" style="background:#2E8FD8"></span>#2E8FD8 → #004A86 作对照。
+  </div>
+</div>
+
+<div class="row">
+
+  <!-- 0 基线 -->
+  <div class="col">
+    <div class="badge"><span class="dot">0</span> 现状基线</div>
+    <div class="card" style="--c1:#2E8FD8; --c2:#004A86;">
+      <div class="sheen"></div><div class="band"></div><div class="edge"></div>
+      <div class="chip"></div>
+      <div class="logoslot"><span class="nettext">UNIONPAY</span></div>
+      <div class="brand-en">CCB</div><div class="brand-cn">中国建设银行</div>
+      <div class="last4">•••• 5044</div>
+    </div>
+    <div class="cap">
+      <h2>现状：纯文字标，没有 logo</h2>
+      <ul>
+        <li>识别完全靠 <b>CCB / 中国建设银行</b> 两行字。</li>
+        <li>19 张卡结构一样，<b>只是换个渐变色</b>，快速扫列表时不好分辨。</li>
+        <li>色值是近似取色，比官网 <b>#0066B3</b> 明显偏亮偏紫。</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- A -->
+  <div class="col">
+    <div class="badge rec"><span class="dot">A</span> 单色白色行徽 · 推荐</div>
+    <div class="card" style="--c1:#0066B3; --c2:#003B6E;">
+      <div class="sheen"></div><div class="band"></div><div class="edge"></div>
+      <div class="chip"></div>
+      <div class="logoslot"><img class="mark-white" src="../../assets/brands/logos/_source/ccb-mark-white.png" alt="建行行徽"></div>
+      <div class="brand-en">CCB</div><div class="brand-cn">中国建设银行</div>
+      <div class="net">UNIONPAY</div><div class="last4">•••• 5044</div>
+    </div>
+    <div class="cap">
+      <h2>从官网 logo 裁出行徽 → 转纯白单色</h2>
+      <ul>
+        <li><span class="ok">＋</span> 图形识别度高，<b>不抢渐变、不花</b>，窄卡也清楚。</li>
+        <li><span class="ok">＋</span> 单色 + 透明底，一套资源可复用于所有银行，<b>换主题不用重导</b>。</li>
+        <li><span class="ok">＋</span> 来源是官网 logo，<b>版本和颜色都对得上</b>。</li>
+        <li><span class="flag">－</span> 需逐家裁图（已写脚本，半自动）。</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- B -->
+  <div class="col">
+    <div class="badge"><span class="dot">B</span> 官网彩色原 logo</div>
+    <div class="card" style="--c1:#0066B3; --c2:#003B6E;">
+      <div class="sheen"></div><div class="band"></div><div class="edge"></div>
+      <div class="chip"></div>
+      <div class="logoslot"><span class="full-plate"><img src="../../assets/brands/logos/_source/ccb-full.png" alt="建行官网 logo"></span></div>
+      <div class="brand-en">CCB</div><div class="brand-cn">中国建设银行</div>
+      <div class="net">UNIONPAY</div><div class="last4">•••• 5044</div>
+    </div>
+    <div class="cap">
+      <h2>整条官网 logo，白底衬贴上去</h2>
+      <ul>
+        <li><span class="ok">＋</span> 最"真"，中英文名和行徽全都在。</li>
+        <li><span class="flag">－</span> 白底衬在渐变卡上是明显<b>贴纸感</b>，和现有六层光影打架。</li>
+        <li><span class="flag">－</span> 200×40 缩到 130×26 后<b>中文已经发糊</b>。</li>
+        <li><span class="flag">－</span> 各家 logo 长宽比不一，19 张卡摆一起会散。</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- C -->
+  <div class="col">
+    <div class="badge"><span class="dot">C</span> 现成矢量优先</div>
+    <div class="card" style="--c1:#0066B3; --c2:#003B6E;">
+      <div class="sheen"></div><div class="band"></div><div class="edge"></div>
+      <div class="chip"></div>
+      <div class="logoslot"><img class="mark-commons" src="../../assets/brands/logos/_source/ccb-commons.svg" alt="Commons 建行旧标"></div>
+      <div class="brand-en">CCB</div><div class="brand-cn">中国建设银行</div>
+      <div class="net">UNIONPAY</div><div class="last4">•••• 5044</div>
+    </div>
+    <div class="cap">
+      <h2>直接用 Simple Icons / Commons 现成 SVG</h2>
+      <ul>
+        <li><span class="flag">－</span> Simple Icons <b>没有建行</b>，六大行一家都没有。</li>
+        <li><span class="flag">－</span> Commons 只有这枚<b>红色老标</b>（#ED1C24，人民建设银行时期），颜色和版本全不对。</li>
+        <li><span class="flag">－</span> 农行 / 中行 / 招行 / 上海银行<b>都缺矢量</b>，会变成"有的有 logo 有的没有"。</li>
+        <li>能用的只有支付宝、微信、Visa、Mastercard、银联。</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<div class="foot">
+  <b>资源来源（本次浏览器实测）</b>：建行官网 <span style="font-family:monospace;font-size:11px">wealth.ccb.com</span> logo PNG（200×40，主色 #0066B3）；Wikimedia Commons <span style="font-family:monospace;font-size:11px">People Construction Bank of China logo.svg</span>（红色老标）；Simple Icons CDN（无建行）。
+  <br><b>法律风险</b>：logo 是注册商标，三种方案都一样——本地自用在自己的记账 App 里无碍；若上架 App Store，需换回「品牌色块 + 简称」。
+  <div class="rec-box">
+    <b>我的建议：A。</b> B 的白底衬会破坏你现有「六层光影、零图片」的卡面结构，C 在建行上直接给出错误颜色和错误版本，覆盖也不齐。
+    A 把官网 logo 压成单色行徽，既满足"要 logo"，又和现有低饱和渐变调性一致；缺的银行同样从各自官网 logo 裁一遍即可，规则统一、可控。
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>DooDoo · 记一笔四版（同底不同控件）</title>
+<style>
+  :root{
+    --bg:#F7F5F1; --card:#fff; --ink:#1D1C1A; --ink2:#6F6B63; --ink3:#A8A39A; --line:#EFECE5;
+    --red:#C0392B; --green:#2E9E6B; --trough:#EBE7E0;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#EDEAE4;font-family:-apple-system,"PingFang SC",sans-serif;color:var(--ink);padding:20px 24px 34px}
+  header.top{max-width:1300px;margin:0 auto 14px}
+  h1{font-size:19px;margin:0 0 4px;letter-spacing:-.3px}
+  .sub{font-size:12.5px;color:#6F6B63;line-height:1.75;margin:0;max-width:1180px}
+  .sub b{color:var(--ink)}
+
+  .diag{max-width:1300px;background:#fff;border-radius:12px;padding:14px 18px;box-shadow:0 6px 18px rgba(0,0,0,.06);margin:0 auto 16px}
+  .diag h2{font-size:13.5px;margin:0 0 7px}
+  .diag p{font-size:12.5px;line-height:1.75;color:#5F5E5A;margin:0 0 5px}
+  .diag b{color:var(--ink)}
+  .diag code{background:#F1EFE8;border-radius:4px;padding:1px 5px;font-size:11.5px}
+
+  .ctrl{max-width:1300px;margin:0 auto 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .chip{font-size:12px;padding:6px 13px;border-radius:999px;background:#fff;color:#5F5E5A;cursor:pointer;border:1px solid #DFDBD2;transition:.16s}
+  .chip:hover{border-color:#C9C4B9;color:var(--ink)}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:600}
+  .toggle{font-size:11.5px;color:#6F6B63;display:flex;align-items:center;gap:5px;margin-left:6px;cursor:pointer;user-select:none}
+  .toggle input{accent-color:#1D1C1A}
+
+  .wrap{max-width:1300px;margin:0 auto;display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
+  .phone{position:relative;width:390px;height:844px;border-radius:44px;background:var(--bg);overflow:hidden;
+         box-shadow:0 0 0 1px #D8D4CC,0 24px 60px rgba(0,0,0,.18);flex:0 0 auto}
+  .side{flex:1 1 330px;min-width:300px;max-width:430px}
+
+  /* ---- 屏幕内 ---- */
+  .statusbar{position:absolute;top:0;left:0;right:0;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;font-size:12px;font-weight:600;z-index:90}
+  .statusbar i{display:block;width:15px;height:9px;border:.8px solid var(--ink);border-radius:2px;position:relative}
+  .statusbar i::after{content:"";position:absolute;inset:1.5px;background:var(--ink);border-radius:1px}
+  .hd{position:absolute;top:52px;left:20px;right:20px;height:34px;display:flex;align-items:center;justify-content:space-between;z-index:50}
+  .hd .logo{font-size:21px;font-weight:700;letter-spacing:-.02em}
+  .tabx{display:flex;align-items:center;padding:2px;border-radius:17px;height:34px;background:var(--trough)}
+  .tabx .t{width:36px;height:30px;border-radius:15px;display:grid;place-items:center;color:rgba(29,28,26,.38)}
+  .tabx .t.on{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 .5px rgba(29,28,26,.10),0 1px 2px rgba(29,28,26,.10)}
+
+  /* 卡堆顶 116：让便签与顶部胶囊至少留 12pt */
+  .deck{position:absolute;top:116px;left:0;right:0;bottom:8px}
+  .card{position:absolute;left:16px;right:16px;top:0;background:var(--card);border-radius:24px;
+        padding:20px 18px 76px;display:flex;flex-direction:column;transform-origin:bottom center}
+  .lay0{left:16px;right:16px;bottom:38px;z-index:40;box-shadow:0 1px 2px rgba(0,0,0,.03),0 10px 28px rgba(0,0,0,.045)}
+  .lay1{left:26px;right:26px;bottom:28px;z-index:30;box-shadow:0 1px 0 rgba(29,28,26,.10),0 4px 8px rgba(29,28,26,.05),inset 0 0 0 1px rgba(29,28,26,.11)}
+  .lay2{left:25px;right:25px;bottom:18px;z-index:20;box-shadow:0 1px 0 rgba(29,28,26,.10),0 4px 8px rgba(29,28,26,.05),inset 0 0 0 1px rgba(29,28,26,.11)}
+  .lay3{left:28px;right:28px;bottom:8px;z-index:10;box-shadow:0 1px 0 rgba(29,28,26,.10),0 6px 16px rgba(29,28,26,.10),inset 0 0 0 1px rgba(29,28,26,.11)}
+  .lay1>*,.lay2>*,.lay3>*{opacity:0}
+
+  .ch{display:flex;justify-content:space-between;align-items:flex-start}
+  .dwrap{display:flex;align-items:baseline;gap:6px}
+  .mon{font-size:11px;color:var(--ink3);letter-spacing:.08em}
+  .dnum{font-size:32px;font-weight:600;letter-spacing:-.02em;line-height:1}
+  .wday{font-size:12px;color:var(--ink3)}
+  .totals{display:flex;align-items:baseline;gap:6px}
+  .totals .lbl{font-size:11px;color:var(--ink3)}
+  .totals .exp{font-size:16px;font-weight:600;color:var(--red);font-variant-numeric:tabular-nums}
+  .hr{height:1px;background:var(--line);margin:14px 0 2px}
+  .rows{flex:1;overflow-y:auto;margin:0 -2px;padding:0 2px;min-height:0;scrollbar-width:none;
+        -webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 34px),transparent 100%);
+        mask-image:linear-gradient(to bottom,#000 calc(100% - 34px),transparent 100%)}
+  .rows::-webkit-scrollbar{width:0;height:0}
+  .note{position:absolute;right:6px;top:-14px;transform:rotate(-3deg);background:#FFF7E0;border:1px solid #EFE2BE;
+        border-radius:5px;padding:5px 10px;font-size:11px;color:#8A6D2F;box-shadow:0 3px 8px rgba(0,0,0,.09);z-index:6;white-space:nowrap}
+  .note s{text-decoration:none;color:#3B7A44}
+  .tx{display:flex;align-items:center;gap:12px;padding:11px 0}
+  .ic{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;flex:0 0 42px}
+  .ic img{width:27px;height:27px;display:block}
+  .tt{font-size:14px;font-weight:500}
+  .ts{font-size:11.5px;color:var(--ink3);margin-top:2px}
+  .ta{margin-left:auto;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+
+  /* ---- 记一笔：四版 ---- */
+  .add{position:absolute;z-index:60;display:flex;align-items:center;justify-content:center;
+       transition:transform .16s,box-shadow .16s,background .16s;cursor:pointer}
+
+  /* A 变小变轻 */
+  .fA .card{padding-bottom:72px}
+  .fA .add{right:18px;bottom:54px;width:44px;height:44px;border-radius:50%;background:var(--ink);color:#fff;
+           box-shadow:0 1px 2px rgba(29,28,26,.14),0 8px 18px rgba(29,28,26,.16)}
+  .fA .add:hover{transform:translateY(-1px);box-shadow:0 2px 4px rgba(29,28,26,.16),0 10px 22px rgba(29,28,26,.20)}
+
+  /* B 文字胶囊 */
+  .fB .card{padding-bottom:70px}
+  .fB .add{right:18px;bottom:56px;height:40px;padding:0 18px 0 14px;gap:7px;border-radius:20px;background:var(--ink);color:#fff;
+           box-shadow:0 2px 4px rgba(29,28,26,.16),0 12px 26px rgba(29,28,26,.22)}
+  .fB .add span{font-size:12.5px;font-weight:600;letter-spacing:.01em}
+  .fB .add:hover{transform:translateY(-1px)}
+
+  /* C 金额入口 */
+  .fC .card{padding-bottom:74px}
+  .fC .add{right:16px;bottom:56px;height:44px;padding:0 5px 0 14px;gap:9px;border-radius:22px;background:var(--ink);color:#fff;
+           box-shadow:0 2px 4px rgba(29,28,26,.18),0 14px 30px rgba(29,28,26,.26)}
+  .fC .add .cl{display:flex;flex-direction:column;line-height:1.05}
+  .fC .add .cl b{font-size:14.5px;font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+  .fC .add .cl i{font-style:normal;font-size:9px;color:rgba(255,255,255,.55);letter-spacing:.06em}
+  .fC .add .plus{width:34px;height:34px;border-radius:17px;background:rgba(255,255,255,.16);display:grid;place-items:center}
+  .fC .add:hover{transform:translateY(-1px)}
+
+  /* D 与卡堆融合：记一笔 = 这张纸的下一行 */
+  .fD .card{padding-bottom:64px}
+  .fD .add{left:34px;right:34px;bottom:54px;height:36px;gap:8px;border-radius:11px;background:#FDFCF9;
+           color:var(--ink);border:1px solid rgba(29,28,26,.12);box-shadow:0 1px 2px rgba(29,28,26,.05)}
+  .fD .add span{font-size:12.5px;font-weight:600}
+  .fD .add em{font-style:normal;font-size:10.5px;color:var(--ink3);margin-left:auto;margin-right:2px}
+  .fD .add:hover{background:#F8F6F1;border-color:rgba(29,28,26,.2)}
+  .fD .add:active{transform:scale(.995)}
+
+  /* 标注 */
+  .anno{position:absolute;inset:0;pointer-events:none;z-index:120;display:none}
+  .anno.on{display:block}
+  .tag{position:absolute;font-size:10px;background:#fff;border:1px solid #DCD7CD;border-radius:4px;padding:2px 5px;color:#5F5E5A;white-space:nowrap}
+
+  /* 右侧说明 */
+  .panel{background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+  .panel h2{font-size:14px;margin:0 0 8px}
+  .panel .cur{font-size:12.5px;color:var(--ink2);line-height:1.8;margin:0 0 10px}
+  .panel .cur b{color:var(--ink)}
+  table{width:100%;border-collapse:collapse}
+  th,td{border-bottom:1px solid var(--line);padding:7px 2px;font-size:11.5px;text-align:left;vertical-align:top}
+  th{color:#8A867D;font-weight:600;font-size:11px;width:78px}
+  tr:last-child td{border-bottom:none}
+  td code{background:#F1EFE8;border-radius:4px;padding:1px 4px;font-size:11px}
+
+  .verdict{margin-top:12px;font-size:12px;line-height:1.8;color:var(--ink2);background:#FAF9F6;border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+  .verdict.ok{background:#F2F8F3;border-color:#DCEBE0;color:#2F6B44}
+  .verdict.warn{background:#FDF6E7;border-color:#F0E4C4;color:#7C5D18}
+  .verdict.bad{background:#FBEDEB;border-color:#F2D9D5;color:#A03B30}
+
+  /* 四版缩略 */
+  .strip{max-width:1300px;margin:26px auto 0;display:flex;gap:14px;flex-wrap:wrap}
+  .mini{background:#fff;border-radius:12px;padding:12px 12px 10px;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+  .mini .frame{position:relative;width:156px;height:338px;overflow:hidden;border-radius:8px}
+  .mini .inner{position:absolute;top:0;left:0;width:390px;height:844px;transform:scale(.4);transform-origin:top left;box-shadow:none;border-radius:0}
+  .mini .cap{font-size:11.5px;color:#5F5E5A;margin-top:8px;display:flex;align-items:center;gap:6px}
+  .mini .cap b{color:var(--ink)}
+  .badge{font-size:9.5px;padding:1.5px 6px;border-radius:999px;font-weight:600}
+  .badge.ok{background:#EAF3EC;color:#2F7A48}
+  .badge.mid{background:#FAF0DF;color:#8A6410}
+  .badge.bad{background:#FBEDEB;color:#B4443A}
+
+  .matrix{max-width:1300px;margin:24px auto 0;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+  .matrix table{width:100%}
+  .matrix th{background:#FAF9F6;font-size:11.5px;color:#5F5E5A;padding:9px 12px;width:auto}
+  .matrix td{padding:9px 12px;font-size:11.5px;line-height:1.6;color:#5F5E5A;border-bottom:1px solid var(--line)}
+  .matrix td:first-child{color:var(--ink);font-weight:600;width:128px}
+  .matrix tr:last-child td{border-bottom:none}
+
+  .notes{max-width:1300px;margin:22px auto 0;background:#fff;border-radius:12px;padding:16px 20px;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+  .notes h2{font-size:14px;margin:0 0 8px}
+  .notes li{font-size:12.5px;line-height:1.85;color:#6F6B63;margin-left:18px}
+  .notes b{color:var(--ink)}
+  .notes code{background:#F1EFE8;border-radius:4px;padding:1px 5px;font-size:11.5px}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>记一笔 · 四版对比</h1>
+  <p class="sub">四版共用<b>同一份卡堆、同一个顶部 tab、同一套 token</b>，只换记一笔这一个控件——否则差异会来自页面而不是控件。每版都按自己的控件高度重算了<b>卡内下内边距</b>，保证流水行与控件之间留 12pt。</p>
+</header>
+
+<div class="diag">
+  <h2>先说三条硬约束（四版都必须满足）</h2>
+  <p>① <b>不许压层厚带</b>：卡堆底部三层各露 10pt，那是「有几天」的唯一证据，控件只能停在最上层卡面里或卡面之外，不能穿过去。</p>
+  <p>② <b>卡内下内边距跟着控件走</b>：<code>padding-bottom = 控件顶到屏幕底 − 卡下沿到屏幕底 + 12</code>。当前卡下沿 38pt，A 版控件顶 98pt ⇒ 72pt，以此类推。这个数<b>不能拍脑袋写死</b>，历史已经踩过一次（底部 tab 换方案后没重测）。</p>
+  <p>③ <b>首页主数字是卡头那个「支出 −¥165.00」</b>。任何把同一个金额再显示一遍的方案（C）都要解释为什么值得重复。</p>
+</div>
+
+<div class="ctrl">
+  <span class="chip on" data-v="fA">A 变小变轻</span>
+  <span class="chip" data-v="fB">B 文字胶囊</span>
+  <span class="chip" data-v="fC">C 金额入口</span>
+  <span class="chip" data-v="fD">D 与卡堆融合</span>
+  <label class="toggle"><input type="checkbox" id="annoChk" checked> 显示尺寸标注</label>
+</div>
+
+<div class="wrap">
+  <div class="phone fA" id="phone"></div>
+  <div class="side">
+    <div class="panel">
+      <h2 id="pTitle">A · 变小变轻</h2>
+      <p class="cur" id="pDesc">保留圆形，把 52 收到 44，投影从两层减到两层但幅度减半，位置更贴边角。</p>
+      <table>
+        <tr><th>尺寸</th><td id="pA">44 × 44，圆角 50%</td></tr>
+        <tr><th>位置</th><td id="pB">right 18 / bottom 54（距屏幕底 98）</td></tr>
+        <tr><th>卡内边距</th><td id="pC"><code>padding-bottom: 72px</code></td></tr>
+        <tr><th>实测间隙</th><td id="pD">—</td></tr>
+      </table>
+      <div class="verdict" id="pV">—</div>
+    </div>
+  </div>
+</div>
+
+<div class="strip" id="strip"></div>
+
+<div class="matrix">
+  <table>
+    <tr><th>方案</th><th>读起来是什么</th><th>首页主数字</th><th>主要代价</th><th>层厚带</th></tr>
+    <tr><td>A 变小变轻</td><td>一枚安静的黑点，随手可点</td><td>不抢</td><td>存在感弱 → 单手拇指区域仍在右下没问题，但「记一笔」这句话消失了，新用户要靠形状猜</td><td>不遮</td></tr>
+    <tr><td>B 文字胶囊</td><td>一个明确的主按钮</td><td>不抢</td><td>横向变长（96pt），压到卡面右下角更多面积；文字在小屏上会被截断的风险低但要留 18pt 内距</td><td>不遮</td></tr>
+    <tr><td>C 金额入口</td><td>一个「今日花了多少 + 记一笔」的复合按钮</td><td><b>重复</b>：卡头已有 −¥165.00</td><td>同一数字出现两次，且按钮比卡头更抢眼，等于把主数字的位置搬到角落；一旦跨月/跨天口径不一致会直接矛盾</td><td>不遮</td></tr>
+    <tr><td>D 与卡堆融合</td><td>这张纸的「下一行」</td><td>不抢</td><td>只在「今天」这张卡上成立；翻到历史日时按钮语义变成「给那天补记」，需要额外文案；且它随卡堆一起翻走，不再是全局入口</td><td>不遮</td></tr>
+  </table>
+</div>
+
+<div class="notes">
+  <h2>四版共同的结论</h2>
+  <ul>
+    <li><b>底部只剩一个控件，所以它必须承担「记一笔」的全部可发现性。</b>上一轮底部有两个黑物（tab 胶囊 + FAB）互相呼应；现在 tab 上了顶部，底部独苗，A 版最轻但最容易被忽略。</li>
+    <li><b>D 的语义最好、可用性最差。</b>「记一笔 = 在这张纸上加一行」是这个产品最好的隐喻，但它只对「今天」这张卡成立；翻回 11-03 时按下去应该是「给 11-03 补记」——这需要额外文案，否则会误记到错误日期。</li>
+    <li><b>C 是唯一会伤到信息架构的方案。</b>卡头的 −¥165.00 是首页第一眼要读的数字，角落里再放一个同值胶囊，用户会开始怀疑哪个是「真的」。</li>
+  </ul>
+</div>
+
+<script>
+var ICO = {
+  flow:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>',
+  wallet:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="6" width="18" height="13" rx="3.5"/><path d="M3 10.5h18M16 15h2"/></svg>',
+  gear:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 3.6v2M12 18.4v2M3.6 12h2M18.4 12h2M6.1 6.1l1.4 1.4M16.5 16.5l1.4 1.4M17.9 6.1l-1.4 1.4M7.5 16.5l-1.4 1.4"/></svg>',
+  plus:'<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M12 5.5v13M5.5 12h13"/></svg>',
+  plusSm:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5.5v13M5.5 12h13"/></svg>'
+};
+var ROWS = [
+  { icon:'Croissant', t:'好利来', s:'吃 · 花呗', a:32.00, bg:'#FFF1E6' },
+  { icon:'LightRail', t:'地铁', s:'行 · 建行5044', a:4.00, bg:'#EAF2FF' },
+  { icon:'Cat', t:'麦富迪猫粮', s:'情 · 白条', a:129.00, bg:'#F3EEFF' },
+  { icon:'HotBeverage', t:'星巴克', s:'吃 · 花呗', a:28.00, bg:'#FFF1E6' },
+  { icon:'Taxi', t:'滴滴', s:'行 · 招行', a:19.50, bg:'#EAF2FF' },
+  { icon:'BentoBox', t:'工作午餐', s:'吃 · 微信', a:26.00, bg:'#FFF1E6' },
+  { icon:'ShoppingBags', t:'日用补货', s:'穿 · 余额宝', a:63.00, bg:'#FFF1E6' }
+];
+var ADDSUM = 32 + 4 + 129;
+function money(n){ return n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
+function addHTML(v){
+  if (v === 'fA') return '<div class="add" id="add">' + ICO.plus + '</div>';
+  if (v === 'fB') return '<div class="add" id="add">' + ICO.plusSm + '<span>记一笔</span></div>';
+  if (v === 'fC') return '<div class="add" id="add"><span class="cl"><i>今日 ' + ROWS.slice(0,3).length + ' 笔</i><b>−¥' + money(ADDSUM) + '</b></span>'
+    + '<span class="plus">' + ICO.plusSm + '</span></div>';
+  return '<div class="add" id="add">' + ICO.plusSm + '<span>记一笔</span><em>加在今天</em></div>';
+}
+
+function screenHTML(v, withId){
+  var rows = ROWS.map(function(r){
+    return '<div class="tx"><div class="ic" style="background:' + r.bg + '">'
+      + '<img src="../../assets/emoji/picked/' + r.icon + '.png" alt="">'
+      + '</div><div><div class="tt">' + r.t + '</div><div class="ts">' + r.s + '</div></div>'
+      + '<div class="ta">−¥' + money(r.a) + '</div></div>';
+  }).join('');
+  return '<div class="statusbar"><span>9:41</span><span><i></i></span></div>'
+    + '<div class="hd"><span class="logo">DooDoo</span>'
+    +   '<span class="tabx"><span class="t on">' + ICO.flow + '</span><span class="t">' + ICO.wallet + '</span><span class="t">' + ICO.gear + '</span></span>'
+    + '</div>'
+    + '<div class="deck">'
+    +   '<div class="card lay0"' + (withId ? ' id="card0"' : '') + '><span class="note">本月 <s>↘ 12.4%</s></span>'
+    +     '<div class="ch"><div class="dwrap"><span class="mon">NOV</span><span class="dnum">06</span><span class="wday">今天</span></div>'
+    +       '<div class="totals"><span class="lbl">支出</span><span class="exp">−¥' + money(ADDSUM) + '</span></div></div>'
+    +     '<div class="hr"></div><div class="rows" id="rows">' + rows + '</div>'
+    +   '</div>'
+    +   '<div class="card lay1"></div><div class="card lay2"></div><div class="card lay3"></div>'
+    + '</div>'
+    + addHTML(v)
+    + (withId ? '<div class="anno" id="anno"></div>' : '');
+}
+
+var phone = document.getElementById('phone');
+phone.innerHTML = screenHTML('fA', true);
+
+/* 缩略 */
+var VS = {
+  fA:{ cap:'变小变轻', badge:'mid', bt:'最轻' },
+  fB:{ cap:'文字胶囊', badge:'ok', bt:'推荐' },
+  fC:{ cap:'金额入口', badge:'bad', bt:'冲突' },
+  fD:{ cap:'与卡堆融合', badge:'mid', bt:'语义好' }
+};
+var strip = document.getElementById('strip');
+Object.keys(VS).forEach(function(k){
+  var v = VS[k], box = document.createElement('div');
+  box.className = 'mini';
+  box.innerHTML = '<div class="frame"><div class="inner phone ' + k + '">' + screenHTML(k, false) + '</div></div>'
+    + '<div class="cap"><b>' + k.slice(1) + '</b>' + v.cap
+    + '<span class="badge ' + v.badge + '" style="margin-left:auto">' + v.bt + '</span></div>';
+  strip.appendChild(box);
+});
+
+var SPEC = {
+  fA:{
+    title:'A · 变小变轻', desc:'保留圆形，把 52 收到 44，投影幅度减半，位置更贴边角。仍然是一枚安静的黑点。',
+    a:'44 × 44，圆角 50%', b:'right 18 / bottom 54（距屏幕底 98）', c:'<code>padding-bottom: 72px</code>',
+    v:'warn', vt:'<b>能省 8pt 卡面，但代价是可发现性。</b>底部现在只剩一个控件，它既要安静又要被找到——44pt 已经是可点区域的舒适下限，再小就要靠图标解释自己。'
+  },
+  fB:{
+    title:'B · 文字胶囊', desc:'图标 + 「记一笔」横向胶囊，一句话把动作说清楚。黑底白字与顶部 tab 的墨色选中块同族。',
+    a:'96 × 40，圆角 20', b:'right 18 / bottom 56（距屏幕底 96）', c:'<code>padding-bottom: 70px</code>',
+    v:'ok', vt:'<b>推荐。</b>唯一不需要用户猜的方案。代价是横向占位 96pt（比 52 的圆多 44pt），但这块区域本来就是卡片右下角的空白，不压任何流水行。'
+  },
+  fC:{
+    title:'C · 金额入口', desc:'把今日支出合计塞进按钮：左「今日 3 笔 / −¥165.00」，右一枚 plus 圆芯。信息量最大。',
+    a:'≈150 × 44，圆角 22', b:'right 16 / bottom 56（距屏幕底 100）', c:'<code>padding-bottom: 74px</code>',
+    v:'bad', vt:'<b>不推荐，原因是重复。</b>卡头已经写着「支出 −¥165.00」，按钮里再写一遍，用户会开始怀疑哪个是真的；而且角落里的按钮比卡头更重，等于把主数字搬到了角落。'
+  },
+  fD:{
+    title:'D · 与卡堆融合', desc:'不再悬浮，做成卡片内部的一条纸面按钮——「记一笔 = 在这张纸上加一行」。白底纸签 + 极细描边，按下去轻微内陷。',
+    a:'卡内 322 × 36，圆角 11', b:'距卡下沿 16pt（卡下沿 38 ⇒ 距屏幕底 54）', c:'<code>padding-bottom: 64px</code>（36 按钮 + 12 间隙 + 16 内距）',
+    v:'mid', vt:'<b>语义最好，但只在「今天」成立。</b>翻到 11-03 时它必须变成「给 11-03 补记」，否则会记错日期；而且它随卡堆翻走，不再是一个全局入口。'
+  }
+};
+
+function setVariant(v){
+  phone.className = 'phone ' + v;
+  phone.innerHTML = screenHTML(v, true);
+  document.querySelectorAll('.chip').forEach(function(c){ c.classList.toggle('on', c.dataset.v === v); });
+  var s = SPEC[v];
+  document.getElementById('pTitle').textContent = s.title;
+  document.getElementById('pDesc').textContent = s.desc;
+  document.getElementById('pA').innerHTML = s.a;
+  document.getElementById('pB').innerHTML = s.b;
+  document.getElementById('pC').innerHTML = s.c;
+  var pv = document.getElementById('pV');
+  pv.className = 'verdict ' + s.v; pv.innerHTML = s.vt;
+  placeAnno();
+}
+
+function placeAnno(){
+  var anno = document.getElementById('anno');
+  var on = document.getElementById('annoChk').checked;
+  if (!on) { anno.classList.remove('on'); return; }
+  anno.classList.add('on');
+  var pr = phone.getBoundingClientRect();
+  var add = document.getElementById('add').getBoundingClientRect();
+  var rows = document.getElementById('rows').getBoundingClientRect();
+  var rowsBottomFrom = pr.bottom - rows.bottom;
+  var addTopFrom = pr.bottom - add.top;
+  var gap = (add.top - rows.bottom).toFixed(0);
+  document.getElementById('pD').innerHTML = '流水行底 ↔ 控件顶 <b>' + gap + 'px</b>（要求 ≥12）';
+
+  var box = document.createElement('div');
+  box.style.cssText = 'position:absolute;border:1px dashed rgba(192,57,43,.6);border-radius:8px;'
+    + 'left:' + (add.left - pr.left - 2) + 'px;top:' + (add.top - pr.top - 2) + 'px;'
+    + 'width:' + (add.width + 4) + 'px;height:' + (add.height + 4) + 'px';
+  var t1 = document.createElement('div');
+  t1.className = 'tag';
+  t1.textContent = Math.round(add.width) + '×' + Math.round(add.height) + ' · 距底 ' + Math.round(addTopFrom);
+  t1.style.left = (add.left - pr.left) + 'px';
+  t1.style.top = (add.top - pr.top - 24) + 'px';
+  var t2 = document.createElement('div');
+  t2.className = 'tag';
+  t2.textContent = '间隙 ' + gap + 'px';
+  t2.style.left = (add.left - pr.left) + 'px';
+  t2.style.top = (add.top - pr.top + add.height + 4) + 'px';
+  var old = anno.querySelectorAll('.dyn');
+  old.forEach(function(n){ n.remove(); });
+  [box, t1, t2].forEach(function(n){ n.classList.add('dyn'); anno.appendChild(n); });
+}
+
+document.querySelectorAll('.chip').forEach(function(c){
+  c.addEventListener('click', function(){ setVariant(c.dataset.v); });
+});
+document.getElementById('annoChk').addEventListener('change', placeAnno);
+window.addEventListener('resize', placeAnno);
+setVariant('fA');
+</script>
+</body>
+</html>

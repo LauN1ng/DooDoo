@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>资产页 v1.0 冻结 · 卡牌堆 + 全屏朦胧浮层</title>
+<style>
+  :root{
+    --ink:#1D1C1A; --ink2:#6B6862; --ink3:#9A968D; --ink4:#B0ACA3;
+    --bg:#F7F5F1; --card:#fff; --line:#EAE7E0;
+    --red:#C0392B; --green:#2E9E6B; --blue:#4C8DF6;
+  }
+  *{box-sizing:border-box;-webkit-font-smoothing:antialiased}
+  html,body{margin:0;height:100%;width:100%;max-width:100%;overflow:hidden}
+  body{
+    background:#EFECE7;
+    font-family:-apple-system,"SF Pro Text","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    color:var(--ink);
+    display:flex;flex-direction:column;align-items:center;
+    overflow:hidden;
+  }
+  .bar{
+    width:100%;height:56px;flex:0 0 56px;display:flex;align-items:center;gap:16px;
+    padding:0 20px;border-bottom:1px solid #E2DFD9;background:#F4F1EC;position:relative;z-index:10;
+    overflow:hidden;
+  }
+  .brand{font-size:13px;font-weight:650;letter-spacing:.01em;white-space:nowrap}
+  .chips{display:flex;gap:6px;flex:0 0 auto}
+  .chip{
+    border:1px solid #DEDAD2;background:#FBFAF7;color:#4A4741;
+    font:inherit;font-size:12px;padding:6px 12px;border-radius:999px;cursor:pointer;
+    transition:.16s;white-space:nowrap;
+  }
+  .chip.on{background:#1D1C1A;color:#fff;border-color:#1D1C1A}
+  .hint{margin-left:auto;font-size:11.5px;color:#8A867D;text-align:right;line-height:1.4;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px}
+
+  .stage{flex:1;min-width:0;min-height:0;position:relative;width:100%;overflow:hidden}
+  .device{position:absolute;left:50%;top:20px;margin-left:-195px;width:390px;height:844px;transform-origin:top center}
+  .screen{
+    position:absolute;inset:0;overflow:hidden;border-radius:44px;background:var(--bg);
+    box-shadow:0 0 0 1px #DAD6CE,0 30px 70px rgba(0,0,0,.16);
+  }
+
+  /* ---- 手机内 ---- */
+  .statusbar{
+    height:52px;display:flex;align-items:flex-end;justify-content:space-between;
+    padding:0 26px 8px;font-size:13px;font-weight:600;
+  }
+  .statusbar .batt,.ovbar .batt{width:22px;height:11px;border-radius:3px;border:1px solid rgba(29,28,26,.35);position:relative}
+  .statusbar .batt::after,.ovbar .batt::after{content:"";position:absolute;left:1.5px;top:1.5px;bottom:1.5px;width:70%;background:var(--ink);border-radius:1.5px}
+
+  .scroll{position:absolute;left:0;right:0;top:52px;bottom:0;overflow-y:auto;padding:0 16px 110px}
+  .scroll::-webkit-scrollbar{display:none}
+
+  .pagetop{display:flex;align-items:baseline;justify-content:space-between;padding:2px 4px 10px}
+  .pagetop .lg{font-size:19px;font-weight:650;letter-spacing:-.02em}
+  .pagetop .seg{display:flex;background:#EBE7E0;border-radius:999px;padding:2px}
+  .pagetop .seg span{font-size:11.5px;padding:5px 11px;border-radius:999px;color:#7A766E}
+  .pagetop .seg span.on{background:#fff;color:var(--ink);font-weight:600}
+
+  /* 汇总卡 */
+  .sum{
+    background:var(--card);border-radius:24px;padding:14px 14px 8px;
+    box-shadow:0 1px 2px rgba(29,28,26,.03),0 8px 22px rgba(29,28,26,.05);
+    margin-bottom:16px;
+  }
+  .sumtop{display:flex;gap:14px}
+  .sumcol{flex:1;min-width:0}
+  .sumcol .k{font-size:10px;color:var(--ink3);letter-spacing:.06em;display:flex;align-items:center;gap:5px}
+  .sumcol .k .dot{width:6px;height:6px;border-radius:50%}
+  .sumcol .v{font-size:20px;font-weight:600;letter-spacing:-.02em;margin-top:5px;font-variant-numeric:tabular-nums}
+  .sumcol .p{font-size:11px;margin-top:3px}
+  .up{color:var(--red)}
+  .down{color:var(--green)}
+  .chart{padding:8px 0 0}
+  .ranges{display:flex;gap:4px;padding:0 0 2px}
+  .rg{flex:1;border:0;background:transparent;font:inherit;font-size:10.5px;color:var(--ink3);
+    padding:5px 0;border-radius:999px;cursor:pointer}
+  .rg.on{background:#F3F0EA;color:var(--ink);font-weight:600}
+
+  /* 分组 */
+  .grp{margin-bottom:18px}
+  .grph{display:flex;align-items:center;gap:8px;padding:0 4px 10px}
+  .grph .nm{font-size:15px;font-weight:650;letter-spacing:-.01em}
+  .grph .tt{font-size:11px;color:#8A867D;font-weight:400;letter-spacing:.01em}
+  .grph .tg{
+    margin-left:auto;width:24px;height:24px;flex:0 0 24px;border:0;border-radius:50%;
+    background:#EBE7E0;color:#5C594F;font:inherit;font-size:15px;line-height:1;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;padding-bottom:1px;
+  }
+
+  .duebar{
+    display:flex;align-items:baseline;justify-content:space-between;
+    background:#fff;border-radius:12px;padding:10px 13px;margin-bottom:8px;
+    box-shadow:0 1px 2px rgba(0,0,0,.03);
+  }
+  .duebar .dl{font-size:10.5px;color:var(--ink3);margin-right:7px}
+  .duebar .dv{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+  .duebar .dn{font-size:10.5px;color:var(--ink3)}
+  .odstrip{
+    background:#FDECEC;color:#A32D2D;border-radius:12px;padding:8px 12px;
+    font-size:11px;line-height:1.5;margin-bottom:12px;
+  }
+  .odstrip b{font-weight:650}
+
+  /* ============ 聚合区：左卡牌堆 + 右汇总 ============ */
+  .agg{display:flex;align-items:center;gap:13px;padding:0 4px}
+
+  .hdeck{position:relative;width:150px;height:101px;flex:0 0 150px;cursor:pointer}
+  .hc{
+    position:absolute;width:132px;height:82px;border-radius:13px;
+    background:linear-gradient(135deg,var(--c1),var(--c2));
+    box-shadow:0 2px 7px rgba(29,28,26,.17),inset 0 0 0 .5px rgba(255,255,255,.16);
+  }
+  /* 后层往右下错位，越深越暗；投影本身就是层与层之间的分界线 */
+  .hc.k2{left:18px;top:18px;filter:brightness(.74)}
+  .hc.k1{left:9px;top:9px;filter:brightness(.87)}
+  .hc.k0{left:0;top:0;z-index:3;padding:10px 12px 0;display:flex;flex-direction:column;overflow:hidden}
+
+  .hcn{font-size:12.5px;font-weight:650;color:#fff;letter-spacing:-.01em;line-height:1.2}
+  .hcs{font-size:9.5px;color:rgba(255,255,255,.76);margin-top:3px;letter-spacing:.04em}
+  .hcf{margin-top:auto;display:flex;justify-content:flex-end;padding-bottom:7px}
+  .hcf .net{font-size:7pt;font-weight:700;letter-spacing:.08em;color:rgba(255,255,255,.55)}
+  /* 负债卡底部必须有还款进度 */
+  .hprog{height:2.5px;border-radius:2px;background:rgba(255,255,255,.32);margin-bottom:9px;flex:0 0 auto}
+  .hprog i{display:block;height:100%;background:rgba(255,255,255,.95);border-radius:2px}
+
+  /* 数量角标：压在卡堆右下角 */
+  .cnt{
+    position:absolute;right:-2px;bottom:-2px;z-index:9;
+    min-width:23px;height:23px;padding:0 6px;border-radius:999px;
+    background:#1D1C1A;color:#fff;font-size:11px;font-weight:650;letter-spacing:-.01em;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 1px 4px rgba(29,28,26,.30);
+  }
+
+  .aggr{flex:1;min-width:0}
+  .aggr .k{font-size:10.5px;color:var(--ink3);letter-spacing:.02em}
+  .aggr .v{
+    font-size:22px;font-weight:650;letter-spacing:-.03em;margin-top:4px;
+    font-variant-numeric:tabular-nums;line-height:1.05;white-space:nowrap;
+  }
+  .aggr .v.red{color:var(--red)}
+  .aggr .m{font-size:9.5px;color:var(--ink3);margin-top:7px;line-height:1.5;letter-spacing:.01em}
+  .aggr .m b{color:var(--ink2);font-weight:600}
+
+  .aggfoot{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 6px 0;font-size:10.5px;color:var(--ink3);cursor:pointer;
+  }
+  .aggfoot .arw{color:var(--ink4);font-size:12px}
+
+  /* ============ 覆盖层：全屏朦胧浮层。不是 sheet，不是新页面 ============ */
+  .ov{position:absolute;inset:0;z-index:60}
+
+  /* 整屏磨砂：底下的资产页被糊开，色块轮廓仍在、字读不出——这才是"浮在页面上"的证据 */
+  .ovfrost{
+    position:absolute;inset:0;
+    background:rgba(247,245,241,.42);
+    -webkit-backdrop-filter:blur(12px) saturate(1.16);
+    backdrop-filter:blur(12px) saturate(1.16);
+    animation:maskIn .26s ease both;
+  }
+  @keyframes maskIn{from{opacity:0}to{opacity:1}}
+
+  /* 状态栏压回磨砂层之上：读作「还在同一屏，只是被蒙住了」 */
+  .ovbar{
+    position:absolute;top:0;left:0;right:0;height:52px;
+    display:flex;align-items:flex-end;justify-content:space-between;
+    padding:0 26px 8px;font-size:13px;font-weight:600;
+    pointer-events:none;   /* 让这条也归入"点空白关闭" */
+  }
+  .ovcls{
+    position:absolute;top:53px;right:16px;z-index:4;
+    width:30px;height:30px;border:0;border-radius:50%;
+    background:rgba(29,28,26,.07);color:var(--ink2);
+    font:inherit;font-size:13px;line-height:1;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  }
+
+  .ovlist{
+    position:absolute;left:0;right:0;top:92px;bottom:0;
+    overflow-y:auto;padding:0 16px 34px;
+    animation:listIn .32s cubic-bezier(.32,.72,0,1) both;
+    /* 底部渐隐：最后一行不要被屏幕圆角"切一刀"，同时暗示可继续滚动 */
+    -webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 30px),transparent 100%);
+    mask-image:linear-gradient(to bottom,#000 calc(100% - 30px),transparent 100%);
+  }
+  @keyframes listIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  .ovlist::-webkit-scrollbar{display:none}
+
+  /* 明细行：左卡面 + 右两列 × 两行。信用与储蓄完全同一套结构（v7） */
+  .orow{display:flex;align-items:center;gap:13px;padding:10px 0;cursor:pointer}
+  .orow:active{opacity:.62}
+  .obc{
+    width:144px;height:96px;flex:0 0 144px;border-radius:15px;
+    position:relative;overflow:hidden;display:flex;flex-direction:column;
+    padding:11px 12px 0;
+    background:linear-gradient(135deg,var(--c1),var(--c2));
+    box-shadow:0 2px 7px rgba(29,28,26,.13),inset 0 0 0 .5px rgba(255,255,255,.16);
+  }
+  /* 逾期：白底红字小旗，贴右上角，被卡的 15pt 圆角裁成贴合形状 */
+  .oflag{
+    position:absolute;top:0;right:0;z-index:3;
+    background:#fff;color:#A32D2D;font-size:9.5px;font-weight:700;letter-spacing:.05em;
+    padding:4px 10px 5px;border-bottom-left-radius:12px;
+    box-shadow:0 1px 2px rgba(29,28,26,.10);
+  }
+  .onm{font-size:12.5px;font-weight:650;color:#fff;letter-spacing:-.01em;line-height:1.2}
+  .omt{font-size:9px;color:rgba(255,255,255,.76);margin-top:3px;letter-spacing:.01em}
+  .obot{
+    margin-top:auto;display:flex;align-items:center;gap:6px;padding-bottom:13px;
+    font-size:9px;color:rgba(255,255,255,.82);letter-spacing:.06em;
+  }
+  .onet{margin-left:auto;font-size:7.5px;font-weight:700;letter-spacing:.09em;opacity:.72}
+  /* 还款小白条：负债卡专用，内缩 10pt 离开圆角 */
+  .oprog{position:absolute;left:10px;right:10px;bottom:5px;height:3px;border-radius:2px;background:rgba(255,255,255,.30);z-index:2}
+  .oprog i{display:block;height:100%;background:rgba(255,255,255,.95);border-radius:2px}
+
+  .ocols{flex:1;display:flex;gap:8px;min-width:0}
+  .ocol{flex:1;min-width:0}
+  .ocol .k{font-size:10.5px;color:var(--ink3);letter-spacing:.02em}
+  .ocol .v{
+    font-size:16.5px;font-weight:650;letter-spacing:-.025em;margin-top:6px;
+    font-variant-numeric:tabular-nums;line-height:1.1;white-space:nowrap;
+  }
+  /* 第二列是「较上月」百分比：↘ 绿（降）、↗ 红（涨）。两组量纲与箭头完全一致（v8） */
+  .ocol .v.up{color:var(--red)}
+  .ocol .v.down{color:var(--green)}
+
+  .ovend{text-align:center;font-size:10.5px;color:var(--ink4);padding:22px 0 6px;letter-spacing:.02em}
+</style>
+</head>
+<body>
+<div class="bar">
+  <div class="brand">资产页 v1.0 冻结 · 卡牌堆 / 全屏朦胧浮层</div>
+  <div class="hint" id="hint"></div>
+</div>
+<div class="stage"><div class="device" id="dev"><div class="screen"></div></div></div>
+
+<script>
+/* ===== 数据：账户数量 = 9 信用 / 8 储蓄（用户自定义，不造结清堆） ===== */
+/* stack: 0=前卡 1=后一层 2=后二层；后层手动指定，保证三层明暗分明（参考图是红→蓝→黑） */
+var CREDIT = [
+  { n:'招商银行', m:'信用卡', num:'•••• 8857', net:'UNIONPAY', c1:'#D4342B', c2:'#8C1410', stack:0,
+    debt:'−3,120.00', delta:'↘ 28.4%', dcls:'down', due:'665.36', dd:'11/08', u:0, od:'逾期 92 天' },
+  { n:'花呗', m:'循环 + 分期 58 笔', num:'支付宝', net:'ALIPAY', c1:'#2C7BFF', c2:'#0B4FCC', stack:1,
+    debt:'−7,842.50', delta:'↗ 4.3%', dcls:'up', due:'1,634.08', dd:'11/25', u:67 },
+  { n:'京东金融', m:'白条', num:'•••• 3078', net:'JD PAY', c1:'#E4393C', c2:'#9E1B1E',
+    debt:'−613.16', delta:'↘ 12.6%', dcls:'down', due:'613.16', dd:'12/02', u:33 },
+  { n:'平安银行', m:'信用卡', num:'•••• 2140', net:'UNIONPAY', c1:'#E8892B', c2:'#A6550D',
+    debt:'−4,800.00', delta:'↗ 14.3%', dcls:'up', due:'600.00', dd:'11/18', u:20 },
+  { n:'招商银行', m:'e招贷 · 17/24 期', num:'•••• 6612', net:'CMB', c1:'#3C3C43', c2:'#131316', stack:2,
+    debt:'−6,670.93', delta:'↘ 6.2%', dcls:'down', due:'442.50', dd:'11/10', u:71 },
+  { n:'微信分付', m:'按日计息', num:'微信支付', net:'WECHAT', c1:'#12A08F', c2:'#06645A',
+    debt:'−218.40', delta:'↗ 9.0%', dcls:'up', due:'218.40', dd:'12/08', u:12 },
+  { n:'美团月付', m:'本月账单', num:'美团', net:'MEITUAN', c1:'#F5B32B', c2:'#B57A05',
+    debt:'−1,286.50', delta:'↘ 13.7%', dcls:'down', due:'1,286.50', dd:'11/09', u:0 },
+  { n:'中信银行', m:'信用卡', num:'•••• 9021', net:'UNIONPAY', c1:'#C0392B', c2:'#7A1C14',
+    debt:'−3,214.51', delta:'↘ 3.6%', dcls:'down', due:'1,020.00', dd:'11/22', u:45 },
+  { n:'抖音月付', m:'本月账单', num:'抖音', net:'DOUYIN', c1:'#2B2B33', c2:'#0A0A0F',
+    debt:'−700.00', delta:'↗ 15.9%', dcls:'up', due:'700.00', dd:'11/15', u:0 }
+];
+
+var SAVING = [
+  { n:'建设银行', m:'储蓄卡 · 主支付', num:'•••• 5044', net:'UNIONPAY', c1:'#1E6FBF', c2:'#0B3F78', stack:0,
+    bal:'1,204.30', delta:'↘ 6.2%', dcls:'down', chg:'−79.60', chd:'10/31' },
+  { n:'余额宝', m:'货币基金', num:'支付宝', net:'ALIPAY', c1:'#12A08F', c2:'#06645A', stack:1,
+    bal:'1,102.60', delta:'↗ 1.8%', dcls:'up', chg:'+19.50', chd:'10/31' },
+  { n:'微信零钱', m:'零钱账户', num:'微信支付', net:'WECHAT', c1:'#2E9E6B', c2:'#12603F', stack:2,
+    bal:'498.30', delta:'↘ 2.4%', dcls:'down', chg:'−12.20', chd:'10/31' },
+  { n:'招商银行', m:'储蓄卡', num:'•••• 1102', net:'CMB', c1:'#D4342B', c2:'#8C1410',
+    bal:'42.00', delta:'↘ 12.4%', dcls:'down', chg:'−5.90', chd:'10/31' },
+  { n:'农业银行', m:'储蓄卡', num:'•••• 3391', net:'UNIONPAY', c1:'#0F8A5F', c2:'#065539',
+    bal:'168.80', delta:'↗ 4.1%', dcls:'up', chg:'+6.70', chd:'10/31' },
+  { n:'交通银行', m:'储蓄卡', num:'•••• 7726', net:'UNIONPAY', c1:'#2A4E8C', c2:'#122A54',
+    bal:'13.00', delta:'↘ 48.0%', dcls:'down', chg:'−12.00', chd:'10/31' },
+  { n:'现金', m:'手动记账', num:'不计入流水', net:'CASH', c1:'#8E8A80', c2:'#55524B',
+    bal:'68.00', delta:'↗ 36.0%', dcls:'up', chg:'+18.00', chd:'10/31' },
+  { n:'京东小金库', m:'货币基金', num:'京东金融', net:'JD PAY', c1:'#E4393C', c2:'#9E1B1E',
+    bal:'23.00', delta:'↗ 0.4%', dcls:'up', chg:'+0.10', chd:'10/31' }
+];
+
+var CREDIT_TOTAL = '28,466.00', SAVING_TOTAL = '3,120.00';
+var state = { ov:null };
+
+/* ===== 资产页：卡牌堆 ===== */
+function hcard(a, isCredit){
+  return '<div class="hc k0" style="--c1:' + a.c1 + ';--c2:' + a.c2 + '">'
+    + '<div class="hcn">' + a.n + '</div>'
+    + '<div class="hcs">' + a.num + '</div>'
+    + '<div class="hcf"><span class="net">' + (a.net || '') + '</span></div>'
+    + (isCredit ? '<div class="hprog"><i style="width:' + a.u + '%"></i></div>' : '')
+    + '</div>';
+}
+
+/* 后层优先用手动指定的 stack，缺失时才按色相/明度兜底挑 */
+function lum(hex){
+  return (0.299*parseInt(hex.slice(1,3),16) + 0.587*parseInt(hex.slice(3,5),16) + 0.114*parseInt(hex.slice(5,7),16)) / 255;
+}
+function hue(hex){
+  var r = parseInt(hex.slice(1,3),16)/255, g = parseInt(hex.slice(3,5),16)/255, b = parseInt(hex.slice(5,7),16)/255;
+  var mx = Math.max(r,g,b), mn = Math.min(r,g,b), d = mx - mn;
+  if (d === 0) return -1;
+  var h = mx === r ? ((g-b)/d) % 6 : mx === g ? (b-r)/d + 2 : (r-g)/d + 4;
+  return (h*60 + 360) % 360;
+}
+function hueGap(a, b){
+  var ha = hue(a), hb = hue(b);
+  if (ha < 0 || hb < 0) return 180;
+  var d = Math.abs(ha - hb);
+  return d > 180 ? 360 - d : d;
+}
+function pickBacks(list, k){
+  var picked = [list[0]];
+  /* 先吃手动指定的层 */
+  for (var s = 1; s <= k; s++){
+    for (var i = 0; i < list.length; i++){
+      if (list[i].stack === s && picked.indexOf(list[i]) < 0){ picked.push(list[i]); break; }
+    }
+  }
+  while (picked.length < k + 1){
+    var best = null, bestScore = -1;
+    for (var j = 0; j < list.length; j++){
+      if (picked.indexOf(list[j]) >= 0) continue;
+      var score = 999;
+      for (var p = 0; p < picked.length; p++){
+        score = Math.min(score, hueGap(list[j].c1, picked[p].c1) + Math.abs(lum(list[j].c1) - lum(picked[p].c1)) * 120);
+      }
+      if (score > bestScore){ bestScore = score; best = list[j]; }
+    }
+    if (!best) break;
+    picked.push(best);
+  }
+  return picked.slice(1);
+}
+
+function deckHTML(list, isCredit, key){
+  var n = list.length;
+  var maxL = Math.min(n - 1, 2);
+  var backs = pickBacks(list, maxL);
+  var h = '<div class="hdeck" data-open="' + key + '">';
+  for (var i = maxL; i >= 1; i--){
+    var b = backs[i-1] || list[0];
+    h += '<div class="hc k' + i + '" style="--c1:' + b.c1 + ';--c2:' + b.c2 + '"></div>';
+  }
+  h += hcard(list[0], isCredit);
+  h += '<span class="cnt">' + n + '</span>';
+  h += '</div>';
+  return h;
+}
+
+function groupBlock(key, title, list, total, isCredit){
+  var due = '';
+  if (isCredit){
+    due = '<div class="duebar"><div><span class="dl">本月要还</span><span class="dv">2,742.00</span></div>'
+        + '<div class="dn">3 笔 · 最近 11/08</div></div>'
+        + '<div class="odstrip"><b>招行 8857 逾期 92 天</b>：8 月账单 665.36 未还</div>';
+  }
+  var agg = '<div class="agg">'
+    + deckHTML(list, isCredit, key)
+    + '<div class="aggr">'
+    +   '<div class="k">' + (isCredit ? '欠款合计' : '余额合计') + '</div>'
+    +   '<div class="v' + (isCredit ? ' red' : '') + '">' + (isCredit ? '−' : '') + total + '</div>'
+    +   '<div class="m">' + (isCredit
+          ? '本月要还 <b>2,742.00</b> · 3 笔 · 最近 11/08'
+          : '较上月 <b class="down">↘ 4.8%</b> · 2 个在用')
+    +   '</div>'
+    + '</div></div>';
+  var foot = isCredit
+    ? '<div class="aggfoot" data-open="credit"><span>含逾期 1 个</span><span class="arw">›</span></div>'
+    : '<div class="aggfoot" data-open="saving"><span>含 2 个长期不动</span><span class="arw">›</span></div>';
+  return '<div class="grp">'
+    + '<div class="grph"><span class="nm">' + title + '</span>'
+    + '<span class="tt">' + list.length + ' 个 · ' + total + '</span>'
+    + '<button class="tg" data-open="' + key + '">+</button></div>'
+    + due + agg + foot + '</div>';
+}
+
+/* ===== 覆盖层明细行：信用 / 储蓄共用一套结构（v7 定稿）=====
+   左：卡面（名称 / 类型 / 卡号 / 网络 + 负债卡的小白条 + 逾期小旗）
+   右：**两列 × 两行** —— 第一列 主数值，第二列 较上月。
+   只有两行，和储蓄参考图一致；本期应还、账单日、本月变动等全部归详情页。 */
+function ovRow(a, isCredit){
+  return '<div class="orow" data-acc="' + a.n + '">'
+    + '<div class="obc" style="--c1:' + a.c1 + ';--c2:' + a.c2 + '">'
+    +   (isCredit ? '<div class="oprog"><i style="width:' + a.u + '%"></i></div>' : '')
+    +   (a.od ? '<div class="oflag">逾期</div>' : '')
+    +   '<div class="onm">' + a.n + '</div>'
+    +   '<div class="omt">' + a.m + '</div>'
+    +   '<div class="obot"><span>' + a.num + '</span>'
+    +     '<span class="onet">' + (a.net || (isCredit ? 'CREDIT' : 'DEBIT')) + '</span></div>'
+    + '</div>'
+    + '<div class="ocols">'
+    +   '<div class="ocol"><div class="k">' + (isCredit ? '欠款' : '余额') + '</div>'
+    +     '<div class="v">' + (isCredit ? a.debt : a.bal) + '</div></div>'
+    +   '<div class="ocol"><div class="k">较上月</div>'
+    +     '<div class="v ' + (a.dcls || '') + '">' + a.delta + '</div></div>'
+    + '</div></div>';
+}
+
+function overlayHTML(key){
+  var isCredit = key === 'credit';
+  var list = isCredit ? CREDIT : SAVING;
+  var rows = list.map(function(a){ return ovRow(a, isCredit); }).join('');
+  /* 头部不重复资产页已有的 合计 / 本月要还 / 逾期提醒——那三样就长在下面的资产页上，
+     覆盖层只负责"这一堆里有哪些"，别的都归详情页 */
+  return '<div class="ov">'
+    + '<div class="ovfrost" data-close="1"></div>'
+    + '<div class="ovbar"><span>9:41</span><span class="batt"></span></div>'
+    + '<button class="ovcls" data-close="1">✕</button>'
+    + '<div class="ovlist">' + rows
+    +   '<div class="ovend">点任一账户进入详情</div>'
+    + '</div>'
+    + '</div>';
+}
+
+function screenHTML(){
+  var C = CREDIT, S = SAVING;
+  var h = ''
+    + '<div class="statusbar"><span>9:41</span><span class="batt"></span></div>'
+    + '<div class="scroll">'
+    +   '<div class="pagetop"><span class="lg">DooDoo</span>'
+    +     '<span class="seg"><span>流水</span><span class="on">资产</span></span></div>'
+    +   '<div class="sum">'
+    +     '<div class="sumtop">'
+    +       '<div class="sumcol"><div class="k"><span class="dot" style="background:#3A9E6B"></span>我有</div>'
+    +         '<div class="v">3,120.00</div><div class="p down">↘ 2.3%</div></div>'
+    +       '<div class="sumcol"><div class="k"><span class="dot" style="background:#E8734A"></span>我欠</div>'
+    +         '<div class="v">28,466.00</div><div class="p up">↗ 4.1%</div></div>'
+    +     '</div>'
+    +     '<div class="chart"><svg viewBox="0 0 320 44" width="100%" height="44" preserveAspectRatio="none">'
+    +       '<polyline points="2,33 40,33 80,32 120,29 160,30 200,27 240,25 280,22 316,21" fill="none" stroke="#4C8DF6" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>'
+    +       '<polyline points="2,12 40,13 80,13 120,16 160,15 200,18 240,17 280,20 316,19" fill="none" stroke="#E8734A" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>'
+    +     '</svg></div>'
+    +     '<div class="ranges"><button class="rg">1周</button><button class="rg">1月</button>'
+    +       '<button class="rg">3月</button><button class="rg">今年</button><button class="rg on">1年</button></div>'
+    +   '</div>'
+    +   groupBlock('credit', '信用', C, CREDIT_TOTAL, true)
+    +   groupBlock('saving', '储蓄', S, SAVING_TOTAL, false)
+    + '</div>';
+  if (state.ov) h += overlayHTML(state.ov);
+  return h;
+}
+
+var screenEl = document.getElementById('dev').querySelector('.screen');
+var hintEl = document.getElementById('hint');
+
+function render(){
+  /* 重绘前记住滚动位置，否则从覆盖层返回会跳回顶部 */
+  var old = screenEl.querySelector('.scroll');
+  var keep = old ? old.scrollTop : 0;
+  screenEl.innerHTML = screenHTML();
+  var nw = screenEl.querySelector('.scroll');
+  if (nw) nw.scrollTop = keep;
+  hintEl.textContent = state.ov
+    ? '覆盖层 · 全屏朦胧浮层（非 sheet、非新页面），点 ✕ 或背景返回'
+    : '点左侧卡牌堆 → 全屏朦胧浮层（不跳转）';
+}
+
+screenEl.addEventListener('click', function(e){
+  if (e.target.closest('[data-close]')){
+    state.ov = null; render(); return;
+  }
+  var op = e.target.closest('[data-open]');
+  if (op){ state.ov = op.dataset.open; render(); }
+});
+
+function fit(){
+  var s = Math.min((window.innerWidth - 40) / 390, (window.innerHeight - 56 - 40) / 844, 1);
+  document.getElementById('dev').style.transform = 'scale(' + s + ')';
+}
+window.addEventListener('resize', fit);
+fit();
+render();
+</script>
+</body>
+</html>

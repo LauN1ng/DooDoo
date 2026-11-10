@@ -1,6 +1,6 @@
 # Math · 纯函数
 
-> 状态：**M2a 已有 5 个文件、16 条单测**：`DayMath`（分组/7 天窗口/合计）、`MoneyMath`（格式化）、`NetWorth`（我有/我欠/净资产）、`AccountDelta`（环比，分母用上期值）、`NetWorthSeries`（5 区间回推走势）。
+> 状态：**M2b 已有 6 个文件**（`TransferMath` 于 M2b 加入），全工程 48 条单测覆盖。`DayMath`（分组/7 天窗口/合计）、`MoneyMath`（格式化）、`NetWorth`（我有/我欠/净资产）、`AccountDelta`（环比，分母用上期值）、`NetWorthSeries`（5 区间回推走势）、`TransferMath`（手续费与还款后余额）。
 
 | 文件 | 里程碑 | 输入 → 输出 |
 |---|---|---|

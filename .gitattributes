@@ -7,6 +7,24 @@
 *.yaml    text eol=lf
 *.pbxproj text eol=lf
 
+# 原型与规格文档强制 LF。
+# 原因：AGENTS.md 6.1 把冻结快照的 SHA256 当契约，而本机 core.autocrlf=true，
+# 不钉死的话 checkout 会转 CRLF，哈希立刻和登记表对不上，契约自我失效。
+*.html    text eol=lf
+*.md      text eol=lf
+*.js      text eol=lf
+*.py      text eol=lf
+*.txt     text eol=lf
+
+# 冻结快照：SHA256 是字节级契约（AGENTS.md 6.1），禁止任何行尾转换。
+# 这四个文件里 home-v1.0 与 entry-types-v1.0 的登记哈希是按 CRLF 算的，
+# 一旦被规范化成 LF 哈希就对不上（实测 e89f84af / ec83710a ≠ 登记的 4526633e / 10b2293b）。
+# 因此必须 -text，原样存储、原样检出。
+design/current/account-stack-v1.1.html -text -eol
+design/current/account-stack-v1.0.html -text -eol
+design/current/home-v1.0.html          -text -eol
+design/current/entry-types-v1.0.html   -text -eol
+
 # 二进制，不做行尾转换
 *.png binary
 *.jpg binary

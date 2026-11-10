@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DooDoo · 导航形式与流水页结构方案</title>
+<style>
+  :root{
+    --bg:#F7F6F3;
+    --paper:#FFFFFF;
+    --ink:#141414;
+    --ink-2:#5A5A5A;
+    --ink-3:#8E8E8E;
+    --line:#E3E1DC;
+    --line-2:#D2CFC8;
+    --accent:#141414;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    font-size:15px;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+    padding:0 0 100px;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 28px;}
+
+  /* ---------- 头部 ---------- */
+  header{padding:64px 0 40px;border-bottom:1px solid var(--line);}
+  .kicker{
+    font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--ink-3);margin-bottom:18px;
+  }
+  h1{font-size:34px;line-height:1.25;font-weight:650;letter-spacing:-.02em;}
+  h1 small{display:block;font-size:15px;font-weight:400;color:var(--ink-2);margin-top:12px;letter-spacing:0;}
+  .rule-note{
+    margin-top:32px;padding:18px 20px;background:#fff;
+    border:1px solid var(--line);border-left:3px solid var(--ink);
+    font-size:13.5px;color:var(--ink-2);line-height:1.7;
+  }
+  .rule-note b{color:var(--ink);}
+
+  /* ---------- 章节 ---------- */
+  section{padding:56px 0 8px;}
+  .sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:8px;}
+  .sec-num{
+    font-size:11px;letter-spacing:.16em;color:var(--ink-3);
+    border:1px solid var(--line-2);padding:3px 8px;border-radius:2px;
+  }
+  h2{font-size:22px;font-weight:620;letter-spacing:-.01em;}
+  .sec-desc{font-size:14px;color:var(--ink-2);margin:10px 0 32px;max-width:720px;}
+
+  /* ---------- 方案卡 ---------- */
+  .options{display:flex;gap:22px;flex-wrap:wrap;margin-bottom:34px;}
+  .opt{flex:1 1 280px;max-width:340px;}
+  .opt-head{display:flex;align-items:center;gap:9px;margin-bottom:12px;}
+  .tag{
+    font-size:11px;font-weight:600;letter-spacing:.06em;
+    background:var(--ink);color:#fff;padding:2px 7px;border-radius:2px;
+  }
+  .opt-head h3{font-size:15px;font-weight:600;letter-spacing:-.01em;}
+  .opt-sub{font-size:12.5px;color:var(--ink-3);margin-bottom:14px;line-height:1.55;}
+
+  /* ---------- 手机线框 ---------- */
+  .phone{
+    width:100%;height:520px;background:var(--paper);
+    border:1.5px solid var(--line-2);border-radius:14px;
+    position:relative;overflow:hidden;
+    display:flex;flex-direction:column;
+    font-size:11px;color:var(--ink);
+  }
+  .statusbar{
+    height:22px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 14px;font-size:8.5px;color:var(--ink-3);
+    border-bottom:1px solid #F0EEEA;flex:0 0 auto;
+  }
+  .screen{flex:1 1 auto;overflow:hidden;display:flex;flex-direction:column;}
+
+  /* 顶栏 */
+  .topbar{
+    padding:10px 14px 8px;flex:0 0 auto;
+    display:flex;align-items:center;justify-content:space-between;
+    border-bottom:1px solid var(--line);
+  }
+  .topbar .t{font-size:12.5px;font-weight:600;}
+  .topbar .r{display:flex;gap:7px;align-items:center;}
+  .entry{
+    font-size:9px;border:1px solid var(--line-2);border-radius:11px;
+    padding:2px 7px;color:var(--ink-2);white-space:nowrap;
+  }
+  .entry.warn{border-color:#B9B3AA;color:var(--ink);}
+  .dot{width:4px;height:4px;border-radius:50%;background:var(--ink);display:inline-block;}
+
+  /* 流水行 */
+  .dayhead{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:5px 14px;background:#FAF9F7;
+    border-bottom:1px solid #F0EEEA;
+    font-size:9.5px;color:var(--ink-3);flex:0 0 auto;
+  }
+  .dayhead b{color:var(--ink-2);font-weight:600;font-size:10px;}
+  .row{
+    display:flex;align-items:center;gap:8px;
+    padding:0 14px;height:38px;flex:0 0 auto;
+    border-bottom:1px solid #F4F2EE;
+  }
+  .ico{
+    width:22px;height:22px;border-radius:6px;background:#EDEBE6;
+    flex:0 0 auto;
+  }
+  .mid{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:1px;}
+  .cat{font-size:10.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .sub{font-size:8.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .amt{font-size:11px;font-weight:600;flex:0 0 auto;letter-spacing:-.01em;}
+  .amt.mute{color:var(--ink-3);font-weight:500;}
+  .badge{
+    font-size:7.5px;border:1px solid var(--line-2);border-radius:2px;
+    padding:0 3px;color:var(--ink-3);margin-left:4px;vertical-align:1px;
+    white-space:nowrap;flex:0 0 auto;
+  }
+
+  /* 底栏 */
+  .tabbar{
+    flex:0 0 auto;border-top:1px solid var(--line);
+    display:flex;padding:6px 0 14px;background:#fff;
+  }
+  .tabbar div{
+    flex:1;text-align:center;font-size:8.5px;color:var(--ink-3);
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+  }
+  .tabbar div .g{width:15px;height:15px;border:1.2px solid var(--line-2);border-radius:4px;}
+  .tabbar div.on{color:var(--ink);font-weight:600;}
+  .tabbar div.on .g{border-color:var(--ink);background:var(--ink);}
+
+  .textbar{
+    flex:0 0 auto;border-top:1px solid var(--line);
+    display:flex;justify-content:center;gap:34px;padding:12px 0 16px;background:#fff;
+    font-size:9.5px;color:var(--ink-3);
+  }
+  .textbar span.on{color:var(--ink);font-weight:600;}
+
+  /* 横向分页指示 */
+  .dots{display:flex;justify-content:center;gap:5px;padding:8px 0 10px;flex:0 0 auto;}
+  .dots i{width:4px;height:4px;border-radius:50%;background:var(--line-2);}
+  .dots i.on{background:var(--ink);width:12px;border-radius:2px;}
+
+  /* 一天一页大日期 */
+  .bigdate{padding:14px 14px 6px;flex:0 0 auto;}
+  .bigdate .lab{font-size:8.5px;color:var(--ink-3);letter-spacing:.06em;}
+  .bigdate .num{font-size:34px;font-weight:600;line-height:1.05;letter-spacing:-.03em;}
+  .bigdate .num span{font-size:11px;font-weight:400;color:var(--ink-3);margin-left:3px;letter-spacing:0;}
+  .thick{height:2px;background:var(--ink);margin:8px 14px 0;flex:0 0 auto;}
+  .weeks{display:flex;justify-content:space-between;padding:8px 14px 4px;flex:0 0 auto;}
+  .weeks i{
+    width:19px;height:19px;border-radius:50%;border:1px solid var(--line-2);
+    font-size:7px;display:flex;align-items:center;justify-content:center;
+    color:var(--ink-3);font-style:normal;
+  }
+  .weeks i.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .weeks i.mark{background:#EDEBE6;border-color:#EDEBE6;color:var(--ink-2);}
+
+  /* 表格版 */
+  .tbl{width:100%;border-collapse:collapse;font-size:10px;}
+  .tbl td{padding:0 6px;height:30px;border-bottom:1px solid #F4F2EE;vertical-align:middle;}
+  .tbl td.d{color:var(--ink-3);font-size:9px;width:30px;text-align:right;padding-right:9px;}
+  .tbl td.a{text-align:right;font-weight:600;font-size:10.5px;white-space:nowrap;}
+  .tbl-wrap{padding:0 10px;flex:1 1 auto;overflow:hidden;}
+
+  /* ---------- 判据表 ---------- */
+  .crit{width:100%;border-collapse:collapse;font-size:13px;background:#fff;border:1px solid var(--line);}
+  .crit th,.crit td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top;}
+  .crit th{font-size:11px;letter-spacing:.08em;color:var(--ink-3);font-weight:600;background:#FBFAF8;}
+  .crit tr:last-child td{border-bottom:none;}
+  .crit td:first-child{color:var(--ink-2);width:180px;}
+  .crit .good{font-weight:600;}
+  .crit .bad{color:var(--ink-3);}
+
+  /* ---------- 数据块 ---------- */
+  .data-box{
+    background:#fff;border:1px solid var(--line);padding:24px 26px;margin-bottom:28px;
+  }
+  .data-box h4{font-size:13px;font-weight:600;margin-bottom:14px;letter-spacing:.02em;}
+  .data-grid{display:flex;gap:34px;flex-wrap:wrap;}
+  .data-item .n{font-size:26px;font-weight:620;letter-spacing:-.02em;line-height:1.2;}
+  .data-item .l{font-size:11.5px;color:var(--ink-3);margin-top:2px;}
+  .data-foot{margin-top:18px;padding-top:14px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-3);line-height:1.6;}
+
+  /* ---------- 推荐 ---------- */
+  .rec{
+    background:var(--ink);color:#fff;padding:34px 36px;margin-top:16px;
+  }
+  .rec .kicker{color:rgba(255,255,255,.5);}
+  .rec h3{font-size:20px;font-weight:620;margin-bottom:14px;letter-spacing:-.01em;}
+  .rec p{font-size:13.5px;line-height:1.75;color:rgba(255,255,255,.78);margin-bottom:12px;max-width:760px;}
+  .rec p:last-child{margin-bottom:0;}
+  .rec b{color:#fff;}
+
+  .foot{margin-top:56px;padding-top:24px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-3);}
+
+  @media(max-width:760px){
+    .wrap{padding:0 18px;}
+    h1{font-size:26px;}
+    .phone{height:440px;}
+    .opt{max-width:none;}
+    .crit td:first-child{width:120px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kicker">DooDoo 记账 · PRD v1.8 · 结构决策</div>
+  <h1>导航形式与流水页结构
+    <small>只定结构，不定视觉。以下全部为灰度线框，颜色、字体、Emoji 属于 M4，这里一概不涉及。</small>
+  </h1>
+  <div class="rule-note">
+    <b>为什么故意做丑。</b>前六版原型被否，四次的理由里都掺着「太素」「太丑」「不如上一版」——那是视觉判断，把结构判断盖住了。这次剥掉颜色、阴影、圆角、Emoji，只留骨架，逼判断落在「这个结构我每天用会不会烦」上。结构定错，M1 的流水页要重写；结构定对了，后面换皮不碰逻辑。
+  </div>
+</header>
+
+<section>
+  <div class="sec-head"><span class="sec-num">00</span><h2>先看一个数字</h2></div>
+  <p class="sec-desc">结构选型不该靠感觉，先看每天要装多少东西。</p>
+
+  <div class="data-box">
+    <h4>流水密度（PRD 3.2）</h4>
+    <div class="data-grid">
+      <div class="data-item"><div class="n">331</div><div class="l">支付宝 3 个月支出笔数</div></div>
+      <div class="data-item"><div class="n">3.7</div><div class="l">日均笔数（单支付宝渠道）</div></div>
+      <div class="data-item"><div class="n">5–8</div><div class="l">全渠道估算日均（含微信、银行、还款、转账）</div></div>
+      <div class="data-item"><div class="n">7,500</div><div class="l">月均支出（元）</div></div>
+    </div>
+    <div class="data-foot">
+      331 笔是支付宝单渠道的消费笔数，不含微信、银行卡、还款与转账。全渠道按 1.5–2 倍估，日均 5–8 笔是合理区间。<br>
+      这个数字直接否掉了一个曾经的设计前提——v6「一天一页」当时假设「一屏最多五行，所以排版能排准」。实际是：低峰日只有 1–2 笔，买年货那种日子 15 笔以上，<b>平均不高但方差极大，一屏一天两头都不合适</b>。
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">01</span><h2>导航形式</h2></div>
+  <p class="sec-desc">决定「流水 / 还款 / 资产 / 设置」这四个地方怎么互相到达。这条直接影响 NavigationStack 怎么组织，改起来牵连全部页面。</p>
+
+  <div class="options">
+
+    <!-- N1 -->
+    <div class="opt">
+      <div class="opt-head"><span class="tag">N1</span><h3>系统 Tab Bar</h3></div>
+      <div class="opt-sub">底部四个图标 + 文字，iOS 原生。</div>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>100%</span></div>
+        <div class="screen">
+          <div class="topbar"><div class="t">流水</div><div class="r"><span class="entry">＋</span></div></div>
+          <div class="dayhead"><b>今天</b><span>支出 328.00</span></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">餐饮</div><div class="sub">花呗</div></div><div class="amt">-32.00</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">交通</div><div class="sub">微信余额</div></div><div class="amt">-6.50</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">日用百货</div><div class="sub">京东白条</div></div><div class="amt">-189.00</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">还款<span class="badge">不计支出</span></div><div class="sub">招行信用卡 8857</div></div><div class="amt mute">-665.36</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">工资</div><div class="sub">工资卡</div></div><div class="amt">+9,800.00</div></div>
+          <div class="dayhead"><b>昨天</b><span>支出 214.70</span></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">餐饮</div><div class="sub">招行信用卡</div></div><div class="amt">-48.00</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">娱乐</div><div class="sub">花呗</div></div><div class="amt">-166.70</div></div>
+        </div>
+        <div class="tabbar">
+          <div class="on"><span class="g"></span>流水</div>
+          <div><span class="g"></span>还款</div>
+          <div><span class="g"></span>资产</div>
+          <div><span class="g"></span>设置</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- N2 -->
+    <div class="opt">
+      <div class="opt-head"><span class="tag">N2</span><h3>三段纯文字底栏</h3></div>
+      <div class="opt-sub">只有文字，无图标；设置收进顶栏右上角。</div>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>100%</span></div>
+        <div class="screen">
+          <div class="topbar"><div class="t">流水</div><div class="r"><span class="entry">设置</span><span class="entry">＋</span></div></div>
+          <div class="dayhead"><b>今天</b><span>支出 328.00</span></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">餐饮</div><div class="sub">花呗</div></div><div class="amt">-32.00</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">交通</div><div class="sub">微信余额</div></div><div class="amt">-6.50</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">日用百货</div><div class="sub">京东白条</div></div><div class="amt">-189.00</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">还款<span class="badge">不计支出</span></div><div class="sub">招行信用卡 8857</div></div><div class="amt mute">-665.36</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">工资</div><div class="sub">工资卡</div></div><div class="amt">+9,800.00</div></div>
+          <div class="dayhead"><b>昨天</b><span>支出 214.70</span></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">餐饮</div><div class="sub">招行信用卡</div></div><div class="amt">-48.00</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">娱乐</div><div class="sub">花呗</div></div><div class="amt">-166.70</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">日用百货</div><div class="sub">支付宝余额</div></div><div class="amt">-24.90</div></div>
+        </div>
+        <div class="textbar"><span class="on">流水</span><span>还款</span><span>资产</span></div>
+      </div>
+    </div>
+
+    <!-- N3 -->
+    <div class="opt">
+      <div class="opt-head"><span class="tag">N3</span><h3>无底栏 · 顶栏入口</h3></div>
+      <div class="opt-sub">还款金额直接露在顶栏，资产入口在右侧。整个底部交给流水。</div>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>100%</span></div>
+        <div class="screen">
+          <div class="topbar">
+            <div class="t">流水</div>
+            <div class="r"><span class="entry warn"><span class="dot"></span> 本月还 3,241</span><span class="entry">资产</span><span class="entry">＋</span></div>
+          </div>
+          <div class="dayhead"><b>今天</b><span>支出 328.00</span></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">餐饮</div><div class="sub">花呗</div></div><div class="amt">-32.00</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">交通</div><div class="sub">微信余额</div></div><div class="amt">-6.50</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">日用百货</div><div class="sub">京东白条</div></div><div class="amt">-189.00</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">还款<span class="badge">不计支出</span></div><div class="sub">招行信用卡 8857</div></div><div class="amt mute">-665.36</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">工资</div><div class="sub">工资卡</div></div><div class="amt">+9,800.00</div></div>
+          <div class="dayhead"><b>昨天</b><span>支出 214.70</span></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">餐饮</div><div class="sub">招行信用卡</div></div><div class="amt">-48.00</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">娱乐</div><div class="sub">花呗</div></div><div class="amt">-166.70</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">日用百货</div><div class="sub">支付宝余额</div></div><div class="amt">-24.90</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">转账<span class="badge">不计支出</span></div><div class="sub">微信 → 建行 5044</div></div><div class="amt mute">-1,000.00</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <table class="crit">
+    <tr><th>判据</th><th>N1 系统 Tab Bar</th><th>N2 三段文字底栏</th><th>N3 无底栏顶栏入口</th></tr>
+    <tr>
+      <td>底栏高度</td>
+      <td class="bad">83pt（含安全区），首页少约 1.5 行流水</td>
+      <td class="good">44pt，少约 0.8 行</td>
+      <td class="good">0pt，底部全给流水</td>
+    </tr>
+    <tr>
+      <td>切换速度</td>
+      <td class="good">任意两页一键直达</td>
+      <td class="good">任意两页一键直达</td>
+      <td class="bad">还款/资产是「进入」不是「切换」，回来要退回首页</td>
+    </tr>
+    <tr>
+      <td>iOS 习惯成本</td>
+      <td class="good">零。用户对 Tab 有肌肉记忆</td>
+      <td>中。无图标纯文字，靠位置记</td>
+      <td class="bad">高。顶栏胶囊不是 iOS 惯例入口</td>
+    </tr>
+    <tr>
+      <td>底线 3（还款看得见）</td>
+      <td>需切到还款 Tab 才知道</td>
+      <td>需切到还款 Tab 才知道</td>
+      <td class="good">金额直接露在顶栏，逾期还带红点</td>
+    </tr>
+    <tr>
+      <td>你此前的批评</td>
+      <td class="bad">「Tab 太无聊」，且「它假装记一笔和设置同等重要」</td>
+      <td class="good">正是回应这个批评：设置不配占一格</td>
+      <td>——</td>
+    </tr>
+  </table>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">02</span><h2>流水页结构</h2></div>
+  <p class="sec-desc">首页第一眼必须是今天的流水（底线 2）。三种装法，差别在于「一天占多少空间」和「有没有地方标出这四种类型」。</p>
+
+  <div class="options">
+
+    <!-- L1 -->
+    <div class="opt">
+      <div class="opt-head"><span class="tag">L1</span><h3>日期分组纵向列表</h3></div>
+      <div class="opt-sub">钱迹 / Moze 范式。粘性日期头，无尽向下滚。</div>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>100%</span></div>
+        <div class="screen">
+          <div class="topbar"><div class="t">流水</div><div class="r"><span class="entry">＋</span></div></div>
+          <div class="dayhead"><b>今天 · 11月4日</b><span>支出 328.00</span></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">餐饮</div><div class="sub">花呗</div></div><div class="amt">-32.00</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">交通</div><div class="sub">微信余额</div></div><div class="amt">-6.50</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">日用百货</div><div class="sub">京东白条</div></div><div class="amt">-189.00</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">还款<span class="badge">不计支出</span></div><div class="sub">招行信用卡 8857</div></div><div class="amt mute">-665.36</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">工资</div><div class="sub">工资卡</div></div><div class="amt">+9,800.00</div></div>
+          <div class="dayhead"><b>昨天 · 11月3日</b><span>支出 214.70</span></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">餐饮</div><div class="sub">招行信用卡</div></div><div class="amt">-48.00</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">娱乐</div><div class="sub">花呗</div></div><div class="amt">-166.70</div></div>
+          <div class="dayhead"><b>11月2日 · 周日</b><span>支出 58.00</span></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">餐饮</div><div class="sub">微信余额</div></div><div class="amt">-58.00</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- L2 -->
+    <div class="opt">
+      <div class="opt-head"><span class="tag">L2</span><h3>一天一页 · 横向分页</h3></div>
+      <div class="opt-sub">v6 范式。一屏一天，左右拖动换日。</div>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>100%</span></div>
+        <div class="screen">
+          <div class="weeks">
+            <i>1</i><i>2</i><i class="on">3</i><i class="mark">4</i><i>5</i><i>6</i><i>7</i>
+          </div>
+          <div class="bigdate">
+            <div class="lab">今天 · 周二</div>
+            <div class="num">04<span>11月</span></div>
+          </div>
+          <div class="thick"></div>
+          <div class="row" style="margin-top:8px"><div class="ico"></div><div class="mid"><div class="cat">餐饮</div><div class="sub">花呗</div></div><div class="amt">-32.00</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">交通</div><div class="sub">微信余额</div></div><div class="amt">-6.50</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">日用百货</div><div class="sub">京东白条</div></div><div class="amt">-189.00</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">还款<span class="badge">不计支出</span></div><div class="sub">招行 8857</div></div><div class="amt mute">-665.36</div></div>
+          <div class="row"><div class="ico"></div><div class="mid"><div class="cat">工资</div><div class="sub">工资卡</div></div><div class="amt">+9,800.00</div></div>
+        </div>
+        <div class="dots"><i class="on"></i><i></i><i></i></div>
+      </div>
+    </div>
+
+    <!-- L3 -->
+    <div class="opt">
+      <div class="opt-head"><span class="tag">L3</span><h3>紧凑账本表格</h3></div>
+      <div class="opt-sub">窄日期列 + 细线 + 金额右对齐，无分组标题。</div>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>100%</span></div>
+        <div class="screen">
+          <div class="topbar"><div class="t">流水</div><div class="r"><span class="entry">＋</span></div></div>
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <tr><td class="d">4</td><td>餐饮 · 花呗</td><td class="a">-32.00</td></tr>
+              <tr><td class="d">4</td><td>交通 · 微信余额</td><td class="a">-6.50</td></tr>
+              <tr><td class="d">4</td><td>日用百货 · 白条</td><td class="a">-189.00</td></tr>
+              <tr><td class="d">4</td><td>还款 · 招行 8857</td><td class="a">-665.36</td></tr>
+              <tr><td class="d">4</td><td>工资 · 工资卡</td><td class="a">+9,800.00</td></tr>
+              <tr><td class="d">3</td><td>餐饮 · 招行卡</td><td class="a">-48.00</td></tr>
+              <tr><td class="d">3</td><td>娱乐 · 花呗</td><td class="a">-166.70</td></tr>
+              <tr><td class="d">3</td><td>日用百货 · 余额</td><td class="a">-24.90</td></tr>
+              <tr><td class="d">2</td><td>餐饮 · 微信</td><td class="a">-58.00</td></tr>
+              <tr><td class="d">2</td><td>交通 · 支付宝</td><td class="a">-13.00</td></tr>
+              <tr><td class="d">1</td><td>餐饮 · 花呗</td><td class="a">-41.50</td></tr>
+              <tr><td class="d">1</td><td>医疗 · 招行卡</td><td class="a">-320.00</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <table class="crit">
+    <tr><th>判据</th><th>L1 纵向列表</th><th>L2 一天一页</th><th>L3 账本表格</th></tr>
+    <tr>
+      <td>首屏看到几天</td>
+      <td class="good">约 3–4 天（今天 + 昨天 + 前天）</td>
+      <td>只 1 天。看昨天要滑一次</td>
+      <td class="good">约 5–6 天</td>
+    </tr>
+    <tr>
+      <td>「不计支出」标签位置</td>
+      <td class="good">有。分类名后紧跟小标签，空间充足</td>
+      <td class="good">有，但账户名只能缩写（招行 8857）</td>
+      <td class="bad">勉强塞进分类名，会挤成一坨</td>
+    </tr>
+    <tr>
+      <td>低峰日（1–2 笔）</td>
+      <td class="good">自然衔接，不空</td>
+      <td class="bad">大半屏空白</td>
+      <td class="good">自然衔接</td>
+    </tr>
+    <tr>
+      <td>高峰日（15 笔以上）</td>
+      <td>滚动，正常</td>
+      <td class="bad">溢出，一屏塞不下，破坏「一屏一天」的承诺</td>
+      <td>滚动，正常</td>
+    </tr>
+    <tr>
+      <td>与 PRD 差异化的关系</td>
+      <td class="good">四种类型（消费/收入/还款/转账）能靠颜色 + 标签双层区分</td>
+      <td class="good">同上，但行数少，标签更挤</td>
+      <td class="bad">只有金额颜色一条线索，标签无处安放</td>
+    </tr>
+    <tr>
+      <td>M1 实现成本</td>
+      <td class="good">最低。SwiftUI List + 分组即可</td>
+      <td class="bad">最高。需要横向分页 + 手势协调 + 与返回手势冲突处理</td>
+      <td>中。自绘表格行，不用 List 的默认样式</td>
+    </tr>
+  </table>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">03</span><h2>我的建议</h2></div>
+
+  <div class="rec">
+    <div class="kicker">推荐组合</div>
+    <h3>N2 + L1</h3>
+    <p><b>流水用 L1（日期分组纵向列表）。</b>它不是最特别的，但它是唯一一个在「日均 5–8 笔、方差极大」这个真实数据下三种日子（1 笔 / 6 笔 / 15 笔）都不别扭的结构。而且「不计支出」这个标签只有它有充足横向空间——那是这个 App 和别的记账软件最实质的区别，不能为了排版牺牲掉。</p>
+    <p><b>导航用 N2（三段纯文字底栏）。</b>你说的「Tab 假装记一笔和设置同等重要」这个批评是对的：设置一年打开三次，不该和「还款」平分一格。三个纯文字位只放真正常用的三个，设置收进顶栏。</p>
+    <p><b>为什么不用 L2。</b>v6 的前提是「一屏最多五行所以能排准」，实际数据是低峰日 1–2 笔、高峰日 15 笔以上。一天一页在平均日刚好，在另外两种日子里都难看。它的问题不是丑，是<b>不稳定</b>——而稳定性要靠 M1 就定下来，不能等 M4 再看。</p>
+    <p><b>为什么不用 N3。</b>顶栏放「本月还 3,241」确实是底线 3 的最优解，但这个位置上放金额，等于把首页顶部变成了仪表盘——你第二轮明确说过「我不是要颠覆行业，前三轮我推的仪表盘全部撤出首页」。所以金额退到还款页，入口留在底栏。</p>
+    <p style="margin-top:22px;padding-top:18px;border-top:1px solid rgba(255,255,255,.15);font-size:13px;color:rgba(255,255,255,.62);">如果这三条建议里有任何一条你不认同，直接说哪一条、为什么。这三件事定完，M0 立刻开搭，之后 M1–M3 不再回头碰结构。</p>
+  </div>
+</section>
+
+<div class="foot">
+  DooDoo 记账 · 结构方案 v1 · 2026-11-04 · 依据 PRD v1.8
+</div>
+
+</div>
+</body>
+</html>

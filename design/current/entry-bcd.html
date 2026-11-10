@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>DooDoo · 记一笔入口 B/C/D 对比（含点下去的第一屏）</title>
+<style>
+  :root{
+    --bg:#F7F5F1; --card:#fff; --ink:#1D1C1A; --ink2:#6F6B63; --ink3:#A8A39A;
+    --line:#EFECE5; --red:#C0392B; --green:#2E9E6B; --trough:#EBE7E0;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#EDEAE4;font-family:-apple-system,"PingFang SC",sans-serif;color:var(--ink);padding:20px 24px 34px}
+  h1{font-size:19px;margin:0 0 4px;letter-spacing:-.3px}
+  .sub{font-size:12.5px;color:#6F6B63;line-height:1.75;margin:0 0 14px;max-width:1180px}
+  .sub b{color:var(--ink)}
+  .sub code{background:#F1EFE8;border-radius:4px;padding:1px 5px;font-size:11.5px}
+
+  .diag{background:#fff;border-radius:12px;padding:14px 18px;box-shadow:0 6px 18px rgba(0,0,0,.06);margin:0 0 18px;max-width:1180px}
+  .diag h2{font-size:13.5px;margin:0 0 7px}
+  .diag p{font-size:12.5px;line-height:1.75;color:#5F5E5A;margin:0 0 5px}
+  .diag b{color:var(--ink)}
+
+  .strip{display:flex;gap:22px;overflow-x:auto;padding:6px 4px 18px;align-items:flex-start}
+  .col{flex:0 0 390px}
+  .cap{display:flex;align-items:baseline;gap:8px;margin:0 2px 8px}
+  .cap b{font-size:13.5px}
+  .cap em{font-style:normal;font-size:11.5px;color:#8A867D}
+  .badge{font-size:10px;padding:2px 7px;border-radius:999px;font-weight:600;margin-left:auto}
+  .badge.ok{background:#EAF3EC;color:#2F7A48}
+  .badge.mid{background:#FAF0DF;color:#8A6410}
+  .badge.bad{background:#FBEDEB;color:#B4443A}
+
+  .phone{position:relative;width:390px;height:844px;border-radius:44px;overflow:hidden;background:var(--bg);
+         box-shadow:0 0 0 1px #D8D4CC,0 22px 54px rgba(0,0,0,.18)}
+  .hintline{font-size:11.5px;line-height:1.6;color:#6F6B63;margin:8px 2px 0}
+  .hintline b{color:var(--ink)}
+
+  /* ---------- 屏幕 ---------- */
+  .statusbar{position:absolute;top:0;left:0;right:0;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;font-size:12px;font-weight:600;z-index:90}
+  .statusbar i{display:block;width:15px;height:9px;border:.8px solid var(--ink);border-radius:2px;position:relative}
+  .statusbar i::after{content:"";position:absolute;inset:1.5px;background:var(--ink);border-radius:1px}
+  .hd{position:absolute;top:52px;left:20px;right:20px;height:34px;display:flex;align-items:center;justify-content:space-between;z-index:50}
+  .hd .logo{font-size:21px;font-weight:700;letter-spacing:-.02em}
+  .tabx{display:flex;align-items:center;padding:2px;border-radius:17px;height:34px;background:var(--trough)}
+  .tabx .t{width:36px;height:30px;border-radius:15px;display:grid;place-items:center;color:rgba(29,28,26,.38)}
+  .tabx .t.on{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 .5px rgba(29,28,26,.10),0 1px 2px rgba(29,28,26,.10)}
+
+  .deck{position:absolute;top:116px;left:0;right:0;bottom:8px}
+  .mode-c .deck{bottom:52px}
+  .card{position:absolute;left:16px;right:16px;top:0;background:var(--card);border-radius:24px;
+        padding:20px 18px 16px;display:flex;flex-direction:column;transform-origin:bottom center}
+  .lay0{left:16px;right:16px;bottom:38px;z-index:40;box-shadow:0 1px 2px rgba(0,0,0,.03),0 10px 28px rgba(0,0,0,.045)}
+  .lay1{left:26px;right:26px;bottom:28px;z-index:30;box-shadow:0 1px 0 rgba(29,28,26,.10),0 4px 8px rgba(29,28,26,.05),inset 0 0 0 1px rgba(29,28,26,.11)}
+  .lay2{left:25px;right:25px;bottom:18px;z-index:20;box-shadow:0 1px 0 rgba(29,28,26,.10),0 4px 8px rgba(29,28,26,.05),inset 0 0 0 1px rgba(29,28,26,.11)}
+  .lay3{left:28px;right:28px;bottom:8px;z-index:10;box-shadow:0 1px 0 rgba(29,28,26,.10),0 6px 16px rgba(29,28,26,.10),inset 0 0 0 1px rgba(29,28,26,.11)}
+  .lay1>*,.lay2>*,.lay3>*{opacity:0}
+
+  .ch{display:flex;justify-content:space-between;align-items:flex-start}
+  .dwrap{display:flex;align-items:baseline;gap:6px}
+  .mon{font-size:11px;color:var(--ink3);letter-spacing:.08em}
+  .dnum{font-size:32px;font-weight:600;letter-spacing:-.02em;line-height:1}
+  .wday{font-size:12px;color:var(--ink3)}
+  .totals{display:flex;align-items:baseline;gap:6px}
+  .totals .lbl{font-size:11px;color:var(--ink3)}
+  .totals .exp{font-size:16px;font-weight:600;color:var(--red);font-variant-numeric:tabular-nums}
+  .hr{height:1px;background:var(--line);margin:14px 0 2px}
+  .rows{flex:1;overflow-y:auto;margin:0 -2px;padding:0 2px;min-height:0;scrollbar-width:none;
+        -webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 34px),transparent 100%);
+        mask-image:linear-gradient(to bottom,#000 calc(100% - 34px),transparent 100%)}
+  .rows::-webkit-scrollbar{width:0;height:0}
+  .note{position:absolute;right:6px;top:-14px;transform:rotate(-3deg);background:#FFF7E0;border:1px solid #EFE2BE;
+        border-radius:5px;padding:5px 10px;font-size:11px;color:#8A6D2F;box-shadow:0 3px 8px rgba(0,0,0,.09);z-index:6;white-space:nowrap}
+  .note s{text-decoration:none;color:#3B7A44}
+  .tx{display:flex;align-items:center;gap:12px;padding:11px 0}
+  .ic{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;flex:0 0 42px}
+  .ic img{width:27px;height:27px;display:block}
+  .tt{font-size:14px;font-weight:500}
+  .ts{font-size:11.5px;color:var(--ink3);margin-top:2px}
+  .ta{margin-left:auto;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+
+  /* ---------- B 记账行 ---------- */
+  .addrow{display:flex;align-items:center;gap:12px;height:56px;flex:0 0 56px;cursor:pointer;margin:0 -2px;padding:0 2px;border-radius:10px;transition:background .16s}
+  .addrow:hover{background:#FCFBF8}
+  /* B2 空分类位（2026-11-08 定案）：同分类格底 #F6F3EC，无描边 */
+  .addrow .slot{width:42px;height:42px;flex:0 0 42px;border-radius:13px;background:#F6F3EC;
+                display:grid;place-items:center;color:rgba(29,28,26,.34)}
+  .addrow .lbl{font-size:14px;font-weight:500;color:rgba(29,28,26,.62)}
+  .addrow .rh{margin-left:auto;font-size:11px;color:var(--ink3)}
+
+  /* ---------- C 页脚墨线栏 ---------- */
+  .footbar{position:absolute;left:0;right:0;bottom:0;height:44px;z-index:60;display:flex;align-items:center;
+           justify-content:space-between;padding:0 20px;background:transparent;border-top:1px solid #EAE7E0;cursor:pointer}
+  .footbar .l{font-size:11px;color:var(--ink3);letter-spacing:.01em}
+  .footbar .r{font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:6px}
+
+  /* ---------- D 卡沿纸签（挂在卡片上，随卡旋转） ---------- */
+  .edge{position:absolute;right:-10px;bottom:150px;width:28px;height:64px;z-index:60;cursor:pointer;
+        background:#fff;border-radius:8px 0 0 8px;box-shadow:inset 1px 0 0 rgba(29,28,26,.12),-2px 0 6px rgba(29,28,26,.06);
+        display:flex;align-items:center;justify-content:center;transform:translateX(0);transition:transform .16s}
+  .edge:hover{transform:translateX(-2px)}
+  .edge span{writing-mode:vertical-rl;font-size:11px;letter-spacing:.18em;color:rgba(29,28,26,.72)}
+
+  /* ---------- 记账页（三版共用目的地） ---------- */
+  .dim{position:absolute;inset:0;background:rgba(29,28,26,.28);z-index:70}
+  .sheet{position:absolute;left:0;right:0;bottom:0;top:216px;background:var(--card);border-radius:26px 26px 0 0;z-index:80;
+         display:flex;flex-direction:column;box-shadow:0 -8px 30px rgba(29,28,26,.14);overflow:hidden}
+  .sheet .grab{width:36px;height:4px;border-radius:2px;background:#E3DFD7;margin:8px auto 0}
+  .tabs{display:flex;justify-content:center;gap:22px;padding:14px 0 6px;font-size:13.5px;color:var(--ink3)}
+  .tabs b{color:var(--ink);font-weight:600;position:relative}
+  .tabs b::after{content:"";position:absolute;left:50%;bottom:-7px;width:16px;height:2px;border-radius:1px;background:var(--ink);transform:translateX(-50%)}
+  .amt{display:flex;align-items:baseline;justify-content:flex-end;gap:6px;padding:10px 24px 14px}
+  .amt .cur{font-size:15px;color:var(--ink3)}
+  .amt .num{font-size:56px;font-weight:600;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px 8px;padding:6px 22px 14px}
+  .cell{display:flex;flex-direction:column;align-items:center;gap:5px}
+  .cell .ci{width:50px;height:50px;border-radius:15px;display:grid;place-items:center;background:#F6F3EC}
+  .cell .ci img{width:30px;height:30px}
+  .cell .cn{font-size:10.5px;color:var(--ink2)}
+  .cell.on .ci{background:#FFF1E6;box-shadow:inset 0 0 0 1px rgba(192,57,43,.28)}
+  .cell.on .cn{color:var(--ink);font-weight:600}
+  .pills{display:flex;gap:8px;padding:0 22px 8px;overflow:hidden}
+  .pill{font-size:12px;color:var(--ink2);background:#F6F3EC;border-radius:999px;padding:6px 12px;white-space:nowrap}
+  .pill.on{background:#1D1C1A;color:#fff;font-weight:600}
+  .meta{display:flex;align-items:center;gap:10px;padding:4px 22px 12px;font-size:11px;color:var(--ink3)}
+  .meta .dot{width:3px;height:3px;border-radius:50%;background:#CFCAC1}
+  .grades{margin-left:auto;display:flex;gap:6px}
+  .g{font-size:10.5px;color:var(--ink3);border-radius:999px;padding:3px 8px}
+  .g.on{background:#1D1C1A;color:#fff;font-weight:600}
+  .kb{margin-top:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:8px 6px 10px;background:#F6F3EC;border-top:1px solid #EAE7E0}
+  .kb button{border:0;background:#fff;border-radius:9px;height:50px;font-size:19px;color:var(--ink);font-family:inherit}
+  .kb button.fn{background:transparent;font-size:15px;color:var(--ink2)}
+  .kb button.ok{background:#1D1C1A;color:#fff;font-size:14px;font-weight:600;grid-column:4;grid-row:4}
+  .kb .sp{background:transparent}
+
+  .toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,8px);background:rgba(29,28,26,.9);color:#fff;
+         font-size:12px;padding:8px 14px;border-radius:999px;opacity:0;pointer-events:none;transition:.22s;z-index:999}
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+
+  table{width:100%;max-width:1180px;border-collapse:collapse;margin:10px 0 0;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+  th,td{border-bottom:1px solid var(--line);padding:9px 12px;font-size:12px;text-align:left;vertical-align:top}
+  th{background:#FAF9F6;font-size:11.5px;color:#5F5E5A;font-weight:600}
+  td:first-child{color:var(--ink);font-weight:600;width:104px}
+  td b{color:var(--ink)}
+  td code{background:#F1EFE8;border-radius:4px;padding:1px 4px;font-size:11px}
+  tr:last-child td{border-bottom:none}
+
+  .notes{max-width:1180px;margin:20px 0 0;background:#fff;border-radius:12px;padding:16px 20px;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+  .notes h2{font-size:14px;margin:0 0 8px}
+  .notes li{font-size:12.5px;line-height:1.85;color:#6F6B63;margin-left:18px}
+  .notes b{color:var(--ink)}
+</style>
+</head>
+<body>
+
+<h1>记一笔入口 · B / C / D 对比</h1>
+<p class="sub">三版共用同一份首页（顶部 T1 tab、四层卡堆、便签、层厚 10pt），只换入口。第四格是<b>三版点下去之后的同一屏</b>——入口长什么样，取决于点进去发生什么。</p>
+
+<div class="diag">
+  <h2>这一轮不做什么</h2>
+  <p>不再做<b>悬浮块</b>。上一轮四版（重圆 / 文字胶囊 / 金额胶囊 / 卡内纸签）都被判「和首页风格不符」，根因是它们都是贴在纸上的物体。这三版都改成<b>结构</b>：一行、一条页脚、一枚页签。</p>
+  <p>三版都满足：不压层厚带（38→8）、不挡便签、与顶部 tab 同一套材质、点击后进入同一张记账页。</p>
+</div>
+
+<div class="strip" id="strip"></div>
+
+<table>
+  <tr>
+    <th>对比项</th><th>B 记账行</th><th>C 页脚墨线栏</th><th>D 卡沿纸签</th>
+  </tr>
+  <tr><td>读成什么</td><td><b>账本的最后一行</b>（内容）</td><td>纸的<b>页脚</b>（结构）</td><td>账本的<b>索引贴</b>（结构）</td></tr>
+  <tr><td>尺寸</td><td>整行 56pt，虚线槽 42×42</td><td>整宽 44pt，1px 上边线</td><td>28×64，伸出卡片 10pt</td></tr>
+  <tr><td>卡片高度</td><td>682（不变）</td><td><b>638（−44）</b></td><td>682（不变）</td></tr>
+  <tr><td>常驻可见</td><td>是（固定在卡内，不随 rows 滚动）</td><td>是（全局）</td><td>是（随卡堆，翻卡跟着走）</td></tr>
+  <tr><td>单手可及</td><td>是（右下角）</td><td>是（屏幕最底）</td><td>是（右侧中部偏下）</td></tr>
+  <tr><td>历史日语义</td><td><b>自动成立</b>：翻到 11-03，那行变「给 11-03 补记」</td><td>需要额外文案（页脚是全局的）</td><td>需要额外文案（纸签贴在当天那张卡上，可自动成立）</td></tr>
+  <tr><td>命中区</td><td>322×56（最大）</td><td>350×44</td><td><b>28×64（最小）</b></td></tr>
+  <tr><td>主要代价</td><td>占 56pt 卡内高度；虚线槽是新元素</td><td>等于重开一条底栏，卡片矮 44pt</td><td>贴屏幕右缘，圆角处易被切；命中窄，边缘滑动易触发系统手势</td></tr>
+</table>
+
+<div class="notes">
+  <h2>三版的真实差别（不是审美，是结构）</h2>
+  <ul>
+    <li><b>B 是唯一「入口即内容」的</b>：它和 8 条流水行共用同一套节奏（42 槽 + 14pt 字），所以读起来不像按钮。代价是它在卡片里，翻卡时跟着走——但这正好是它支持补记的原因。</li>
+    <li><b>C 是唯一「永远在同一个像素位置」的</b>：不随卡、不随滚动。适合「打开就记一笔、记完就走」的习惯；但它是全局的，历史日补记要靠额外的日期选择。</li>
+    <li><b>D 是唯一「完全不占版面」的</b>：伸出卡外 10pt，不吃卡内高度也不吃屏幕底部。但 28×64 的命中区在 390pt 屏上偏窄，而且贴右缘，iOS 的边缘返回手势会和它抢。</li>
+  </ul>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var ICO = {
+  flow:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>',
+  wallet:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="6" width="18" height="13" rx="3.5"/><path d="M3 10.5h18M16 15h2"/></svg>',
+  gear:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 3.6v2M12 18.4v2M3.6 12h2M18.4 12h2M6.1 6.1l1.4 1.4M16.5 16.5l1.4 1.4M17.9 6.1l-1.4 1.4M7.5 16.5l-1.4 1.4"/></svg>',
+  plus:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5.5v13M5.5 12h13"/></svg>'
+};
+var ROWS = [
+  { icon:'Croissant', t:'好利来', s:'吃 · 花呗', a:32.00, bg:'#FFF1E6' },
+  { icon:'LightRail', t:'地铁', s:'行 · 建行5044', a:4.00, bg:'#EAF2FF' },
+  { icon:'Cat', t:'麦富迪猫粮', s:'情 · 白条', a:129.00, bg:'#F3EEFF' },
+  { icon:'HotBeverage', t:'星巴克', s:'吃 · 花呗', a:28.00, bg:'#FFF1E6' },
+  { icon:'Taxi', t:'滴滴', s:'行 · 招行', a:19.50, bg:'#EAF2FF' },
+  { icon:'BentoBox', t:'工作午餐', s:'吃 · 微信', a:26.00, bg:'#FFF1E6' },
+  { icon:'ShoppingBags', t:'日用补货', s:'穿 · 余额宝', a:63.00, bg:'#FFF1E6' },
+  { icon:'GameDie', t:'手游充值', s:'乐 · 花呗', a:30.00, bg:'#EAF2FF' }
+];
+var CATS = [
+  { icon:'BentoBox', n:'吃', on:true }, { icon:'TShirt', n:'穿' }, { icon:'House', n:'住' }, { icon:'LightRail', n:'行' },
+  { icon:'GameDie', n:'乐' }, { icon:'Pill', n:'医' }, { icon:'Cat', n:'情' }, { icon:'Package', n:'其他' }
+];
+function money(n){ return n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
+function rowsHTML(){
+  return ROWS.map(function(r){
+    return '<div class="tx"><div class="ic" style="background:' + r.bg + '">'
+      + '<img src="../../assets/emoji/picked/' + r.icon + '.png" alt="">'
+      + '</div><div><div class="tt">' + r.t + '</div><div class="ts">' + r.s + '</div></div>'
+      + '<div class="ta">−¥' + money(r.a) + '</div></div>';
+  }).join('');
+}
+
+function homeHTML(mode){
+  var sum = ROWS.slice(0,3).reduce(function(a,r){ return a + r.a; }, 0);
+  var addrow = mode === 'b'
+    ? '<div class="addrow" data-tap="1"><span class="slot">' + ICO.plus + '</span><span class="lbl">记一笔</span><span class="rh">今天</span></div>'
+    : '';
+  var footbar = mode === 'c'
+    ? '<div class="footbar" data-tap="1"><span class="l">今天 3 笔 · ¥165.00</span><span class="r">' + ICO.plus + '记一笔</span></div>'
+    : '';
+  var edge = mode === 'd' ? '<div class="edge" data-tap="1"><span>记一笔</span></div>' : '';
+
+  return '<div class="statusbar"><span>9:41</span><span><i></i></span></div>'
+    + '<div class="hd"><span class="logo">DooDoo</span>'
+    +   '<span class="tabx"><span class="t on">' + ICO.flow + '</span><span class="t">' + ICO.wallet + '</span><span class="t">' + ICO.gear + '</span></span>'
+    + '</div>'
+    + '<div class="deck">'
+    +   '<div class="card lay0">'
+    +     '<span class="note">本月 <s>↘ 12.4%</s></span>'
+    +     '<div class="ch"><div class="dwrap"><span class="mon">NOV</span><span class="dnum">06</span><span class="wday">今天</span></div>'
+    +       '<div class="totals"><span class="lbl">支出</span><span class="exp">−¥' + money(sum) + '</span></div></div>'
+    +     '<div class="hr"></div><div class="rows">' + rowsHTML() + '</div>' + addrow + edge
+    +   '</div>'
+    +   '<div class="card lay1"></div><div class="card lay2"></div><div class="card lay3"></div>'
+    + '</div>'
+    + footbar;
+}
+
+function entryHTML(){
+  var cells = CATS.map(function(c){
+    return '<div class="cell' + (c.on ? ' on' : '') + '"><span class="ci"><img src="../../assets/emoji/picked/' + c.icon + '.png" alt=""></span>'
+      + '<span class="cn">' + c.n + '</span></div>';
+  }).join('');
+  var keys = ['1','2','3','⌫','4','5','6','+','7','8','9','−','.','0','00'];
+  var kb = keys.map(function(k){
+    var fn = (k === '⌫' || k === '+' || k === '−') ? ' fn' : '';
+    return '<button class="' + fn.trim() + '">' + k + '</button>';
+  }).join('') + '<button class="ok">完成</button>';
+
+  return '<div class="dim"></div>'
+    + '<div class="sheet">'
+    +   '<div class="grab"></div>'
+    +   '<div class="tabs"><b>支出</b><span>收入</span><span>还款</span><span>转账</span></div>'
+    +   '<div class="amt"><span class="cur">¥</span><span class="num">0.00</span></div>'
+    +   '<div class="grid">' + cells + '</div>'
+    +   '<div class="pills"><span class="pill on">花呗</span><span class="pill">建行 5044</span><span class="pill">微信</span><span class="pill">白条</span></div>'
+    +   '<div class="meta"><span>今天</span><span class="dot"></span><span>写备注</span>'
+    +     '<span class="grades"><span class="g">夯</span><span class="g">飘</span><span class="g on">拉</span><span class="g">NPC</span></span></div>'
+    +   '<div class="kb">' + kb + '</div>'
+    + '</div>';
+}
+
+var STRIP = [
+  { mode:'b', title:'B · 记账行', note:'今天卡的最后一行：虚线空槽 + 「记一笔」', badge:'ok', bt:'推荐', cap:'卡 682 · 行 56 · 命中 322×56' },
+  { mode:'c', title:'C · 页脚墨线栏', note:'屏底一条 44pt，只有 1px 上边线', badge:'mid', bt:'备选', cap:'卡 638 · 栏 44 · 命中 350×44' },
+  { mode:'d', title:'D · 卡沿纸签', note:'卡片右缘伸出 10pt 的一枚纸签', badge:'mid', bt:'备选', cap:'卡 682 · 签 28×64 · 命中偏窄' },
+  { mode:'entry', title:'→ 点下去之后', note:'三版进入同一屏：纸卡 + 分类 + 账户 + 评分 + 键盘', badge:'ok', bt:'共用', cap:'A 版录入（入口与录入是同一件事）' }
+];
+
+var strip = document.getElementById('strip');
+STRIP.forEach(function(v){
+  var col = document.createElement('div');
+  col.className = 'col';
+  var inner = v.mode === 'entry' ? (homeHTML('b') + entryHTML()) : homeHTML(v.mode);
+  col.innerHTML = '<div class="cap"><b>' + v.title + '</b><em>' + v.note + '</em>'
+    + '<span class="badge ' + v.badge + '">' + v.bt + '</span></div>'
+    + '<div class="phone mode-' + v.mode + '">' + inner + '</div>'
+    + '<div class="hintline">' + v.cap + '</div>';
+  strip.appendChild(col);
+});
+
+var toastEl = document.getElementById('toast');
+function toast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add('on');
+  clearTimeout(toastEl._t);
+  toastEl._t = setTimeout(function(){ toastEl.classList.remove('on'); }, 1600);
+}
+document.querySelectorAll('[data-tap="1"]').forEach(function(el){
+  el.addEventListener('click', function(){ toast('→ 进记账页（最右那格），入口形态不改目的地'); });
+});
+</script>
+</body>
+</html>

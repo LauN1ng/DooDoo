@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>记账 App · 一天一页</title>
+<style>
+:root{
+  --bg:#FBFAF7;
+  --card:#FFFFFF;
+  --ink:#131211;
+  --ink2:#8C867C;
+  --ink3:#C2BCB1;
+  --line:#F0EDE6;
+  --red:#D8452F;
+}
+*{box-sizing:border-box;-webkit-font-smoothing:antialiased;}
+body{
+  margin:0;padding:36px 24px 60px;background:#EAE6DF;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue","PingFang SC","Microsoft YaHei UI",sans-serif;
+  color:var(--ink);
+}
+header{max-width:1240px;margin:0 auto 26px;}
+header .tag{display:inline-block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#6B6558;background:#FBFAF7;border-radius:20px;padding:4px 11px;margin-bottom:10px;}
+header h1{margin:0 0 8px;font-size:19px;font-weight:600;letter-spacing:-.4px;}
+header p{margin:0;font-size:13px;line-height:1.75;color:#6B6558;max-width:840px;}
+header p b{color:#2A251E;font-weight:600;}
+
+.stage{display:flex;gap:26px;justify-content:center;flex-wrap:wrap;max-width:1300px;margin:0 auto;align-items:flex-start;}
+.col{display:flex;flex-direction:column;gap:10px;width:308px;}
+.cap{font-size:11px;color:#6B6558;line-height:1.6;}
+.cap b{color:#2A251E;font-weight:600;}
+
+.phone{
+  width:308px;height:648px;flex:none;position:relative;overflow:hidden;
+  background:var(--bg);border-radius:46px;
+  box-shadow:0 26px 60px rgba(60,48,30,.18), 0 2px 8px rgba(60,48,30,.06);
+  display:flex;flex-direction:column;
+}
+.notch{position:absolute;top:9px;left:50%;transform:translateX(-50%);width:54px;height:15px;background:#131211;border-radius:10px;z-index:20;}
+.sb{height:32px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 24px;font-size:10.5px;font-weight:600;z-index:19;}
+
+.topbar{flex:none;display:flex;align-items:center;justify-content:space-between;padding:6px 22px 10px;}
+.mon{font-size:15px;font-weight:600;letter-spacing:-.3px;}
+.mon i{font-style:normal;font-size:10.5px;color:var(--ink2);font-weight:400;margin-left:6px;}
+.chip{
+  display:flex;align-items:center;gap:5px;background:#fff;border-radius:20px;
+  padding:5px 11px;font-size:10.5px;font-weight:600;box-shadow:0 1px 4px rgba(19,18,17,.06);
+}
+.chip i{width:5px;height:5px;border-radius:50%;background:var(--red);}
+
+.week{flex:none;display:flex;justify-content:space-between;padding:0 20px 6px;}
+.wd{
+  width:34px;display:flex;flex-direction:column;align-items:center;gap:5px;
+  font-size:9.5px;color:var(--ink3);font-weight:500;
+}
+.wd b{
+  width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;
+}
+.wd.on b{background:#131211;color:#fff;}
+.wd.on{color:var(--ink);}
+
+.pager{
+  flex:1;display:flex;overflow-x:auto;overflow-y:hidden;
+  scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
+}
+.pager::-webkit-scrollbar{height:0;}
+.page{
+  min-width:100%;height:100%;scroll-snap-align:start;
+  padding:2px 22px 0;display:flex;flex-direction:column;overflow:hidden;
+}
+
+.dhead{padding:6px 0 0;}
+.dlabel{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);font-weight:600;}
+.dnum{
+  font-size:58px;font-weight:700;letter-spacing:-3.6px;line-height:.94;margin-top:6px;
+  font-variant-numeric:tabular-nums;
+}
+.dnum span{font-size:14px;font-weight:500;letter-spacing:0;color:var(--ink2);margin-left:8px;vertical-align:14px;}
+
+.dsum{
+  display:flex;align-items:baseline;gap:8px;margin-top:14px;
+  padding-bottom:14px;border-bottom:1.5px solid #131211;
+}
+.dsum .v{font-size:23px;font-weight:600;letter-spacing:-1.1px;font-variant-numeric:tabular-nums;}
+.dsum .k{font-size:10.5px;color:var(--ink2);}
+.dsum .r{margin-left:auto;font-size:10.5px;color:var(--ink2);font-variant-numeric:tabular-nums;}
+
+.list{margin-top:6px;flex:1;overflow:hidden;}
+.row{display:flex;align-items:center;gap:12px;padding:9px 0;}
+.row + .row{border-top:1px solid var(--line);}
+.ic{width:40px;height:40px;flex:none;display:flex;align-items:center;justify-content:center;position:relative;}
+.ic img{width:36px;height:36px;object-fit:contain;}
+.ic .fb{display:none;font-size:21px;align-items:center;justify-content:center;}
+.ic .fb.on{display:flex;}
+.mid{flex:1;min-width:0;}
+.nm{font-size:14px;font-weight:500;letter-spacing:-.2px;}
+.ac{font-size:10.5px;color:var(--ink3);margin-top:2px;}
+.amt{font-size:14.5px;font-weight:600;letter-spacing:-.35px;font-variant-numeric:tabular-nums;}
+.amt.in{color:#2E7D4F;}
+
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--ink3);font-size:12px;padding-bottom:40px;}
+.empty .e{font-size:52px;}
+
+.dots{flex:none;display:flex;justify-content:center;gap:5px;padding:6px 0 4px;}
+.dots i{width:4px;height:4px;border-radius:50%;background:#D9D3C8;}
+.dots i.on{width:14px;border-radius:2px;background:#131211;}
+
+.dock{
+  position:absolute;left:18px;right:18px;bottom:18px;height:50px;border-radius:25px;
+  background:#131211;color:#fff;display:flex;align-items:center;justify-content:center;gap:7px;
+  font-size:14px;font-weight:500;letter-spacing:.12em;
+  box-shadow:0 10px 26px rgba(19,18,17,.28);z-index:15;
+}
+
+/* 负债页 */
+.h2{font-size:22px;font-weight:600;letter-spacing:-.6px;padding:8px 0 0;}
+.sub{font-size:10.5px;color:var(--ink2);margin-top:5px;}
+.bigline{display:flex;align-items:baseline;gap:7px;padding:22px 0 4px;}
+.bigline b{font-size:64px;font-weight:700;letter-spacing:-4.4px;line-height:.9;font-variant-numeric:tabular-nums;}
+.bigline span{font-size:13px;color:var(--ink2);}
+.bigsub{font-size:11px;color:var(--ink3);margin-top:6px;}
+
+.two{display:flex;gap:10px;margin-top:20px;}
+.box{flex:1;background:#fff;border-radius:18px;padding:14px;box-shadow:0 1px 4px rgba(19,18,17,.05);}
+.box .k{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink2);font-weight:600;}
+.box .v{font-size:21px;font-weight:600;letter-spacing:-.9px;margin-top:6px;font-variant-numeric:tabular-nums;}
+.box .v.g{color:#2E7D4F;}
+
+.plist{margin-top:18px;}
+.pitem{padding:13px 0;border-bottom:1px solid var(--line);}
+.pitem .t{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:500;}
+.pitem .t b{font-variant-numeric:tabular-nums;letter-spacing:-.3px;}
+.track{height:3px;background:#EEEBE4;border-radius:2px;margin:10px 0 7px;overflow:hidden;}
+.track i{display:block;height:100%;border-radius:2px;background:#131211;}
+.track i.w{background:var(--red);}
+.pitem .s{font-size:10px;color:var(--ink3);letter-spacing:.02em;}
+
+.note{font-size:12px;line-height:1.75;color:#6B6558;background:#F5F2EB;border-radius:14px;padding:14px 16px;margin-top:22px;max-width:1220px;}
+.note b{color:#2A251E;}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="tag">v6 · one day, one page</span>
+  <h1>一天一页</h1>
+  <p>不再是一条无限长的流水列表。<b>每一屏只放一天</b>，左右滑动换日期，顶部一周日历可以直接跳。内容量天生可控，所以排版能做得干净；滑动本身也有物理感。<b>请直接用手指在手机框里左右拖</b>，不是静态图。</p>
+</header>
+
+<div class="stage">
+
+  <div class="col">
+    <div class="cap"><b>拖动试试</b> · 三页：前天 / 昨天 / 今天</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="sb"><span>9:41</span><span>●●● ⌁ ▮</span></div>
+
+      <div class="topbar">
+        <div class="mon">11 月<i>2026</i></div>
+        <div class="chip"><i></i>19 个月结清</div>
+      </div>
+
+      <div class="week">
+        <div class="wd"><span>一</span><b>2</b></div>
+        <div class="wd on"><span>二</span><b>3</b></div>
+        <div class="wd"><span>三</span><b>4</b></div>
+        <div class="wd"><span>四</span><b>5</b></div>
+        <div class="wd"><span>五</span><b>6</b></div>
+        <div class="wd"><span>六</span><b>7</b></div>
+        <div class="wd"><span>日</span><b>8</b></div>
+      </div>
+
+      <div class="pager" id="pager">
+
+        <!-- 前天 -->
+        <div class="page">
+          <div class="dhead">
+            <div class="dlabel">周日</div>
+            <div class="dnum">01<span>11 月</span></div>
+          </div>
+          <div class="dsum">
+            <span class="v">−3,268</span>
+            <span class="k">支出</span>
+            <span class="r">2 笔</span>
+          </div>
+          <div class="list">
+            <div class="row">
+              <span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/House/3D/house_3d.png" alt=""><span class="fb">🏠</span></span>
+              <div class="mid"><div class="nm">房租</div><div class="ac">招行储蓄卡 · 居住</div></div>
+              <div class="amt">−3,200</div>
+            </div>
+            <div class="row">
+              <span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Movie%20camera/3D/movie_camera_3d.png" alt=""><span class="fb">🎬</span></span>
+              <div class="mid"><div class="nm">电影</div><div class="ac">微信支付 · 娱乐</div></div>
+              <div class="amt">−68</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 昨天 -->
+        <div class="page">
+          <div class="dhead">
+            <div class="dlabel">周一</div>
+            <div class="dnum">02<span>11 月</span></div>
+          </div>
+          <div class="dsum">
+            <span class="v">+12,495</span>
+            <span class="k">净变化</span>
+            <span class="r">2 笔</span>
+          </div>
+          <div class="list">
+            <div class="row">
+              <span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Money%20bag/3D/money_bag_3d.png" alt=""><span class="fb">💰</span></span>
+              <div class="mid"><div class="nm">工资</div><div class="ac">招行储蓄卡 · 收入</div></div>
+              <div class="amt in">+12,540</div>
+            </div>
+            <div class="row">
+              <span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Steaming%20bowl/3D/steaming_bowl_3d.png" alt=""><span class="fb">🍜</span></span>
+              <div class="mid"><div class="nm">外卖</div><div class="ac">支付宝 · 餐饮</div></div>
+              <div class="amt">−45</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 今天 -->
+        <div class="page">
+          <div class="dhead">
+            <div class="dlabel">今天 · 周二</div>
+            <div class="dnum">03<span>11 月</span></div>
+          </div>
+          <div class="dsum">
+            <span class="v">−268</span>
+            <span class="k">支出</span>
+            <span class="r">4 笔</span>
+          </div>
+          <div class="list">
+            <div class="row">
+              <span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Cooked%20rice/3D/cooked_rice_3d.png" alt=""><span class="fb">🍚</span></span>
+              <div class="mid"><div class="nm">午饭</div><div class="ac">微信支付 · 餐饮</div></div>
+              <div class="amt">−32</div>
+            </div>
+            <div class="row">
+              <span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Hot%20beverage/3D/hot_beverage_3d.png" alt=""><span class="fb">☕</span></span>
+              <div class="mid"><div class="nm">咖啡</div><div class="ac">现金 · 餐饮</div></div>
+              <div class="amt">−22</div>
+            </div>
+            <div class="row">
+              <span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Automobile/3D/automobile_3d.png" alt=""><span class="fb">🚗</span></span>
+              <div class="mid"><div class="nm">打车</div><div class="ac">花呗 · 交通</div></div>
+              <div class="amt">−28</div>
+            </div>
+            <div class="row">
+              <span class="ic"><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Shopping%20cart/3D/shopping_cart_3d.png" alt=""><span class="fb">🛒</span></span>
+              <div class="mid"><div class="nm">超市</div><div class="ac">招行储蓄卡 · 购物</div></div>
+              <div class="amt">−186</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="dots" id="dots"><i></i><i></i><i class="on"></i></div>
+      <div class="dock">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        记一笔
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="cap"><b>负债</b> · 点顶部「19 个月结清」进入</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="sb"><span>9:41</span><span>●●● ⌁ ▮</span></div>
+      <div style="flex:1;overflow:hidden;padding:0 22px;">
+        <div class="h2">负债</div>
+        <div class="sub">按你实际每月还款额推演</div>
+
+        <div class="bigline"><b>19</b><span>个月后结清</span></div>
+        <div class="bigsub">2028 年 6 月 · 共 35,680</div>
+
+        <div class="two">
+          <div class="box">
+            <div class="k">本月要还</div>
+            <div class="v">5,200</div>
+          </div>
+          <div class="box">
+            <div class="k">还完剩</div>
+            <div class="v g">7,340</div>
+          </div>
+        </div>
+
+        <div class="plist">
+          <div class="pitem">
+            <div class="t"><span>招行信用卡</span><b>−12,480</b></div>
+            <div class="track"><i class="w" style="width:38%"></i></div>
+            <div class="s">年化 18.25% · 每月 8 日 · 剩 7 个月</div>
+          </div>
+          <div class="pitem">
+            <div class="t"><span>花呗</span><b>−3,200</b></div>
+            <div class="track"><i class="w" style="width:62%"></i></div>
+            <div class="s">分 6 期 · 每月 9 日 · 剩 6 个月</div>
+          </div>
+          <div class="pitem">
+            <div class="t"><span>借父母</span><b>−20,000</b></div>
+            <div class="track"><i style="width:15%"></i></div>
+            <div class="s">无息 · 无固定期限 · 剩 20 个月</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="note">
+  <b>这一版想解决的三件事</b>：① 排版不好看，因为内容量不受控——一天一页把它锁死，一屏最多五行，字体、行高、留白才能排得准；② 结构平庸，因为「列表 + 卡片」是所有记账 App 的形状，横向分页把时间轴变成了可以触摸的东西；③ 交互太平，滑动比滚动有更强的物理反馈，手指划过时日期数字会跟着走。
+</div>
+
+<script>
+document.querySelectorAll('.ic img').forEach(function(img){
+  var path = img.getAttribute('src').replace(/^https?:\/\/[^\/]+/, '');
+  var hosts = ['https://fastly.jsdelivr.net','https://gcore.jsdelivr.net']; var i=0;
+  img.addEventListener('error', function(){
+    if (i < hosts.length) { img.src = hosts[i++] + path; return; }
+    img.style.display='none';
+    var fb = img.nextElementSibling;
+    if (fb) fb.classList.add('on');
+  });
+});
+var pager = document.getElementById('pager');
+var dots = document.getElementById('dots').children;
+pager.addEventListener('scroll', function(){
+  var idx = Math.round(pager.scrollLeft / pager.clientWidth);
+  for (var i=0;i<dots.length;i++) dots[i].className = (i===idx) ? 'on' : '';
+});
+pager.scrollLeft = pager.clientWidth * 2;
+</script>
+</body>
+</html>

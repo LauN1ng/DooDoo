@@ -1,0 +1,19 @@
+{
+  "secA": "A · 7 张时的叠法（取卡片底部 150pt）",
+  "secB": "B · 记账行的槽（取行 76pt，390 宽实际尺寸）",
+  "stacks": [
+    { "title": "现状：7 张 · 6 条等距白边", "mode": "s0" },
+    { "title": "S1 只露 3 条边（推荐）", "mode": "s1" },
+    { "title": "S2 锥形收窄（每层缩 6pt）", "mode": "s2" },
+    { "title": "S3 两条边 + 底部渐隐", "mode": "s3" }
+  ],
+  "slots": [
+    { "title": "B1 虚线槽（现状）", "mode": "b1" },
+    { "title": "B2 空分类位（推荐）", "mode": "b2" },
+    { "title": "B3 纯文字行（无槽）", "mode": "b3" },
+    { "title": "B4 纸面按钮", "mode": "b4" }
+  ],
+  "rowLabel": "记一笔",
+  "rowRight": "今天",
+  "plusText": "+"
+}

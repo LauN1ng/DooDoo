@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>DooDoo · 叠法 4 版 + 槽 4 版（小图）</title>
+<style>
+  :root{
+    --bg:#F7F5F1; --card:#fff; --ink:#1D1C1A; --ink2:#6F6B63; --ink3:#A8A39A; --line:#EFECE5;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#EDEAE4;font-family:-apple-system,"PingFang SC",sans-serif;color:var(--ink);padding:18px 20px 26px}
+  h1{font-size:17px;margin:0 0 3px;letter-spacing:-.2px}
+  .sub{font-size:11.5px;color:#6F6B63;line-height:1.7;margin:0 0 14px}
+  .sub b{color:var(--ink)}
+  .sec{font-size:12.5px;font-weight:650;margin:16px 0 8px;display:flex;align-items:center;gap:8px}
+  .sec em{font-style:normal;font-weight:400;font-size:11px;color:#8A867D}
+  .grid{display:flex;flex-wrap:wrap;gap:14px}
+  .item{width:390px}
+  .cap{display:flex;align-items:baseline;gap:6px;margin:0 2px 5px}
+  .cap b{font-size:12px}
+  .cap span{font-size:10.5px;color:#8A867D}
+  .badge{font-size:9px;padding:1px 6px;border-radius:999px;font-weight:600;margin-left:auto}
+  .badge.ok{background:#EAF3EC;color:#2F7A48}
+  .badge.mid{background:#FAF0DF;color:#8A6410}
+  .badge.bad{background:#FBEDEB;color:#B4443A}
+
+  /* 叠法取样：只取卡片底部 150pt */
+  .stackview{position:relative;width:390px;height:150px;border-radius:14px;overflow:hidden;background:var(--bg);
+             box-shadow:inset 0 0 0 1px #DED9D0}
+  .sk{position:absolute;left:16px;right:16px;border-radius:24px;background:var(--card);
+      box-shadow:0 1px 0 rgba(29,28,26,.10),0 4px 8px rgba(29,28,26,.05),inset 0 0 0 1px rgba(29,28,26,.11)}
+  .sk.front{box-shadow:0 1px 2px rgba(0,0,0,.03),0 10px 28px rgba(0,0,0,.045)}
+  .note{font-size:10.5px;color:#6F6B63;line-height:1.6;margin:5px 2px 0}
+  .note b{color:var(--ink)}
+
+  /* 槽取样：只取记账行 76pt */
+  .rowview{width:390px;height:76px;border-radius:14px;overflow:hidden;background:var(--card);
+           box-shadow:inset 0 0 0 1px #E3DED5;display:flex;align-items:center;padding:0 18px}
+  .rowview .inner{display:flex;align-items:center;gap:12px;width:100%}
+  .lbl{font-size:14px;font-weight:500;color:rgba(29,28,26,.62)}
+  .rh{margin-left:auto;font-size:11px;color:var(--ink3)}
+
+  .slot{width:42px;height:42px;flex:0 0 42px;border-radius:13px;display:grid;place-items:center;color:rgba(29,28,26,.34)}
+  .s1{background:#FCFBF8;border:1px dashed rgba(29,28,26,.18)}
+  .s2{background:#F6F3EC}
+  .s4{background:#fff;box-shadow:inset 0 0 0 .5px rgba(29,28,26,.12),0 1px 2px rgba(29,28,26,.06);color:rgba(29,28,26,.5)}
+  .txtonly{font-size:14px;font-weight:500;color:rgba(29,28,26,.62);display:flex;align-items:center;gap:6px}
+
+  svg{display:block}
+</style>
+</head>
+<body>
+
+<h1>叠法 4 版 + 记账行槽 4 版</h1>
+<p class="sub">都是 <b>390pt 宽的实际尺寸取样</b>，上排取卡片底部 150pt，下排取记账行 76pt。不是示意图，数值就是实现值。</p>
+
+<div class="sec">A · 7 张时的叠法 <em>现状是 6 条等距白边，读成「一沓空白卡片」</em></div>
+<div class="grid" id="stackGrid"></div>
+
+<div class="sec">B · 记账行的槽 <em>行高 56、槽 42×42、两侧 18 内距，只有左侧这一块在变</em></div>
+<div class="grid" id="slotGrid"></div>
+
+<script>
+var PLUS15 = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5.5v13M5.5 12h13"/></svg>';
+var PLUS14 = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5.5v13M5.5 12h13"/></svg>';
+
+/* ---------- A：叠法 ---------- */
+function cards(conf){
+  /* conf: {n, t, colors, shrink, fade}  n 张，层厚 t，底部 8 起 */
+  var n = conf.n, t = conf.t, out = '';
+  for (var d = n - 1; d >= 0; d--){
+    var bottom = 8 + t * d;
+    var lr = 16 + (conf.shrink || 0) * d;
+    var op = conf.fade ? Math.max(.35, 1 - d * 0.18) : 1;
+    var z = n - d;
+    out += '<div class="sk' + (d === 0 ? ' front' : '') + '" style="bottom:' + bottom + 'px;left:' + lr + 'px;right:' + lr + 'px;z-index:' + z
+      + (conf.fade ? ';opacity:' + op.toFixed(2) : '') + '"></div>';
+  }
+  return out;
+}
+
+var STACKS = [
+  { key:'s0', title:'S0 现状（7 张 · 层厚 10）', note:'6 条等距白边 + 6 层描边，读成「一沓空白卡」。<b>问题就出在这</b>：纸叠的质感来自「有一点厚度」，不是「数得清几张」。', badge:'bad', bt:'否',
+    html: cards({ n:7, t:10 }) },
+  { key:'s1', title:'S1 只露 3 条边（推荐）', note:'视觉层数封顶 4 张，更深的卡不画。N≤4 时与现在<b>完全一致</b>，只有 N≥5 才被压住——已通过的那版外观不会被改动。', badge:'ok', bt:'推荐',
+    html: cards({ n:4, t:10 }) },
+  { key:'s2', title:'S2 锥形收窄（4 层 · 每层缩 6）', note:'每往后一层左右各收 6pt，形成「一摞纸」的锥形，而不是平行线。代价：<b>卡宽不再是常数</b>，实现时要多一个变量。', badge:'mid', bt:'备选',
+    html: cards({ n:4, t:12, shrink:6 }) },
+  { key:'s3', title:'S3 只露 2 条边 + 渐隐（厚度感）', note:'两条边往下接一段柔和的底部阴影，表达「还有一沓」但不数层。最像照片里的纸堆，代价是<b>「几天」完全不可见</b>。', badge:'mid', bt:'备选',
+    html: cards({ n:3, t:10, fade:true }) + '<div style="position:absolute;left:16px;right:16px;bottom:0;height:26px;background:linear-gradient(to bottom,rgba(29,28,26,0),rgba(29,28,26,.08));border-radius:0 0 24px 24px"></div>' }
+];
+
+var sg = document.getElementById('stackGrid');
+STACKS.forEach(function(s){
+  var el = document.createElement('div');
+  el.className = 'item';
+  el.innerHTML = '<div class="cap"><b>' + s.title + '</b><span class="badge ' + s.badge + '">' + s.bt + '</span></div>'
+    + '<div class="stackview">' + s.html + '</div>'
+    + '<div class="note">' + s.note + '</div>';
+  sg.appendChild(el);
+});
+
+/* ---------- B：槽 ---------- */
+var SLOTS = [
+  { key:'s1', title:'B1 虚线槽（现状）', note:'42×42 虚线圆角槽。语义最明确（「这里还空着」），但<b>虚线是页面里全新的元素</b>——别处一条虚线都没有。', badge:'mid', bt:'现状',
+    leading:'<span class="slot s1">' + PLUS15 + '</span>' },
+  { key:'s2', title:'B2 空分类位（推荐）', note:'与分类格子同一个底 <b>#F6F3EC</b>、同 42pt、同圆角，只是没有 emoji。最融入、零新增语汇；代价是「空位」的语义比虚线弱一点。', badge:'ok', bt:'推荐',
+    leading:'<span class="slot s2">' + PLUS15 + '</span>' },
+  { key:'s3', title:'B3 纯文字行（无槽）', note:'去掉方块，只有「＋ 记一笔」。最轻，但失去了与流水行共用的 42pt 图标节奏，读成「链接」而不是「又一行」。', badge:'mid', bt:'备选',
+    leading:'<span class="txtonly">' + PLUS14 + '记一笔</span>' },
+  { key:'s4', title:'B4 纸面按钮', note:'白底 + 半像素描边 + 1px 投影，像一枚压上去的小纸签。最像「按钮」，也最容易被读回成物体——就是要避开的那种。', badge:'bad', bt:'不建议',
+    leading:'<span class="slot s4">' + PLUS15 + '</span>' }
+];
+
+var lg = document.getElementById('slotGrid');
+SLOTS.forEach(function(s){
+  var el = document.createElement('div');
+  el.className = 'item';
+  el.innerHTML = '<div class="cap"><b>' + s.title + '</b><span class="badge ' + s.badge + '">' + s.bt + '</span></div>'
+    + '<div class="rowview"><div class="inner">' + s.leading
+    + (s.key === 's3' ? '' : '<span class="lbl">记一笔</span>')
+    + '<span class="rh">今天</span></div></div>'
+    + '<div class="note">' + s.note + '</div>';
+  lg.appendChild(el);
+});
+</script>
+</body>
+</html>

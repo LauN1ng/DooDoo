@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F7F7F9">
+<title>DooDoo · 首页 v2</title>
+<style>
+  :root{
+    --green:#34C759; --green-d:#12803A;
+    --ink:#111114; --i2:#5C5C63; --i3:#8E8E96;
+    --hair:#EFEFF3; --bg:#F7F7F9;
+  }
+  *{box-sizing:border-box;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:#E9E8E4;overflow:hidden;
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+
+  .app{position:relative;margin:0 auto;background:var(--bg);
+    width:100%;max-width:430px;height:100dvh;overflow-y:auto;overflow-x:hidden;
+    -webkit-overflow-scrolling:touch}
+  @media (min-width:520px){
+    body{display:flex;align-items:center;justify-content:center;padding:24px}
+    .app{height:min(920px, calc(100dvh - 48px));border-radius:44px;
+      box-shadow:0 2px 6px rgba(0,0,0,.07),0 30px 70px -30px rgba(0,0,0,.4);border:1px solid #DEDDD8}
+  }
+
+  .hdr{position:sticky;top:0;z-index:20;padding:16px 20px 12px;background:rgba(247,247,249,.97);
+    border-bottom:1px solid rgba(0,0,0,.045)}
+  .hrow{display:flex;align-items:baseline;justify-content:space-between}
+  .hrow .t{font-size:20px;font-weight:600;letter-spacing:-.4px}
+  .hrow .s{font-size:12.5px;color:var(--i3)}
+  .hrow .s b{color:var(--ink);font-weight:600;font-size:14px;margin-left:4px;letter-spacing:-.2px}
+
+  .strip{display:flex;align-items:flex-end;gap:3px;height:34px;margin-top:12px}
+  .strip i{flex:1;display:block;border-radius:2px;min-height:3px;background:#DCEEDF;transition:background .2s}
+  .strip i.off{background:#E4E4E9}
+  .strip i.cur{background:#1F8F3F}
+  .mk-wrap{position:relative;height:5px}
+  .mk-wrap span{position:absolute;top:1px;height:2px;border-radius:1px;background:var(--ink);
+    transition:left .2s cubic-bezier(.3,.8,.3,1),width .2s}
+
+  main{padding-bottom:104px}
+
+  .sec-h{font-size:11px;font-weight:600;letter-spacing:.1em;color:var(--i3);margin:18px 20px 2px}
+
+  .today{margin:6px 14px 0;background:#fff;border-radius:20px;padding:15px 18px 6px;
+    box-shadow:0 1px 2px rgba(0,0,0,.035),0 10px 26px -22px rgba(0,0,0,.3);border:1px solid var(--hair)}
+  .today .th{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2px}
+  .today .d{font-size:15px;font-weight:600;letter-spacing:-.2px}
+  .today .d em{font-style:normal;font-size:11.5px;color:var(--i3);font-weight:400;margin-left:5px}
+  .today .n{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+  .today .sub{font-size:11.5px;color:var(--i3);margin:2px 0 6px}
+
+  .row{display:flex;align-items:center;gap:11px;padding:9px 0}
+  .ico{width:32px;height:32px;border-radius:10px;flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+  .meta{flex:1;min-width:0}
+  .t1{font-size:14px;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .t2{font-size:11.5px;color:var(--i3);margin-top:1px}
+  .amt{font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink);white-space:nowrap}
+  .amt.in{color:var(--green-d)}
+
+  .more{display:block;width:100%;border:0;background:transparent;font:inherit;
+    font-size:12.5px;color:var(--i2);text-align:center;padding:8px 0 12px;cursor:pointer}
+  .more:active{opacity:.55}
+
+  .list{margin:0 14px;background:#fff;border-radius:16px;border:1px solid var(--hair);overflow:hidden}
+  .day{display:block;width:100%;border:0;background:#fff;font:inherit;text-align:left;
+    padding:0 16px;cursor:pointer;transition:background .12s}
+  .day:active{background:#FAFAFB}
+  .day + .day{border-top:1px solid var(--hair)}
+  .day .in{display:flex;align-items:center;justify-content:space-between;height:48px}
+  .day .dl{display:flex;align-items:baseline;gap:7px}
+  .day .dt{font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums}
+  .day .dw{font-size:11.5px;color:var(--i3)}
+  .day .dn{font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink);letter-spacing:-.2px}
+  .day.zero .dt{color:var(--i3)}
+  .day.zero .dn{font-weight:400;color:var(--i3);font-size:13px}
+
+  .detail{overflow:hidden;max-height:0;transition:max-height .3s cubic-bezier(.3,.8,.3,1)}
+  .detail.open{max-height:320px}
+  .detail .row{padding:8px 0}
+  .detail .row:last-child{padding-bottom:14px}
+
+  .goall{margin:14px 14px 0;background:#fff;border:1px solid var(--hair);border-radius:14px;
+    padding:0 16px;display:flex;align-items:center;justify-content:space-between;
+    height:52px;cursor:pointer;text-decoration:none}
+  .goall:active{background:#FAFAFB}
+  .goall span.tx{font-size:14px;color:var(--ink);font-weight:500}
+  .goall span.nx{font-size:12.5px;color:var(--i3);display:flex;align-items:center;gap:5px}
+
+  .hero{margin:16px 14px 0;background:#fff;border:1px solid var(--hair);border-radius:16px;padding:16px 18px}
+  .hero .k{font-size:11.5px;color:var(--i3)}
+  .hero .v{font-size:27px;font-weight:600;letter-spacing:-.9px;margin-top:4px;font-variant-numeric:tabular-nums}
+  .hero .b{margin-top:12px;height:6px;border-radius:3px;background:#EFEFF3;overflow:hidden}
+  .hero .b i{display:block;height:100%;width:68%;background:var(--green);border-radius:3px}
+  .hero .f{display:flex;justify-content:space-between;margin-top:7px;font-size:11.5px;color:var(--i3)}
+
+  .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;margin:0 auto;max-width:430px;
+    height:calc(64px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);
+    background:rgba(255,255,255,.97);border-top:1px solid rgba(0,0,0,.06);
+    display:flex;align-items:center;justify-content:space-around}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9.5px;color:var(--i3)}
+  .tab.on{color:var(--green-d);font-weight:600}
+  .plus{width:46px;height:46px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;
+    box-shadow:0 4px 14px -2px rgba(52,199,89,.45);margin-top:-18px}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <header class="hdr">
+    <div class="hrow">
+      <span class="t">11 月</span>
+      <span class="s">支出<b>¥6,842</b></span>
+    </div>
+    <div class="strip" id="strip"></div>
+    <div class="mk-wrap"><span id="mk" style="left:0;width:8px"></span></div>
+  </header>
+
+  <main>
+    <div class="sec-h">今天</div>
+    <section class="today">
+      <div class="th">
+        <div>
+          <div class="d">11 月 5 日<em>周三</em></div>
+          <div class="sub">3 笔 · 早上那杯咖啡是夯</div>
+        </div>
+        <div class="n">−224.40</div>
+      </div>
+      <div class="row">
+        <div class="ico" style="background:#FDEFF3"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9h12l-1 10.5a1 1 0 0 1-1 .9H8a1 1 0 0 1-1-.9z" stroke="#D4537E" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 9V6.5a3 3 0 0 1 6 0V9" stroke="#D4537E" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+        <div class="meta"><div class="t1">星巴克</div><div class="t2">09:12 · 弹性支出 · 夯</div></div>
+        <div class="amt">−32.00</div>
+      </div>
+      <div class="row">
+        <div class="ico" style="background:#E9F4FD"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5.5 8.5h13l1.3 10.2a1 1 0 0 1-1 1.3H5.2a1 1 0 0 1-1-1.3z" stroke="#378ADD" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 9V6.8a3 3 0 0 1 6 0V9" stroke="#378ADD" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+        <div class="meta"><div class="t1">盒马鲜生</div><div class="t2">12:40 · 生活所需 · 飘</div></div>
+        <div class="amt">−186.40</div>
+      </div>
+      <div id="tr" style="display:none">
+        <div class="row">
+          <div class="ico" style="background:#FBF0E4"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="6" y="4.5" width="12" height="13" rx="3" stroke="#BA7517" stroke-width="1.8"/><path d="M6 12.5h12" stroke="#BA7517" stroke-width="1.8"/><path d="M7.5 20.5l.8-3M16.5 20.5l-.8-3" stroke="#BA7517" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+          <div class="meta"><div class="t1">地铁</div><div class="t2">08:05 · 固定支出 · NPC</div></div>
+          <div class="amt">−6.00</div>
+        </div>
+      </div>
+      <button class="more" id="mb">展开另外 1 笔</button>
+    </section>
+
+    <div class="sec-h">最近</div>
+    <div class="list" id="recent"></div>
+
+    <a class="goall" href="#">
+      <span class="tx">全部账单</span>
+      <span class="nx">34 笔<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#C2C2C8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </a>
+
+    <div class="sec-h">这个月</div>
+    <div class="hero">
+      <div class="k">预算 10,000 · 还剩 13 天</div>
+      <div class="v">还能花 ¥3,157</div>
+      <div class="b"><i></i></div>
+      <div class="f"><span>已花 6,842</span><span>每天可用 ¥242</span></div>
+    </div>
+  </main>
+
+  <nav class="tabbar">
+    <span class="tab on"><svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M4 10.5L12 4l8 6.5V20a1 1 0 0 1-1 1h-4v-5H9v5H5a1 1 0 0 1-1-1z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>首页</span>
+    <span class="tab"><svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M5 6h14M5 12h14M5 18h9" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>账单</span>
+    <span class="plus"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 6v12M6 12h12" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg></span>
+    <span class="tab"><svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M5 19V11M12 19V5M19 19v-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>排行</span>
+    <span class="tab"><svg width="21" height="21" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9" r="3.4" stroke="currentColor" stroke-width="1.9"/><path d="M5 20c1.2-3.5 3.8-5.2 7-5.2s5.8 1.7 7 5.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>我的</span>
+  </nav>
+</div>
+
+<script>
+(function(){
+  const RECENT = [
+    {d:'11 月 4 日', w:'周二', amt:2400, items:[['房租','固定支出 · NPC','−2,400.00','#F1EFFA','house']]},
+    {d:'11 月 3 日', w:'周一', amt:6,    items:[['地铁','固定支出 · NPC','−6.00','#FBF0E4','train']]},
+    {d:'11 月 2 日', w:'周日', amt:0,    items:[]},
+    {d:'11 月 1 日', w:'周六', amt:386,  items:[['和朋友的火锅','弹性支出 · 夯','−386.00','#FDEFF3','bag']]}
+  ];
+  const ICONS = {
+    house:'<path d="M4.5 10.5L12 4.5l7.5 6v9a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1z" stroke="#534AB7" stroke-width="1.8" stroke-linejoin="round"/>',
+    train:'<rect x="6" y="4.5" width="12" height="13" rx="3" stroke="#BA7517" stroke-width="1.8"/><path d="M6 12.5h12" stroke="#BA7517" stroke-width="1.8"/><path d="M7.5 20.5l.8-3M16.5 20.5l-.8-3" stroke="#BA7517" stroke-width="1.7" stroke-linecap="round"/>',
+    bag:'<path d="M6 9h12l-1 10.5a1 1 0 0 1-1 .9H8a1 1 0 0 1-1-.9z" stroke="#D4537E" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 9V6.5a3 3 0 0 1 6 0V9" stroke="#D4537E" stroke-width="1.8" stroke-linecap="round"/>'
+  };
+
+  const mount = document.getElementById('recent');
+  RECENT.forEach(function(it){
+    const b = document.createElement('button');
+    b.className = 'day' + (it.amt === 0 ? ' zero' : '');
+    b.innerHTML =
+      '<div class="in">' +
+        '<div class="dl"><span class="dt">' + it.d + '</span><span class="dw">' + it.w + '</span></div>' +
+        '<span class="dn">' + (it.amt === 0 ? '没花钱' : '−' + it.amt.toLocaleString()) + '</span>' +
+      '</div>' +
+      '<div class="detail">' + (it.items || []).map(function(x){
+        return '<div class="row"><div class="ico" style="background:' + x[3] + '"><svg width="16" height="16" viewBox="0 0 24 24" fill="none">' + (ICONS[x[4]] || '') + '</svg></div>' +
+               '<div class="meta"><div class="t1">' + x[0] + '</div><div class="t2">' + x[1] + '</div></div>' +
+               '<div class="amt">' + x[2] + '</div></div>';
+      }).join('') + '</div>';
+    b.addEventListener('click', function(){ b.querySelector('.detail').classList.toggle('open'); });
+    mount.appendChild(b);
+  });
+
+  const strip = document.getElementById('strip');
+  const mk = document.getElementById('mk');
+  const amts = [224, 2400, 6, 0, 386, 58, 1280, 32, 240, 0, 96, 460, 0, 720, 180, 44, 0, 300, 1560, 66, 220, 0, 88, 340, 120, 0, 52, 186, 900, 210];
+  const maxA = 2400;
+  const bars = amts.map(function(a, i){
+    const b = document.createElement('i');
+    b.style.height = (4 + Math.sqrt(a / maxA) * 30) + 'px';
+    b.className = 'off';
+    if (i === 0) b.classList.add('cur');
+    strip.appendChild(b);
+    return b;
+  });
+
+  const mb = document.getElementById('mb'), tr = document.getElementById('tr');
+  let open = false;
+  mb.addEventListener('click', function(){
+    open = !open;
+    tr.style.display = open ? 'block' : 'none';
+    mb.textContent = open ? '收起' : '展开另外 1 笔';
+  });
+
+  function sync(){
+    const hh = document.querySelector('.hdr').offsetHeight;
+    const items = [document.querySelector('section.today')].concat(Array.from(mount.children));
+    let idx = 0;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].getBoundingClientRect().bottom > hh + 30) { idx = i; break; }
+    }
+    bars.forEach(function(b, i){
+      b.className = (i === idx ? 'off' : 'off');
+      if (i === idx) b.classList.add('cur');
+      if (i === 0 && idx !== 0) b.classList.add('cur');
+    });
+    const bw = bars[0].offsetWidth + 3;
+    mk.style.left = (idx * bw) + 'px';
+    mk.style.width = bars[0].offsetWidth + 'px';
+  }
+  document.getElementById('app').addEventListener('scroll', function(){ requestAnimationFrame(sync); }, {passive:true});
+  setTimeout(sync, 50);
+})();
+</script>
+</body>
+</html>

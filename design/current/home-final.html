@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DooDoo · 首页定稿</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden}
+  body{background:#EDEAE4;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",sans-serif;color:#1D1C1A;display:flex;flex-direction:column;align-items:center}
+
+  .bar{width:100%;height:52px;flex:0 0 52px;display:flex;align-items:center;gap:12px;padding:0 20px;border-bottom:1px solid #E2DFD9;background:#F4F1EC;overflow:hidden;z-index:5}
+  .brand{font-size:13px;font-weight:650;white-space:nowrap}
+  .hint{margin-left:auto;font-size:11.5px;color:#8A867D;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:600px}
+
+  .stage{flex:1;min-width:0;min-height:0;width:100%;position:relative;overflow:hidden}
+  .device{position:absolute;left:50%;top:16px;margin-left:-195px;width:390px;height:844px;transform-origin:top center}
+  .screen{position:absolute;inset:0;overflow:hidden;border-radius:44px;background:#F7F5F1;box-shadow:0 0 0 1px #DAD6CE,0 30px 70px rgba(0,0,0,.16)}
+  .statusbar{position:absolute;top:0;left:0;right:0;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;font-size:12px;font-weight:600;z-index:90}
+  .statusbar i{display:block;width:15px;height:9px;border:.8px solid #1D1C1A;border-radius:2px;position:relative}
+  .statusbar i::after{content:"";position:absolute;inset:1.5px;background:#1D1C1A;border-radius:1px}
+
+  .hd{position:absolute;top:52px;left:20px;right:20px;height:34px;display:flex;align-items:center;justify-content:space-between;z-index:50}
+  .hd .logo{font-size:21px;font-weight:700;letter-spacing:-.02em}
+
+  /* 卡堆铺到距屏幕底 8，层厚仍是 10pt 三层，写法保持现状的淡 */
+  .deck{position:absolute;top:100px;left:0;right:0;bottom:8px;touch-action:pan-y}
+
+  .card{position:absolute;left:16px;right:16px;top:0;background:#fff;border-radius:24px;
+        padding:20px 18px 76px;display:flex;flex-direction:column;transform-origin:bottom center}
+  .lay0{left:16px;right:16px;bottom:38px;z-index:40;box-shadow:0 1px 2px rgba(0,0,0,.03),0 10px 28px rgba(0,0,0,.045)}
+  .lay1{left:26px;right:26px;bottom:28px;z-index:30;box-shadow:0 1px 0 rgba(29,28,26,.10),0 4px 8px rgba(29,28,26,.05),inset 0 0 0 1px rgba(29,28,26,.11)}
+  .lay2{left:25px;right:25px;bottom:18px;z-index:20;box-shadow:0 1px 0 rgba(29,28,26,.10),0 4px 8px rgba(29,28,26,.05),inset 0 0 0 1px rgba(29,28,26,.11)}
+  .lay3{left:28px;right:28px;bottom:8px;z-index:10;box-shadow:0 1px 0 rgba(29,28,26,.10),0 6px 16px rgba(29,28,26,.10),inset 0 0 0 1px rgba(29,28,26,.11)}
+  .lay1>*,.lay2>*,.lay3>*{opacity:0}
+  .layX{opacity:0;pointer-events:none;z-index:5}
+
+  .ch{display:flex;justify-content:space-between;align-items:flex-start}
+  .dwrap{display:flex;align-items:baseline;gap:6px}
+  .mon{font-size:11px;color:#A8A39A;letter-spacing:.08em}
+  .dnum{font-size:32px;font-weight:600;letter-spacing:-.02em;line-height:1}
+  .wday{font-size:12px;color:#A8A39A}
+  .totals{display:flex;align-items:baseline;gap:6px}
+  .totals .lbl{font-size:11px;color:#A8A39A}
+  .totals .exp{font-size:16px;font-weight:600;color:#C0392B;font-variant-numeric:tabular-nums}
+  .hr{height:1px;background:#EFECE5;margin:14px 0 2px}
+  .rows{flex:1;overflow-y:auto;margin:0 -2px;padding:0 2px;min-height:0;scrollbar-width:none;
+        -webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 34px),transparent 100%);
+        mask-image:linear-gradient(to bottom,#000 calc(100% - 34px),transparent 100%)}
+  .rows::-webkit-scrollbar{width:0;height:0}
+  /* 便签：较上月（口径 MTD 同期，见设计文档 3.5.2） */
+  .note{position:absolute;right:6px;top:-14px;transform:rotate(-3deg);
+        background:#FFF7E0;border:1px solid #EFE2BE;border-radius:5px;padding:5px 10px;
+        font-size:11px;color:#8A6D2F;box-shadow:0 3px 8px rgba(0,0,0,.09);z-index:6;white-space:nowrap}
+  .note s{text-decoration:none;color:#3B7A44}
+  .tx{display:flex;align-items:center;gap:12px;padding:11px 0}
+  .ic{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;flex:0 0 42px}
+  .ic img{width:27px;height:27px;display:block}
+  .tt{font-size:14px;font-weight:500}
+  .ts{font-size:11.5px;color:#A8A39A;margin-top:2px}
+  .ta{margin-left:auto;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+  .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#B5B1A8;font-size:14px}
+  .empty small{font-size:11.5px;color:#C6C2B9}
+
+  /* 导航：压在卡堆最上面一层，层厚带完整从它下方穿过 */
+  .nav{position:absolute;left:16px;bottom:52px;height:40px;z-index:60;
+       display:flex;align-items:center;gap:1px;padding:0 6px;border-radius:20px;background:#1D1C1A;
+       box-shadow:inset 0 0 0 .5px rgba(255,255,255,.10),0 2px 4px rgba(29,28,26,.20),0 14px 30px rgba(29,28,26,.28)}
+  .nav .t{width:38px;height:34px;display:grid;place-items:center;border-radius:17px;color:rgba(255,255,255,.52)}
+  .nav .t.on{color:#fff;background:rgba(255,255,255,.14)}
+  .fab{position:absolute;right:18px;bottom:58px;width:52px;height:52px;border-radius:50%;z-index:60;
+       background:#1D1C1A;color:#fff;display:grid;place-items:center;
+       box-shadow:0 2px 4px rgba(29,28,26,.20),0 14px 30px rgba(29,28,26,.26)}
+</style>
+</head>
+<body>
+<div class="bar">
+  <div class="brand">首页 · 定稿</div>
+  <div class="hint" id="hint">卡堆现状不变（层厚 10pt）；便签改「本月 ↘12.4%」（MTD 同期）；单日多笔=滚动+渐隐+计数行</div>
+</div>
+<div class="stage"><div class="device" id="dev"></div></div>
+
+<script>
+var ICO = {
+  flow:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>',
+  wallet:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="6" width="18" height="13" rx="3.5"/><path d="M3 10.5h18M16 15h2"/></svg>',
+  chart:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5 19V11M12 19V6M19 19v-5"/></svg>',
+  plus:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M12 5.5v13M5.5 12h13"/></svg>'
+};
+var DAYS = [
+  { m:11, d:2, w:'周日', rows:[] },
+  { m:11, d:3, w:'周一', rows:[
+    { icon:'Croissant', t:'好利来', s:'吃 · 花呗', a:26.00, bg:'#FFF1E6' },
+    { icon:'LightRail', t:'地铁', s:'行 · 建行5044', a:4.00, bg:'#EAF2FF' }
+  ]},
+  { m:11, d:4, w:'周二', rows:[
+    { icon:'Cat', t:'麦富迪猫粮', s:'情 · 白条', a:129.00, bg:'#F3EEFF' }
+  ]},
+  { m:11, d:5, w:'周三', rows:[
+    { icon:'HotBeverage', t:'星巴克', s:'吃 · 花呗', a:28.00, bg:'#FFF1E6' },
+    { icon:'Taxi', t:'滴滴', s:'行 · 招行', a:19.50, bg:'#EAF2FF' }
+  ]},
+  { m:11, d:6, w:'今天', today:true, rows:[
+    { icon:'Croissant', t:'好利来', s:'吃 · 花呗', a:32.00, bg:'#FFF1E6' },
+    { icon:'LightRail', t:'地铁', s:'行 · 建行5044', a:4.00, bg:'#EAF2FF' },
+    { icon:'Cat', t:'麦富迪猫粮', s:'情 · 白条', a:129.00, bg:'#F3EEFF' }
+  ]}
+];
+var MON = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+function money(n){ return n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function pad2(n){ return String(n).padStart(2,'0'); }
+
+function cardHTML(day){
+  var sum = day.rows.reduce(function(a,r){ return a + r.a; }, 0);
+  var rows = day.rows.length
+    ? day.rows.map(function(r){
+        return '<div class="tx"><div class="ic" style="background:' + r.bg + '">'
+          + '<img src="../../assets/emoji/picked/' + r.icon + '.png" alt="">'
+          + '</div><div><div class="tt">' + r.t + '</div><div class="ts">' + r.s + '</div></div>'
+          + '<div class="ta">−¥' + money(r.a) + '</div></div>';
+      }).join('')
+    : '<div class="empty">没花钱的一天 :)<small>右滑可以看到昨天之前</small></div>';
+  var head = '<div class="ch"><div class="dwrap"><span class="mon">' + MON[day.m-1] + '</span>'
+    + '<span class="dnum">' + pad2(day.d) + '</span><span class="wday">' + day.w + '</span></div>'
+    + (sum > 0 ? '<div class="totals"><span class="lbl">支出</span><span class="exp">−¥' + money(sum) + '</span></div>' : '')
+    + '</div>';
+  /* 便签：只在「今天」这张卡显示（口径是月度，见设计文档 3.5.2） */
+  var note = day.today
+    ? '<span class="note">本月 <s>↘ 12.4%</s></span>'
+    : '';
+  /* 单日多笔：底部渐隐（用户裁定：不加计数行） */
+  var VIS = 9;
+  return '<div class="card">' + note + head + '<div class="hr"></div><div class="rows">' + rows + '</div></div>';
+}
+
+var dev = document.getElementById('dev');
+var cardsHTML = '';
+for (var i = 0; i < DAYS.length; i++) cardsHTML += cardHTML(DAYS[i]);
+
+dev.innerHTML = '<div class="screen">'
+  + '<div class="statusbar"><span>9:41</span><span><i></i></span></div>'
+  + '<div class="hd"><span class="logo">DooDoo</span></div>'
+  + '<div class="deck">' + cardsHTML + '</div>'
+  + '<div class="nav">'
+  +   '<span class="t on">' + ICO.flow + '</span>'
+  +   '<span class="t">' + ICO.wallet + '</span>'
+  +   '<span class="t">' + ICO.chart + '</span>'
+  + '</div><div class="fab">' + ICO.plus + '</div></div>';
+
+var deck = dev.querySelector('.deck');
+var cards = [].slice.call(dev.querySelectorAll('.card'));
+var idx = cards.length - 1, dx = 0, down = false, sx = 0, sy = 0, axis = null, lx = 0, lt = 0, vel = 0;
+
+var LAYCLS = { '0':'lay0', '-1':'lay1', '-2':'lay2', '-3':'lay3' };
+var DECOR = { r:[-1.0,0.9,-1.3], x:[-5,4,-4], fr:[1.0,-1.2,1.4], fx:[-2,2,-2], lift:[4,3,2] };
+var peelP = 0;
+
+function rel(){ cards.forEach(function(c, i){ c.dataset.rel = i - idx; }); }
+function paint(){
+  cards.forEach(function(c){
+    var r = +c.dataset.rel;
+    c.className = 'card ' + (LAYCLS[r] || 'layX');
+  });
+}
+function layout(d, animate, fanP){
+  var p = fanP || 0;
+  var cf = animate ? 'transform .36s cubic-bezier(.32,.72,0,1),opacity .22s,left .36s cubic-bezier(.32,.72,0,1),right .36s cubic-bezier(.32,.72,0,1),bottom .36s cubic-bezier(.32,.72,0,1)' : 'none';
+  cards.forEach(function(card){
+    var r = +card.dataset.rel, tr;
+    card.style.transition = cf;
+    if (r === 0){
+      tr = 'translateX(' + d + 'px) rotate(' + (d / 110) + 'deg)';
+    } else if (r < 0 && r >= -3){
+      var k = -r;
+      tr = 'translateX(' + (DECOR.x[k-1] + p * DECOR.fx[k-1]) + 'px)'
+         + ' translateY(' + (-DECOR.lift[k-1] * peelP) + 'px)'
+         + ' rotate(' + (DECOR.r[k-1] + p * DECOR.fr[k-1]) + 'deg)';
+    } else {
+      tr = 'translateX(420px)';
+    }
+    card.style.transform = tr;
+  });
+}
+function settle(){
+  var w = deck.clientWidth;
+  var moved = Math.abs(dx) > w * 0.22 || Math.abs(vel) > 0.55;
+  if (moved && dx > 0 && idx > 0) idx--;
+  else if (moved && dx < 0 && idx < cards.length - 1) idx++;
+  dx = 0; vel = 0; peelP = 0;
+  rel(); paint(); layout(0, true, 0);
+}
+function scaleFactor(){ return dev.getBoundingClientRect().width / 390; }
+
+dev.addEventListener('pointerdown', function(e){
+  down = true; sx = e.clientX; sy = e.clientY; axis = null; lx = 0; lt = performance.now(); vel = 0;
+  cards.forEach(function(c){ c.style.transition = 'none'; });
+});
+window.addEventListener('pointermove', function(e){
+  if (!down) return;
+  var s = scaleFactor() || 1;
+  var d = (e.clientX - sx) / s, dy = (e.clientY - sy) / s;
+  /* 手势仲裁：首 8pt 按位移主轴判定方向。纵向给卡内滚动，横向给翻卡 */
+  if (!axis && (Math.abs(d) > 8 || Math.abs(dy) > 8)) axis = Math.abs(d) > Math.abs(dy) ? 'x' : 'y';
+  if (axis !== 'x') return;
+  dx = d;
+  if ((dx > 0 && idx === 0) || (dx < 0 && idx === cards.length - 1)) dx *= 0.30;
+  var now = performance.now();
+  if (now - lt > 16){ vel = (dx - lx) / (now - lt); lx = dx; lt = now; }
+  var w = deck.clientWidth;
+  var p = Math.min(1, Math.abs(dx) / (w * 0.45));
+  peelP = Math.min(1, Math.abs(dx) / (w * 0.5));
+  layout(dx, false, p);
+});
+window.addEventListener('pointerup', function(){
+  if (!down) return; down = false;
+  if (axis !== 'x'){ dx = 0; peelP = 0; layout(0, true, 0); return; }
+  settle();
+});
+window.addEventListener('pointercancel', function(){ if (!down) return; down = false; dx = 0; peelP = 0; layout(0, true, 0); });
+
+function fit(){
+  var s = Math.min((window.innerWidth - 40) / 390, (window.innerHeight - 52 - 36) / 844, 1);
+  dev.style.transform = 'scale(' + s + ')';
+}
+window.addEventListener('resize', fit);
+rel(); paint(); layout(0, false, 0); fit();
+</script>
+</body>
+</html>

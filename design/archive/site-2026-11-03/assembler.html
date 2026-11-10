@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DooDoo · 组件拼装台</title>
+<style>
+  :root{
+    --bg:#F2F0EC; --paper:#FFFFFF;
+    --ink:#141414; --ink-2:#57534C; --ink-3:#8E887E;
+    --line:#E2DFD8; --line-2:#CFCAC0;
+    --warm:#F7F5F1;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  }
+  .app{display:flex;height:100vh;overflow:hidden;}
+
+  /* ---------- 左：预览 ---------- */
+  .stage{
+    flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:28px;background:
+      radial-gradient(circle at 50% 30%, #FAF8F4 0%, var(--bg) 65%);
+    min-width:0;overflow-y:auto;
+  }
+  .stage-label{
+    font-size:10.5px;letter-spacing:.18em;color:var(--ink-3);
+    text-transform:uppercase;margin-bottom:16px;
+  }
+
+  .phone{
+    width:352px;height:680px;background:var(--paper);
+    border-radius:34px;position:relative;overflow:hidden;
+    box-shadow:0 1px 2px rgba(0,0,0,.06), 0 14px 40px -12px rgba(0,0,0,.22), 0 0 0 1px rgba(0,0,0,.05);
+    display:flex;flex-direction:column;
+  }
+  .notch{
+    position:absolute;top:9px;left:50%;transform:translateX(-50%);
+    width:88px;height:22px;background:var(--ink);border-radius:12px;z-index:30;
+  }
+  .sbar{
+    height:34px;display:flex;align-items:flex-end;justify-content:space-between;
+    padding:0 22px 4px;font-size:10.5px;font-weight:600;color:var(--ink);
+    flex:0 0 auto;
+  }
+  .content{flex:1 1 auto;overflow-y:auto;overflow-x:hidden;position:relative;scrollbar-width:none;}
+  .content::-webkit-scrollbar{display:none;}
+  #overlay{position:absolute;inset:0;pointer-events:none;z-index:15;}
+
+  /* 顶栏 */
+  .bar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:8px 18px 10px;flex:0 0 auto;
+  }
+  .bar .ttl{font-size:20px;font-weight:700;letter-spacing:-.02em;}
+  .bar .acts{display:flex;gap:8px;align-items:center;}
+  .chip{
+    font-size:11px;border:1px solid var(--line-2);border-radius:13px;
+    padding:3px 10px;color:var(--ink-2);white-space:nowrap;font-weight:500;
+  }
+  .chip.solid{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+  /* 日期头 - sticky */
+  .dhead{
+    display:flex;align-items:baseline;justify-content:space-between;
+    padding:6px 18px 6px;background:var(--warm);
+    border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  }
+  .dhead .d{font-size:12.5px;font-weight:650;letter-spacing:.01em;}
+  .dhead .s{font-size:11px;color:var(--ink-3);}
+  /* 日期头 - 细线 */
+  .dline{
+    height:1px;background:var(--ink);margin:14px 18px 2px;
+  }
+  .dline + .dlab{font-size:10px;color:var(--ink-3);padding:1px 18px 5px;letter-spacing:.1em;}
+  /* 日期头 - 超大 */
+  .dbig{padding:12px 18px 4px;}
+  .dbig .l{font-size:10px;color:var(--ink-3);letter-spacing:.12em;}
+  .dbig .n{font-size:52px;font-weight:700;line-height:1.02;letter-spacing:-.045em;}
+  .dbig .n i{font-style:normal;font-size:13px;font-weight:500;color:var(--ink-3);margin-left:5px;letter-spacing:0;}
+  .dbig .rule{height:2.5px;background:var(--ink);margin-top:6px;}
+
+  /* ---- 流水行 A：图标容器 + 双行 ---- */
+  .rA{display:flex;align-items:center;gap:11px;padding:0 18px;height:58px;border-bottom:1px solid #F1EEE8;}
+  .rA .ico{
+    width:38px;height:38px;border-radius:11px;flex:0 0 auto;
+    background:#EFEBE3;display:flex;align-items:center;justify-content:center;
+    font-size:17px;color:var(--ink-3);
+  }
+  .rA .ico.plain{border-radius:0;background:transparent;font-size:20px;}
+  .rA .ico.round{border-radius:50%;}
+  .rA .m{flex:1 1 auto;min-width:0;}
+  .rA .c{font-size:14.5px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .rA .s{font-size:11px;color:var(--ink-3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .rA .v{font-size:15px;font-weight:650;letter-spacing:-.01em;flex:0 0 auto;}
+  .rA .v.out{color:var(--ink-3);font-weight:550;}
+
+  /* ---- 流水行 B：单行 ---- */
+  .rB{display:flex;align-items:center;gap:10px;padding:0 18px;height:46px;border-bottom:1px solid #F1EEE8;}
+  .rB .ico{width:20px;height:20px;border-radius:5px;background:#EFEBE3;flex:0 0 auto;}
+  .rB .c{font-size:14px;flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .rB .v{font-size:14.5px;font-weight:620;flex:0 0 auto;}
+
+  /* ---- 流水行 C：账本表格 ---- */
+  .rC{display:flex;align-items:center;padding:0 18px;height:40px;border-bottom:1px solid #F1EEE8;}
+  .rC .dt{width:34px;font-size:11px;color:var(--ink-3);flex:0 0 auto;text-align:right;padding-right:12px;}
+  .rC .c{flex:1 1 auto;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .rC .v{font-size:13.5px;font-weight:620;flex:0 0 auto;font-variant-numeric:tabular-nums;}
+
+  /* ---- 流水行 D：大金额 ---- */
+  .rD{padding:9px 18px 11px;border-bottom:1px solid #F1EEE8;}
+  .rD .top{display:flex;align-items:baseline;gap:8px;}
+  .rD .v{font-size:26px;font-weight:680;letter-spacing:-.035em;line-height:1.15;}
+  .rD .c{font-size:13px;font-weight:600;color:var(--ink);}
+  .rD .meta{font-size:11px;color:var(--ink-3);margin-top:2px;}
+
+  .tag{
+    display:inline-block;font-size:9.5px;border:1px solid var(--line-2);
+    border-radius:3px;padding:0 4px;color:var(--ink-3);
+    margin-left:6px;vertical-align:1.5px;font-weight:500;white-space:nowrap;
+  }
+
+  /* 底栏 - tab */
+  .navtab{
+    flex:0 0 auto;display:flex;padding:8px 0 20px;border-top:1px solid var(--line);
+    background:rgba(255,255,255,.96);backdrop-filter:blur(12px);
+  }
+  .navtab div{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9.5px;color:var(--ink-3);}
+  .navtab div .g{width:19px;height:19px;border:1.4px solid var(--line-2);border-radius:5px;}
+  .navtab div.on{color:var(--ink);font-weight:650;}
+  .navtab div.on .g{border-color:var(--ink);background:var(--ink);}
+
+  /* 底栏 - 文字 */
+  .navtext{
+    flex:0 0 auto;display:flex;justify-content:center;gap:44px;padding:14px 0 22px;
+    border-top:1px solid var(--line);background:rgba(255,255,255,.96);backdrop-filter:blur(12px);
+    font-size:12.5px;color:var(--ink-3);
+  }
+  .navtext span.on{color:var(--ink);font-weight:700;}
+
+  /* 底栏 - 水位条 */
+  .navwater{
+    flex:0 0 auto;background:var(--ink);color:#fff;padding:11px 18px 20px;
+    display:flex;align-items:center;gap:12px;position:relative;
+  }
+  .navwater::before{
+    content:"";position:absolute;top:5px;left:50%;transform:translateX(-50%);
+    width:30px;height:2.5px;border-radius:2px;background:rgba(255,255,255,.34);
+  }
+  .navwater .k{font-size:9.5px;letter-spacing:.1em;opacity:.6;}
+  .navwater .v{font-size:17px;font-weight:680;letter-spacing:-.02em;}
+  .navwater .n{margin-left:auto;text-align:right;font-size:9.5px;opacity:.72;line-height:1.45;}
+
+  /* FAB */
+  .fab{
+    position:absolute;right:18px;bottom:22px;width:52px;height:52px;border-radius:50%;
+    background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;
+    font-size:26px;font-weight:300;line-height:1;z-index:20;
+    box-shadow:0 5px 16px -4px rgba(0,0,0,.35);
+  }
+  .pill{
+    position:absolute;left:18px;right:18px;bottom:20px;height:50px;border-radius:25px;
+    background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;
+    font-size:15px;font-weight:620;letter-spacing:.01em;z-index:20;
+    box-shadow:0 5px 18px -5px rgba(0,0,0,.35);
+  }
+
+  /* ---------- 右：面板 ---------- */
+  .panel{
+    flex:0 0 424px;background:#FBFAF8;border-left:1px solid var(--line);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .panel-head{padding:22px 24px 16px;border-bottom:1px solid var(--line);flex:0 0 auto;}
+  .panel-head .k{font-size:10px;letter-spacing:.18em;color:var(--ink-3);text-transform:uppercase;}
+  .panel-head h1{font-size:18px;font-weight:680;letter-spacing:-.015em;margin-top:5px;}
+  .panel-head p{font-size:11.5px;color:var(--ink-3);margin-top:6px;line-height:1.55;}
+  .panel-body{flex:1 1 auto;overflow-y:auto;padding:6px 24px 20px;}
+
+  .grp{padding:17px 0 15px;border-bottom:1px solid var(--line);}
+  .grp:last-child{border-bottom:none;}
+  .grp-h{display:flex;align-items:baseline;gap:8px;margin-bottom:10px;}
+  .grp-h .n{font-size:10px;color:var(--ink-3);font-weight:700;letter-spacing:.08em;}
+  .grp-h .t{font-size:13px;font-weight:650;letter-spacing:-.01em;}
+  .opts{display:flex;flex-direction:column;gap:6px;}
+
+  .o{
+    display:flex;align-items:center;gap:10px;
+    border:1px solid var(--line);border-radius:7px;padding:9px 11px;
+    background:#fff;cursor:pointer;transition:border-color .12s, box-shadow .12s, background .12s;
+    text-align:left;font-family:inherit;
+  }
+  .o:hover{border-color:var(--line-2);}
+  .o.on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink);}
+  .o .box{
+    width:15px;height:15px;border-radius:50%;border:1.5px solid var(--line-2);
+    flex:0 0 auto;position:relative;
+  }
+  .o.on .box{border-color:var(--ink);background:var(--ink);}
+  .o.on .box::after{
+    content:"";position:absolute;left:4.5px;top:4.5px;width:4px;height:4px;
+    border-radius:50%;background:#fff;
+  }
+  .o .lb{flex:1 1 auto;min-width:0;}
+  .o .lb b{display:block;font-size:12.5px;font-weight:620;letter-spacing:-.005em;}
+  .o .lb span{display:block;font-size:11px;color:var(--ink-3);line-height:1.45;margin-top:1px;}
+
+  .panel-foot{
+    flex:0 0 auto;border-top:1px solid var(--line);padding:14px 24px 18px;background:#fff;
+  }
+  .cfg{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:11px;color:var(--ink-2);background:var(--warm);
+    border:1px solid var(--line);border-radius:6px;padding:10px 12px;
+    line-height:1.75;white-space:pre-wrap;word-break:break-all;
+  }
+  .foot-note{font-size:11px;color:var(--ink-3);margin-top:9px;line-height:1.55;}
+
+  @media(max-width:900px){
+    .app{flex-direction:column;height:auto;overflow:visible;}
+    .stage{padding:20px 12px;}
+    .phone{width:320px;height:600px;}
+    .panel{flex:0 0 auto;border-left:none;border-top:1px solid var(--line);overflow:visible;max-height:none;}
+    .panel-body{overflow:visible;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="stage">
+    <div class="stage-label">预览 · 点右侧换件</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="sbar"><span>9:41</span><span>▮▮▮</span></div>
+      <div class="content" id="content"></div>
+      <div id="overlay"></div>
+      <div id="navwrap"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="k">DooDoo · 拼装台</div>
+      <h1>逐个部位挑</h1>
+      <p>不用判断整体。只看「这一行/这一个栏，我想不想要」。全部点完，底下那行配置发我，我按它做完整页。</p>
+    </div>
+
+    <div class="panel-body" id="panel"></div>
+
+    <div class="panel-foot">
+      <div class="cfg" id="cfg"></div>
+      <div class="foot-note">数据用的是你真实账单里的数（花呗 32、白条 189、招行 665.36、工资 9,800）。这样你看到的是它装你自己账的样子。</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const state = {
+  nav:   'text',    // tab | text | top | water
+  row:   'A',       // A | B | C | D
+  head:  'sticky',  // sticky | line | big
+  entry: 'pill',    // fab | pill | top
+  ico:   'box',     // box | plain | round
+  amt:   'cents'    // cents | round | comma
+};
+
+const GROUPS = [
+  {
+    key:'nav', title:'底部导航', hint:'',
+    opts:[
+      {v:'tab',   b:'系统 Tab Bar',        s:'四个图标+文字，iOS 原生，零学习成本'},
+      {v:'text',  b:'三段纯文字',          s:'只有流水/还款/资产，设置收进顶栏'},
+      {v:'water', b:'水位条',              s:'不切页，本月应还金额常驻底部'},
+      {v:'top',   b:'不要底栏',            s:'还款和资产入口都放顶栏，底部全给流水'}
+    ]
+  },
+  {
+    key:'row', title:'流水行', hint:'',
+    opts:[
+      {v:'A', b:'图标 + 双行',   s:'38pt 容器装 emoji，下行写账户名。信息最全'},
+      {v:'B', b:'单行紧凑',      s:'46pt 一行放完，一屏能多看两三笔'},
+      {v:'C', b:'账本表格',      s:'左边日期列，金额右对齐，像纸质账'},
+      {v:'D', b:'大金额行',      s:'金额做成 26pt 视觉主体，分类退成小字'}
+    ]
+  },
+  {
+    key:'head', title:'日期头', hint:'',
+    opts:[
+      {v:'sticky', b:'粘性分组头', s:'「今天 · 11月4日」浅底一条，滚动时吸顶'},
+      {v:'line',   b:'一根黑细线', s:'只用横线分隔，不做文字头'},
+      {v:'big',    b:'超大数字日期', s:'52pt 的 04 加粗线，v6 的做法'}
+    ]
+  },
+  {
+    key:'entry', title:'记一笔入口', hint:'',
+    opts:[
+      {v:'pill', b:'底部黑胶囊', s:'全宽浮在内容上，最沉'},
+      {v:'fab',  b:'右下圆按钮', s:'52pt 圆形，最省地方'},
+      {v:'top',  b:'顶栏 ＋',    s:'没有悬浮层，最不挡内容'}
+    ]
+  },
+  {
+    key:'ico', title:'Emoji 容器', hint:'只对「图标+双行」有效',
+    opts:[
+      {v:'box',   b:'圆角方块（浅底）', s:'38pt 圆角 11，每类一个浅底色'},
+      {v:'plain', b:'裸放',             s:'不装容器，emoji 直接站在页面上'},
+      {v:'round', b:'圆形（浅底）',     s:'38pt 圆形，比方块柔'}
+    ]
+  },
+  {
+    key:'amt', title:'金额格式', hint:'',
+    opts:[
+      {v:'cents', b:'-32.00',    s:'保留两位小数，最精确'},
+      {v:'round', b:'-32',       s:'整数省略小数，最干净'},
+      {v:'comma', b:'-1,234.50', s:'千分位，大额好读'}
+    ]
+  }
+];
+
+const DATA = [
+  {d:'today',  c:'餐饮',     s:'花呗',        v:32,      k:'expense'},
+  {d:'today',  c:'交通',     s:'微信余额',    v:6.5,     k:'expense'},
+  {d:'today',  c:'日用百货', s:'京东白条',    v:189,     k:'expense'},
+  {d:'today',  c:'还款',     s:'招行信用卡 8857', v:665.36, k:'repay'},
+  {d:'today',  c:'工资',     s:'工资卡',      v:-9800,   k:'income'},
+  {d:'today',  c:'转账',     s:'微信 → 建行 5044', v:1000, k:'transfer'},
+  {d:'yest',   c:'餐饮',     s:'招行信用卡',  v:48,      k:'expense'},
+  {d:'yest',   c:'娱乐',     s:'花呗',        v:166.7,   k:'expense'},
+  {d:'yest',   c:'日用百货', s:'支付宝余额',  v:24.9,    k:'expense'},
+  {d:'od',     c:'餐饮',     s:'微信余额',    v:58,      k:'expense'},
+  {d:'od',     c:'医疗',     s:'招行信用卡',  v:320,     k:'expense'}
+];
+
+const HEADS = {
+  today:{t:'今天 · 11月4日', s:'支出 328.00'},
+  yest: {t:'昨天 · 11月3日', s:'支出 239.60'},
+  od:   {t:'11月2日 · 周一', s:'支出 378.00'}
+};
+
+function fmt(v, kind){
+  const abs = Math.abs(v);
+  let s;
+  if(state.amt === 'round'){
+    s = abs % 1 === 0 ? String(abs) : abs.toFixed(2);
+    if(s.endsWith('.00')) s = s.slice(0,-3);
+  } else if(state.amt === 'comma'){
+    s = abs.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  } else {
+    s = abs.toFixed(2);
+  }
+  if(kind === 'income') return '+' + s;
+  return '−' + s;
+}
+
+function iconClass(){
+  if(state.ico === 'plain') return 'ico plain';
+  if(state.ico === 'round') return 'ico round';
+  return 'ico';
+}
+
+function rowHtml(it){
+  const badge = (it.k === 'repay' || it.k === 'transfer') ? '<span class="tag">不计支出</span>' : '';
+  const vc = (it.k === 'repay' || it.k === 'transfer') ? 'v out' : 'v';
+
+  if(state.row === 'A'){
+    return `<div class="rA">
+      <div class="${iconClass()}">●</div>
+      <div class="m"><div class="c">${it.c}${badge}</div><div class="s">${it.s}</div></div>
+      <div class="${vc}">${fmt(it.v,it.k)}</div>
+    </div>`;
+  }
+  if(state.row === 'B'){
+    return `<div class="rB">
+      <div class="ico"></div>
+      <div class="c">${it.c}${badge}</div>
+      <div class="v">${fmt(it.v,it.k)}</div>
+    </div>`;
+  }
+  if(state.row === 'C'){
+    const day = it.d === 'today' ? '4' : it.d === 'yest' ? '3' : '2';
+    return `<div class="rC">
+      <div class="dt">${day}</div>
+      <div class="c">${it.c} · ${it.s}${badge}</div>
+      <div class="v">${fmt(it.v,it.k)}</div>
+    </div>`;
+  }
+  return `<div class="rD">
+    <div class="top"><div class="v">${fmt(it.v,it.k)}</div><div class="c">${it.c}${badge}</div></div>
+    <div class="meta">${it.s}</div>
+  </div>`;
+}
+
+function headHtml(key, first){
+  const h = HEADS[key];
+  if(state.head === 'sticky'){
+    return `<div class="dhead"><span class="d">${h.t}</span><span class="s">${h.s}</span></div>`;
+  }
+  if(state.head === 'line'){
+    if(first) return `<div class="dlab">${h.t}</div>`;
+    return `<div class="dline"></div><div class="dlab">${h.t}</div>`;
+  }
+  const num = key === 'today' ? '04' : key === 'yest' ? '03' : '02';
+  return `<div class="dbig">
+    <div class="l">${h.t}</div>
+    <div class="n">${num}<i>11月</i></div>
+    <div class="rule"></div>
+  </div>`;
+}
+
+function render(){
+  const c = document.getElementById('content');
+  const showBar = (state.nav === 'top' || state.nav === 'water');
+  const showTopRight = (state.nav === 'top' || state.nav === 'text');
+  const entryInTop = (state.entry === 'top');
+
+  let acts = '';
+  if(showTopRight){
+    if(state.nav === 'top'){
+      acts = `<span class="chip">资产</span>`;
+    } else {
+      acts = `<span class="chip">设置</span>`;
+    }
+  }
+  if(entryInTop) acts += `<span class="chip solid">＋</span>`;
+
+  let html = '';
+  if(showBar){
+    html += `<div class="bar"><div class="ttl">流水</div><div class="acts">${acts}</div></div>`;
+  } else if(acts){
+    html += `<div class="bar"><div class="ttl">流水</div><div class="acts">${acts}</div></div>`;
+  }
+
+  // 账本表格自带日期列，日期头自动让位（真实组件兼容处理）
+  const skipHead = (state.row === 'C');
+  let lastKey = null;
+  DATA.forEach((it, i) => {
+    if(!skipHead && it.d !== lastKey){
+      html += headHtml(it.d, i === 0);
+    }
+    lastKey = it.d;
+    html += rowHtml(it);
+  });
+
+  c.innerHTML = html;
+
+  // 记一笔浮层：放在 overlay 里，跟着底栏高度上移
+  const navH = {tab:64, text:50, water:68, top:0}[state.nav] ?? 0;
+  let ov = '';
+  if(state.entry === 'fab'){
+    ov = `<div class="fab" style="bottom:${navH + 16}px">＋</div>`;
+  } else if(state.entry === 'pill'){
+    ov = `<div class="pill" style="bottom:${navH + 12}px">记一笔</div>`;
+  }
+  document.getElementById('overlay').innerHTML = ov;
+
+  // 内容底部留白，避免被浮层压住
+  c.style.paddingBottom = (state.entry === 'top' ? 16 : navH + 84) + 'px';
+
+  // 底栏
+  let nav = '';
+  if(state.nav === 'tab'){
+    nav = `<div class="navtab">
+      <div class="on"><span class="g"></span>流水</div>
+      <div><span class="g"></span>还款</div>
+      <div><span class="g"></span>资产</div>
+      <div><span class="g"></span>设置</div>
+    </div>`;
+  } else if(state.nav === 'text'){
+    nav = `<div class="navtext"><span class="on">流水</span><span>还款</span><span>资产</span></div>`;
+  } else if(state.nav === 'water'){
+    nav = `<div class="navwater">
+      <div><div class="k">本月还应还</div><div class="v">3,241.68</div></div>
+      <div class="n">最近 11/25 花呗 1,634<br>逾期 1 笔 · 上拉</div>
+    </div>`;
+  }
+  document.getElementById('navwrap').innerHTML = nav;
+
+  // 配置输出
+  const label = k => {
+    const g = GROUPS.find(x => x.key === k);
+    const o = g.opts.find(x => x.v === state[k]);
+    return o ? o.b : state[k];
+  };
+  const headLabel = (state.row === 'C') ? '（表格自带日期列，已关闭）' : label('head');
+  document.getElementById('cfg').textContent =
+    `导航：${label('nav')}  ·  流水行：${label('row')}\n` +
+    `日期头：${headLabel}  ·  入口：${label('entry')}\n` +
+    `容器：${label('ico')}  ·  金额：${label('amt')}`;
+}
+
+function buildPanel(){
+  const p = document.getElementById('panel');
+  p.innerHTML = GROUPS.map((g, gi) => `
+    <div class="grp">
+      <div class="grp-h"><span class="n">0${gi+1}</span><span class="t">${g.title}</span></div>
+      <div class="opts">
+        ${g.opts.map(o => `
+          <button class="o${state[g.key] === o.v ? ' on' : ''}" data-k="${g.key}" data-v="${o.v}">
+            <span class="box"></span>
+            <span class="lb"><b>${o.b}</b><span>${o.s}</span></span>
+          </button>`).join('')}
+      </div>
+    </div>`).join('');
+
+  p.querySelectorAll('.o').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state[btn.dataset.k] = btn.dataset.v;
+      p.querySelectorAll(`.o[data-k="${btn.dataset.k}"]`).forEach(b => b.classList.remove('on'));
+      btn.classList.add('on');
+      render();
+    });
+  });
+}
+
+buildPanel();
+render();
+</script>
+</body>
+</html>

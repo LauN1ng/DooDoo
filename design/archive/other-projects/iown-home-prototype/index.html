@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>iOwn · 日卡片首页原型</title>
+<style>
+  :root{
+    --bg:#efeeea; --panel:#fffefb; --ink:#141416; --ink2:#6a6a72; --ink3:#a3a3ab;
+    --line:#e6e3dc; --accent:#c8452f; --green:#2f7d5c;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--ink); min-height:100vh;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    display:flex; justify-content:center; align-items:flex-start; gap:54px;
+    padding:44px 40px 70px; flex-wrap:wrap;
+  }
+
+  .notes{width:352px;flex:0 0 auto;position:sticky;top:44px}
+  .notes h1{font-size:26px;line-height:1.25;margin:0 0 8px;letter-spacing:-.02em;font-weight:700}
+  .notes .sub{font-size:13px;color:var(--ink2);line-height:1.7;margin:0 0 24px}
+  .nitem{border-left:2px solid var(--line);padding:2px 0 2px 16px;margin-bottom:18px;transition:.22s}
+  .nitem .t{font-size:13.5px;font-weight:600;margin-bottom:5px;color:var(--ink2);transition:.22s}
+  .nitem .d{font-size:12.5px;line-height:1.72;color:var(--ink3);transition:.22s}
+  .nitem.on{border-left-color:var(--accent)}
+  .nitem.on .t{color:var(--ink)}
+  .nitem.on .d{color:var(--ink2)}
+  .legend{margin-top:26px;padding-top:20px;border-top:1px solid var(--line);font-size:12px;line-height:1.9;color:var(--ink3)}
+  .legend b{color:var(--ink2);font-weight:600}
+
+  .device{
+    position:relative;width:390px;height:844px;flex:0 0 auto;
+    border-radius:46px;background:#111;padding:9px;
+    box-shadow:0 2px 4px rgba(0,0,0,.2),0 40px 80px -30px rgba(30,25,20,.5);
+  }
+  .screen{
+    position:relative;width:100%;height:100%;border-radius:38px;overflow:hidden;
+    background:var(--panel);display:flex;flex-direction:column;
+  }
+
+  .statusbar{
+    height:50px;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;
+    padding:0 28px 0 32px;font-size:13px;font-weight:600;letter-spacing:.02em;z-index:5;
+  }
+  .statusbar .r{display:flex;align-items:center;gap:6px}
+  .sig{display:flex;align-items:flex-end;gap:1.5px;height:9px}
+  .sig i{width:2.5px;border-radius:1px;background:var(--ink);display:block}
+  .sig i:nth-child(1){height:3px}.sig i:nth-child(2){height:5px}
+  .sig i:nth-child(3){height:7px}.sig i:nth-child(4){height:9px}
+  .bat{width:20px;height:10px;border:1.2px solid var(--ink);border-radius:3px;position:relative;padding:1.4px}
+  .bat::after{content:"";position:absolute;right:-3px;top:2.6px;width:1.6px;height:4px;background:var(--ink);border-radius:0 1px 1px 0}
+  .bat i{display:block;height:100%;width:76%;background:var(--ink);border-radius:1px}
+
+  .topbar{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:2px 22px 12px;z-index:5}
+  .topbar .month{font-size:12px;color:var(--ink3);letter-spacing:.06em}
+  .topbar .all{
+    font-size:12px;color:var(--ink2);border:1px solid var(--line);background:#fff;
+    padding:5px 11px;border-radius:20px;cursor:pointer;transition:.16s;font-family:inherit;
+  }
+  .topbar .all:hover{background:#f7f6f2;color:var(--ink)}
+
+  .stage{position:relative;flex:1 1 auto;overflow:hidden;touch-action:none;cursor:grab}
+  .stage.dragging{cursor:grabbing}
+  .track{display:flex;height:100%;will-change:transform}
+  .day{width:100%;flex:0 0 100%;height:100%;padding:0 22px 24px;display:flex;flex-direction:column}
+
+  .dateRow{display:flex;align-items:baseline;gap:9px;margin-bottom:14px}
+  .dateRow .d1{font-size:25px;font-weight:700;letter-spacing:-.03em}
+  .dateRow .d2{font-size:13.5px;color:var(--ink3);font-weight:500}
+  .pill{font-size:10.5px;font-weight:600;letter-spacing:.04em;padding:3px 9px;border-radius:20px;background:#e9e7e1;color:var(--ink2)}
+  .pill.live{background:var(--accent);color:#fff}
+  .pill.live::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:#fff;margin-right:5px;vertical-align:1px;animation:blink 1.9s ease-in-out infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+  .sum{margin-bottom:18px}
+  .sum .label{font-size:11.5px;color:var(--ink3);letter-spacing:.08em;margin-bottom:6px}
+  .sum .amt{font-size:44px;font-weight:650;letter-spacing:-.035em;line-height:1;font-variant-numeric:tabular-nums}
+  .sum .amt .cur{font-size:22px;font-weight:500;color:var(--ink3);margin-right:3px;letter-spacing:0}
+  .sum .row{display:flex;gap:18px;margin-top:11px;font-size:12px;color:var(--ink2)}
+  .sum .row b{font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+  .sum .row .inc b{color:var(--green)}
+
+  .list{flex:0 0 auto;overflow:hidden;min-height:0}
+  .item{display:flex;align-items:center;gap:11px;padding:10px 0;border-bottom:1px solid #f2f0ea}
+  .item:last-child{border-bottom:0}
+  .ico{width:33px;height:33px;flex:0 0 33px;border-radius:11px;display:grid;place-items:center;font-size:12px;font-weight:600}
+  .i-a{background:#f6e9e2;color:#a8482c}
+  .i-b{background:#e6eeea;color:#2f7d5c}
+  .i-c{background:#eceaf3;color:#585090}
+  .i-d{background:#f3efe2;color:#8a7328}
+  .item .mid{flex:1;min-width:0}
+  .item .nm{font-size:13.5px;font-weight:520;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .item .ct{font-size:11px;color:var(--ink3)}
+  .item .v{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+
+  .brief{
+    flex:0 0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:1px;
+    background:var(--line);border-radius:14px;overflow:hidden;margin:16px 0 0;
+  }
+  .brief div{background:#fbfaf7;padding:11px 10px 10px}
+  .brief .k{font-size:10.5px;color:var(--ink3);margin-bottom:4px}
+  .brief .v{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+
+  .more{
+    margin-top:12px;border:1px solid var(--line);border-radius:14px;padding:14px 16px;
+    display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:.18s;background:#fff;
+  }
+  .more:hover{border-color:#cfcbc2}
+  .more .h{font-size:13px;font-weight:600}
+  .more .p{font-size:11px;color:var(--ink3);margin-top:3px}
+  .more .go{font-size:15px;color:var(--ink3)}
+
+  .foot{flex:0 0 auto;margin-top:auto;padding-top:14px;border-top:1px solid var(--line)}
+  .bar{height:5px;border-radius:5px;background:#eeece6;overflow:hidden;display:flex;gap:2px;margin-bottom:8px}
+  .bar i{display:block;height:100%}
+  .foot .fl{display:flex;justify-content:space-between;font-size:11px;color:var(--ink3)}
+  .foot .fl b{color:var(--ink2);font-weight:600}
+
+  .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;padding-bottom:80px}
+  .empty .ring{width:60px;height:60px;border-radius:50%;border:1.5px dashed #dcd9d1;display:grid;place-items:center;color:#c9c6bd;font-size:20px}
+  .empty .et{font-size:13.5px;color:var(--ink3)}
+  .empty .btn{font-family:inherit;font-size:13px;color:var(--ink);border:1px solid var(--line);background:#fff;padding:9px 20px;border-radius:22px;cursor:pointer}
+  .empty .btn:hover{background:#f7f6f2}
+
+  .allpanel{padding:0;height:100%;overflow:hidden;display:flex;flex-direction:column}
+  .allpanel h2{font-size:24px;margin:0 0 4px;letter-spacing:-.02em}
+  .allpanel .st{font-size:12px;color:var(--ink3);margin-bottom:10px}
+  .dayhead{font-size:11px;color:var(--ink3);letter-spacing:.05em;margin:13px 0 4px;display:flex;justify-content:space-between}
+  .dayhead b{color:var(--ink2);font-variant-numeric:tabular-nums;font-weight:600}
+
+  .scrim{position:absolute;inset:0;background:rgba(20,18,16,.26);opacity:0;pointer-events:none;transition:opacity .3s;z-index:20}
+  .scrim.on{opacity:1;pointer-events:auto}
+  .sheet{
+    position:absolute;left:0;right:0;bottom:0;z-index:21;background:var(--panel);
+    border-radius:26px 26px 0 0;padding:12px 22px 26px;transform:translateY(100%);
+    transition:transform .42s cubic-bezier(.22,.85,.28,1);
+    box-shadow:0 -12px 40px -18px rgba(30,25,20,.35);
+  }
+  .grab{width:38px;height:4px;border-radius:4px;background:#dcd9d1;margin:0 auto 15px}
+  .calHead{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
+  .calHead .m{font-size:19px;font-weight:700;letter-spacing:-.02em}
+  .calHead .m span{font-size:12px;color:var(--ink3);font-weight:500;margin-left:6px}
+  .calHead .nav{display:flex;gap:6px;font-size:13px;color:var(--ink3)}
+  .calHead .nav i{font-style:normal;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:#f4f2ec;cursor:pointer}
+  .wk{display:grid;grid-template-columns:repeat(7,1fr);font-size:10.5px;color:var(--ink3);text-align:center;margin-bottom:6px;letter-spacing:.04em}
+  .days{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+  .cell{
+    position:relative;aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+    font-size:13px;border-radius:12px;cursor:pointer;transition:.14s;font-variant-numeric:tabular-nums;
+  }
+  .cell.dim{color:#cfccc4;cursor:default}
+  .cell.has{font-weight:600}
+  .cell.today{background:var(--ink);color:#fff;font-weight:650}
+  .cell .dot{position:absolute;bottom:5px;width:3px;height:3px;border-radius:50%;background:var(--accent)}
+  .cell.today .dot{background:#fff}
+  .cell:hover:not(.dim):not(.today){background:#f4f2ec}
+  .calFoot{margin-top:14px;display:flex;gap:8px;font-size:11.5px;color:var(--ink3);align-items:center;justify-content:space-between}
+  .calFoot .k{display:flex;align-items:center;gap:6px}
+  .calFoot .k i{width:4px;height:4px;border-radius:50%;background:var(--accent)}
+
+  .colL{display:flex;flex-direction:column;align-items:center;gap:16px}
+  .states{display:flex;justify-content:center;gap:7px;flex-wrap:wrap}
+  .states button{
+    font:inherit;font-size:11.5px;padding:7px 13px;border-radius:20px;cursor:pointer;
+    border:1px solid #dcd9d1;background:#fff;color:var(--ink2);transition:.16s;
+  }
+  .states button:hover{border-color:#c2beb4;color:var(--ink)}
+  .states button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .hint{font-size:11.5px;color:var(--ink3);text-align:center;line-height:1.8;max-width:390px}
+  .hint b{color:var(--ink2)}
+</style>
+</head>
+<body>
+
+<div class="notes">
+  <h1>日卡片首页</h1>
+  <p class="sub">拖动手机里的卡片试手感：横向拖 = 逐日回看，纵向拖 = 拉开日历。右侧高亮的是当前状态对应的设计要点。</p>
+
+  <div class="nitem" data-k="today">
+    <div class="t">01 · 今天（默认）</div>
+    <div class="d">卡片只回答「今天花了多少」。但早上 7 点打开往往只有 1–2 笔，所以中间那块「今日小结」不是装饰，是撑住版面的必需品。</div>
+  </div>
+  <div class="nitem" data-k="yes">
+    <div class="t">02 · 右滑到昨天</div>
+    <div class="d">右侧露出的「今天」边缘是可滑动的唯一暗示。昨天的卡片转只读态：徽标变灰、没有实时圆点，避免用户以为能在这里记账。</div>
+  </div>
+  <div class="nitem" data-k="empty">
+    <div class="t">03 · 滑到没记账的那天</div>
+    <div class="d">空日是这套结构的高频场景。连续几天不记账，会连滑过好几张空卡——所以「补记」必须是一等公民按钮，不是小字提示。</div>
+  </div>
+  <div class="nitem" data-k="bound">
+    <div class="t">04 · 第 4 天 = 边界</div>
+    <div class="d">别让「滑到第 N 天」自动变成列表，形态突变会让人失去方向感。卡片形态不变，只在底部挂一张通往全部流水的入口。</div>
+  </div>
+  <div class="nitem" data-k="cal">
+    <div class="t">05 · 下滑 = 日历</div>
+    <div class="d">日历不是另一个页面，是卡片底下的一层。点任意一天直接落回那天的卡片——这条回程路径才是整套结构成立的关键。</div>
+  </div>
+  <div class="nitem" data-k="all">
+    <div class="t">06 · 全部流水</div>
+    <div class="d">按日分组的连续列表，日期头带当日合计。这里是「找上个月某笔」的兜底路径，必须有直达入口，不能只靠滑 4 次。</div>
+  </div>
+
+  <div class="legend">
+    <b>手势约束</b><br>
+    横向起手区限定在卡片内、距屏幕左缘 ≥ 20pt，避免和 iOS 系统返回手势打架。<br><br>
+    <b>方向语义</b><br>
+    右滑 = 回到过去，与 Apple 日历一致；左滑是未来，用阻尼回弹告知「没有更多」。
+  </div>
+</div>
+
+<div class="colL">
+  <div class="device">
+    <div class="screen">
+      <div class="statusbar">
+        <span>6:53</span>
+        <span class="r"><span class="sig"><i></i><i></i><i></i><i></i></span><span class="bat"><i></i></span></span>
+      </div>
+      <div class="topbar">
+        <span class="month" id="monthLabel">2026 年 11 月</span>
+        <button class="all" id="allBtn">全部流水</button>
+      </div>
+
+      <div class="stage" id="stage">
+        <div class="track" id="track"></div>
+        <div class="scrim" id="scrim"></div>
+        <div class="sheet" id="sheet">
+          <div class="grab"></div>
+          <div class="calHead">
+            <div class="m">11 月<span>2026</span></div>
+            <div class="nav"><i>‹</i><i>›</i></div>
+          </div>
+          <div class="wk"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+          <div class="days" id="calDays"></div>
+          <div class="calFoot">
+            <span class="k"><i></i>有流水</span>
+            <span>本月 26 笔 · ¥2,340.50</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="states" id="states">
+    <button data-i="0">全部流水</button>
+    <button data-i="1">更早（边界）</button>
+    <button data-i="2">空日</button>
+    <button data-i="3">前天</button>
+    <button data-i="4">昨天</button>
+    <button data-i="5" class="on">今天</button>
+  </div>
+  <p class="hint">在卡片上<b>向右拖</b>看昨天 · <b>向下拖</b>拉出日历（或双击卡片）· 点日历里的日期直接跳回那天</p>
+</div>
+
+<script>
+const DAYS = [
+  { key:"all" },
+  { key:"d4", date:"11月2日", wd:"周日", total:186.0, inc:0, more:true, items:[
+      {t:"10:20", nm:"理发", ct:"生活 · 理发", v:68.0, c:"c"},
+      {t:"14:05", nm:"超市囤货", ct:"日用", v:96.5, c:"d"},
+      {t:"19:30", nm:"朋友聚餐 AA", ct:"餐饮 · 聚餐", v:21.5, c:"a"}
+    ]},
+  { key:"d3", date:"11月3日", wd:"周二", total:0, inc:0, items:[] },
+  { key:"d2", date:"11月4日", wd:"周三", total:45.2, inc:0, items:[
+      {t:"12:38", nm:"公司楼下沙拉", ct:"餐饮 · 午餐", v:32.0, c:"a"},
+      {t:"19:05", nm:"药房", ct:"医疗", v:13.2, c:"b"}
+    ]},
+  { key:"d1", date:"11月5日", wd:"周四", total:124.8, inc:300, items:[
+      {t:"08:12", nm:"瑞幸 生椰拿铁", ct:"餐饮 · 咖啡", v:9.9, c:"a"},
+      {t:"09:40", nm:"地铁 2 号线", ct:"交通", v:4.0, c:"b"},
+      {t:"12:30", nm:"食堂", ct:"餐饮 · 午餐", v:18.0, c:"a"},
+      {t:"15:20", nm:"设计素材订阅", ct:"订阅", v:68.0, c:"c"},
+      {t:"18:50", nm:"盒马", ct:"日用", v:20.9, c:"d"},
+      {t:"21:10", nm:"打车回家", ct:"交通", v:4.0, c:"b"}
+    ]},
+  { key:"d0", date:"11月6日", wd:"周五", total:12.5, inc:0, items:[
+      {t:"06:40", nm:"楼下豆浆油条", ct:"餐饮 · 早餐", v:8.5, c:"a"},
+      {t:"06:48", nm:"地铁 2 号线", ct:"交通", v:4.0, c:"b"}
+    ]}
+];
+
+const track = document.getElementById("track");
+const stage = document.getElementById("stage");
+const sheet = document.getElementById("sheet");
+const scrim = document.getElementById("scrim");
+const W = () => stage.clientWidth;
+const money = (n) => n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+const itemRow = (it) => `
+  <div class="item">
+    <div class="ico i-${it.c}">${it.ct.split(" · ").pop()[0]}</div>
+    <div class="mid"><div class="nm">${it.nm}</div><div class="ct">${it.t} · ${it.ct}</div></div>
+    <div class="v">−${money(it.v)}</div>
+  </div>`;
+
+function dayHTML(d, isToday){
+  if (d.key === "all") return `<div class="day">${allHTML()}</div>`;
+
+  const max = d.items.length ? Math.max(...d.items.map(i => i.v)) : 0;
+  const avg = d.items.length ? d.total / d.items.length : 0;
+
+  const body = d.items.length
+    ? `<div class="list">${d.items.map(itemRow).join("")}</div>`
+    : `<div class="empty">
+         <div class="ring">—</div>
+         <div class="et">${d.date} 没有记录</div>
+         <button class="btn">补一笔 ${d.date} 的支出</button>
+       </div>`;
+
+  const brief = d.items.length ? `<div class="brief">
+      <div><div class="k">最大一笔</div><div class="v">¥${money(max)}</div></div>
+      <div><div class="k">平均每笔</div><div class="v">¥${money(avg)}</div></div>
+      <div><div class="k">距本月预算</div><div class="v">¥${money(2659.5)}</div></div>
+    </div>` : "";
+
+  const more = d.more ? `<div class="more" id="moreCard">
+      <div><div class="h">再往前的流水</div><div class="p">11 月 1 日及更早 · 共 26 笔</div></div>
+      <div class="go">→</div>
+    </div>` : "";
+
+  return `<div class="day">
+    <div class="dateRow">
+      <span class="d1">${d.date}</span><span class="d2">${d.wd}</span>
+      ${isToday ? '<span class="pill live">今天</span>' : '<span class="pill">只读</span>'}
+    </div>
+    <div class="sum">
+      <div class="label">${isToday ? "今日支出" : "当日支出"}</div>
+      <div class="amt"><span class="cur">¥</span>${money(d.total)}</div>
+      <div class="row">
+        <div>${d.items.length} 笔</div>
+        <div class="inc">收入 <b>+${money(d.inc)}</b></div>
+        <div>结余 <b>${money(d.inc - d.total)}</b></div>
+      </div>
+    </div>
+    ${body}
+    ${brief}
+    ${more}
+    <div class="foot">
+      <div class="bar"><i style="width:34%;background:#c8452f"></i><i style="width:22%;background:#2f7d5c"></i><i style="width:14%;background:#585090"></i><i style="width:9%;background:#8a7328"></i></div>
+      <div class="fl"><span>本月已用 <b>¥2,340.50</b> / 5,000</span><span><b>47%</b></span></div>
+    </div>
+  </div>`;
+}
+
+function allHTML(){
+  const groups = [
+    { h:"11月6日 周五", sum:12.50, items:DAYS[5].items },
+    { h:"11月5日 周四", sum:124.80, items:DAYS[4].items },
+    { h:"11月4日 周三", sum:45.20, items:DAYS[3].items },
+    { h:"11月3日 周二", sum:0, items:[] }
+  ];
+  return `<div class="allpanel">
+    <h2>全部流水</h2>
+    <div class="st">共 26 笔 · 支出 ¥2,340.50 · 收入 ¥3,000.00</div>
+    ${groups.map(g => `
+      <div class="dayhead"><span>${g.h}</span><b>${g.sum ? "−" + money(g.sum) : "—"}</b></div>
+      ${g.items.length ? g.items.slice(0, 3).map(itemRow).join("") + (g.items.length > 3 ? `<div class="ct" style="font-size:11px;color:#a3a3ab;padding:8px 0 2px">还有 ${g.items.length - 3} 笔</div>` : "") : '<div class="ct" style="font-size:11px;color:#a3a3ab;padding:6px 0">无记录</div>'}
+    `).join("")}
+  </div>`;
+}
+
+track.innerHTML = DAYS.map((d, i) => dayHTML(d, i === DAYS.length - 1)).join("");
+
+const LAST = DAYS.length - 1;
+let idx = LAST;
+let startX = 0, startY = 0, dragX = 0, dragY = 0, axis = null, dragging = false;
+
+function paint(anim){
+  track.style.transition = anim ? "transform .4s cubic-bezier(.22,.85,.28,1)" : "none";
+  track.style.transform = `translateX(${-idx * W() + dragX}px)`;
+}
+
+const NOTE_MAP = { 0:"all", 1:"bound", 2:"empty", 3:"yes", 4:"yes", 5:"today" };
+
+function syncState(){
+  document.querySelectorAll(".nitem").forEach(n => n.classList.remove("on"));
+  const n = document.querySelector(`.nitem[data-k="${NOTE_MAP[idx]}"]`);
+  if (n) n.classList.add("on");
+  document.querySelectorAll("#states button").forEach(b => b.classList.toggle("on", +b.dataset.i === idx));
+  document.getElementById("monthLabel").textContent = "2026 年 11 月";
+  const allBtn = document.getElementById("allBtn");
+  allBtn.textContent = idx === 0 ? "回到今天" : "全部流水";
+}
+
+function go(i, anim = true){
+  idx = Math.max(0, Math.min(LAST, i));
+  dragX = 0;
+  paint(anim);
+  syncState();
+}
+
+stage.addEventListener("pointerdown", e => {
+  if (e.target.closest(".sheet") || e.target.closest("#moreCard")) return;
+  dragging = true; axis = null;
+  startX = e.clientX; startY = e.clientY; dragX = 0; dragY = 0;
+  stage.classList.add("dragging");
+  window.addEventListener("pointermove", onMove);
+  window.addEventListener("pointerup", onUp);
+  window.addEventListener("pointercancel", onUp);
+});
+
+function onMove(e){
+  if (!dragging) return;
+  const dx = e.clientX - startX, dy = e.clientY - startY;
+  if (!axis && (Math.abs(dx) > 9 || Math.abs(dy) > 9)) axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+
+  if (axis === "x"){
+    let v = dx;
+    if ((idx === LAST && dx < 0) || (idx === 0 && dx > 0)) v = dx * 0.32;
+    dragX = v;
+    paint(false);
+  } else if (axis === "y"){
+    dragY = Math.max(0, dy);
+    const p = Math.min(dragY / 320, 1);
+    sheet.style.transition = "none";
+    sheet.style.transform = `translateY(${(1 - p) * 100}%)`;
+    scrim.classList.toggle("on", p > 0.02);
+  }
+}
+
+function onUp(){
+  window.removeEventListener("pointermove", onMove);
+  window.removeEventListener("pointerup", onUp);
+  window.removeEventListener("pointercancel", onUp);
+  if (!dragging) return;
+  dragging = false;
+  stage.classList.remove("dragging");
+  if (axis === "x"){
+    if (dragX > 58 && idx > 0) idx -= 1;
+    else if (dragX < -58 && idx < LAST) idx += 1;
+    dragX = 0; paint(true); syncState();
+  } else if (axis === "y"){
+    if (dragY > 110) openCal(); else closeCal();
+    dragY = 0;
+  }
+  axis = null;
+}
+
+function openCal(){
+  sheet.style.transition = "transform .42s cubic-bezier(.22,.85,.28,1)";
+  sheet.style.transform = "translateY(0)";
+  scrim.classList.add("on");
+  document.querySelectorAll(".nitem").forEach(n => n.classList.remove("on"));
+  const n = document.querySelector('.nitem[data-k="cal"]');
+  if (n) n.classList.add("on");
+}
+function closeCal(){
+  sheet.style.transition = "transform .42s cubic-bezier(.22,.85,.28,1)";
+  sheet.style.transform = "translateY(100%)";
+  scrim.classList.remove("on");
+  syncState();
+}
+
+scrim.addEventListener("click", closeCal);
+stage.addEventListener("dblclick", openCal);
+document.getElementById("allBtn").addEventListener("click", () => go(idx === 0 ? LAST : 0));
+document.querySelectorAll("#states button").forEach(b => b.addEventListener("click", () => go(+b.dataset.i)));
+track.addEventListener("click", e => { if (e.target.closest("#moreCard")) go(0); });
+
+const MAP_TO_IDX = { 6:5, 5:4, 4:3, 3:2, 2:1 };
+const HAS_DATA = [2,3,4,5,6,8,9,11,12,14,15,17,20,22,24,26,27];
+function buildCal(){
+  const first = new Date(2026, 10, 1);
+  const offset = (first.getDay() + 6) % 7;
+  let html = "";
+  for (let i = 0; i < offset; i++) html += `<div class="cell dim"></div>`;
+  for (let d = 1; d <= 30; d++){
+    const cls = ["cell"];
+    if (HAS_DATA.includes(d)) cls.push("has");
+    if (d === 6) cls.push("today");
+    html += `<div class="${cls.join(" ")}" data-d="${d}">${d}${HAS_DATA.includes(d) ? '<span class="dot"></span>' : ""}</div>`;
+  }
+  document.getElementById("calDays").innerHTML = html;
+  document.querySelectorAll(".cell[data-d]").forEach(c => {
+    c.addEventListener("click", () => {
+      const d = +c.dataset.d;
+      closeCal();
+      setTimeout(() => go(MAP_TO_IDX[d] !== undefined ? MAP_TO_IDX[d] : 0), 170);
+    });
+  });
+}
+buildCal();
+
+paint(false);
+syncState();
+window.addEventListener("resize", () => paint(false));
+</script>
+</body>
+</html>

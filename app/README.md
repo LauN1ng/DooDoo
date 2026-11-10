@@ -1,6 +1,8 @@
 # app/ · DooDoo iOS 工程
 
-> 状态：**M0 已跑通**（2026-11-08）。CI 在 Xcode 26.6 / iOS 26.5 SDK 上构建通过、3 条单测绿、未签名 `.app` 已产出；手动触发可另出**未签名真机 `.ipa`**，用于端侧安装查看。
+> 状态：**M2b 收口中**（2026-11-10 核准）。M0 工程搭建、M1 记一笔+流水、M2a 账户+资产页均已闭合；M2b 还款/转账的 11-09 真机缺陷已修完，CI run `42648536927` 全绿（`DooDooTests/` 48 条单测）。
+> **M2a / M2b 都还差一步：真机复判。没在 iPhone 上复看前不得算完成**。M3 分期尚未动工。
+> 进度一律以仓库根的 `PROGRESS.md` 为准，本文件只记工程事实，不记进度。
 > 开发机是 **Windows + PowerShell，没有 Mac、没有 Xcode，只有一台 iPhone**——每次改代码只能靠 CI 编译、靠 iPhone 真机验收，本地只能说"写完了"。
 
 ## 一、工程事实
@@ -16,7 +18,7 @@
 | 数据 | SwiftData，纯本地，无 CloudKit、无账号 |
 | 网络 | 零请求、零分析 SDK |
 | 并发 | `SWIFT_VERSION = 6.0`，`SWIFT_STRICT_CONCURRENCY = complete` |
-| CI | `.github/workflows/ios.yml`：push/PR 跑构建 + 单测并出未签名模拟器 `.app`；**push 到 `main` 额外自动出未签名真机 `.ipa`**（`ipa` job，需 `build` 绿）；仓库 public，分钟不计费 |
+| CI | `.github/workflows/ios.yml` 两个 job，**串行**：`build`（XcodeGen → 模拟器 Debug 构建 → 48 条单测）→ `ipa`（真机 Release 构建 → 压 `Payload/` → 出未签名 IPA）。`build` 在 push 与 PR 都跑；`ipa` 只在 `push`（仅 main）或手动触发时跑。仓库 public，分钟不计费 |
 
 ## 二、目录（实际，不是设想）
 
@@ -28,13 +30,18 @@ app/
 │   │   ├── DooDooApp.swift        # @main，建 ModelContainer
 │   │   ├── RootView.swift         # 页头 + 三段 tab + 内容
 │   │   └── RootTab.swift          # flow / assets / settings
-│   ├── Models/                    # @Model；M0 只有 AppSettings
-│   ├── Services/                  # M1 起：LedgerService（唯一余额写入口）
-│   ├── Math/                      # M2 起：纯函数 + 单测
-│   ├── ViewModels/                # M1 起：状态与校验
-│   ├── Views/                     # FlowView / AssetsView / SettingsView
-│   └── Resources/Assets.xcassets  # AppIcon（空）/ AccentColor（墨色）
-├── DooDooTests/SmokeTests.swift   # 3 条冒烟：tab 定义、默认值、内存容器读写
+│   ├── Models/                    # @Model：AppSettings / Account / Category / Transaction
+│   │                              #   非模型附属：BrandPalette（卡面配色）、SpendGrade（评分四档）
+│   ├── Services/                  # LedgerService（唯一余额写入口）/ SeedService（演示数据）
+│   ├── Math/                      # 6 个纯函数文件：Day / Money / NetWorth / AccountDelta
+│   │                              #   / NetWorthSeries / Transfer
+│   ├── ViewModels/                # EntryViewModel（记一笔草稿与校验）
+│   ├── Views/                     # FlowView / AssetsView / SettingsView（设置页仍是最简版）
+│   │   ├── Entry/                 # 记一笔四类型面板 + 分类选择
+│   │   └── Components/            # 日卡 / 卡面 / 层叠 / 净值卡 / 账户编辑器
+│   ├── Resources/Assets.xcassets  # AppIcon / AccentColor
+│   └── Resources/Emoji            # 3D 图标（bundle 根 PNG，必须用 Image(uiImage:) 加载）
+├── DooDooTests/                   # 5 个文件 48 条 @Test（821 行）
 └── README.md
 ```
 
@@ -71,18 +78,21 @@ app/
 
 > 想免掉手动续签：Windows 上装 **AltServer**，手机同一 Wi-Fi 下 AltStore 会自动续签；或上付费开发者账号（一年有效）。M1 之后每次改代码都要重装一次，续签成本远低于重新构建。
 
-## 四、M0 门禁与验证方法
+## 四、M0 门禁（历史记录，六条已闭合）
 
-| 门禁 | 怎么验 | 现状 |
+> 本节只记 M0 当时怎么验、验到哪。**当前状态一律看 `PROGRESS.md`**，别拿这张表判断进度。
+
+| 门禁 | 怎么验 | 结果 |
 |---|---|---|
-| 单测能过 | 3 条冒烟测试（tab 定义 / 默认值 / 内存容器读写） | ✅ CI 通过 |
+| 单测能过 | 当时 3 条冒烟（tab 定义 / 默认值 / 内存容器读写） | ✅ 现已扩到 48 条 |
 | CI 能出未签名产物 | `DooDoo-unsigned-app`，5.8 MB，sha256 `a082958c…` | ✅ run `42423907280` |
-| CI 能出未签名 IPA | 手动 `Run workflow` → `ipa` job → artifact `DooDoo-unsigned-ipa` | ⬜ 待首次运行验证 |
-| iPhone 能装上并打开 | 下载 IPA → Sideloadly 自签 → 首页出得来 | ⬜ 待人工 |
-| 界面观感对 | 在 iPhone 上逐页看三个 tab 与设置页 | ⬜ 待人工（**本项目唯一的界面验收手段**） |
-| 数据能落盘 | 设置页拨「逾期横幅」→ 杀进程 → 重开，开关保持 | ⬜ 待人工 |
+| CI 能出未签名 IPA | 手动 `Run workflow` → `ipa` job → artifact `DooDoo-unsigned-ipa` | ✅ 已多次出包，11-09 装上真机 |
+| iPhone 能装上并打开 | Sideloadly 自签 → 首页出得来 | ✅ 11-09 已装 |
+| 界面观感对 | 在 iPhone 上逐页看 | 🔁 **每轮改完都靠这个**，不过就改，无终态 |
+| 数据能落盘 | 杀进程 → 重开，数据保持 | ✅ M1 已验流水持久化 |
 
-**前三条是硬门禁（第 3 条待首次运行）；后三条只能靠 iPhone 人工确认——本工作区没有 macOS，模拟器这条路不存在。**
+**后三条永远只能靠 iPhone 人工确认——本工作区没有 macOS，模拟器这条路不存在。**
+**「装得上」不是一次性门禁，是每次发版都要过一遍的门禁**，M2a 的「老库升级不崩」就挂在这一条上。
 
 ## 五、不要做的事
 
@@ -90,4 +100,4 @@ app/
 - 不把原型 HTML 的 CSS 数值直接硬编码进 SwiftUI，先对照 `docs/design/spec/`。
 - 不引入 SwiftUI 之外的 UI 框架、图表库、格式化库。
 - 不在这里写业务逻辑：记账走 Service，算钱走 Math。
-- 不提前写 M1/M2 的模型——schema 一次只加本里程碑要用的。
+- 不提前写未来里程碑的模型——schema 一次只加本里程碑要用的。M3 的 `DebtPlan` / `Installment` / `BillStatement` 属 M3，M2 阶段不预埋：旧库迁移还没在真机验过，此时加新表会让崩溃无法归因。

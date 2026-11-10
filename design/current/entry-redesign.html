@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DooDoo · 记一笔 · 参考三图重做</title>
+<style>
+  :root{
+    --page:#F2F2F3; --card:#FFFFFF; --ink:#1D1C1A; --ink2:#6B6862;
+    --sub:#8E8E93; --faint:#B6B6BB; --line:#EFEFEF; --dash:#E3E3E6;
+    --red:#FF3B30; --pad:#F4F4F5;
+    --accent:#2FB344; --accent-soft:rgba(47,179,68,.12);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden}
+  body{background:#E4E2DD;color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;display:flex;align-items:center;justify-content:center;flex-direction:column}
+
+  /* 顶部工具条 */
+  .bar{position:fixed;left:0;right:0;top:0;height:52px;display:flex;align-items:center;gap:14px;padding:0 20px;
+    background:#EFEDE8;border-bottom:1px solid #DEDBD4;z-index:50}
+  .bar .t{font-size:13px;font-weight:600}
+  .bar .t small{font-weight:400;color:#8A867D;font-size:11px;margin-left:8px}
+  .accs{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .accs .lbl{font-size:11px;color:#8A867D;margin-right:2px}
+  .dot{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:.15s}
+  .dot.on{border-color:#1D1C1A;transform:scale(1.06)}
+
+  /* 设备 */
+  .stage{margin-top:52px;flex:1;display:flex;align-items:center;justify-content:center;gap:28px;min-height:0}
+  .devwrap{position:relative;flex:0 0 auto}
+  .device{width:390px;height:844px;border-radius:44px;position:relative;overflow:hidden;background:var(--page);
+    box-shadow:0 0 0 1px #D3D0C9,0 30px 70px rgba(0,0,0,.20);transform-origin:top left}
+
+  /* 底页：流水（被浮层压住） */
+  .under{position:absolute;inset:0;background:var(--page);padding:0 18px}
+  .under .uhead{height:52px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 8px 6px}
+  .under .uhead b{font-size:19px;font-weight:600;letter-spacing:-.4px}
+  .under .uhead span{font-size:15px;color:var(--sub)}
+  .under .ucard{background:#fff;border-radius:24px;padding:18px;margin-top:6px;height:560px}
+  .under .ud{font-size:30px;font-weight:600;letter-spacing:-.02em}
+  .under .ul{font-size:11px;color:var(--sub);letter-spacing:.9px;margin-bottom:4px}
+  .under .ur{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #F7F7F8}
+  .under .ui{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;font-size:20px}
+  .under .ut{flex:1;font-size:14px}
+  .under .uv{font-size:14px;font-weight:600}
+  .under .uveil{position:absolute;inset:0;background:rgba(0,0,0,.30)}
+
+  /* 浮层面板 */
+  .panel{position:absolute;left:0;right:0;top:52px;bottom:0;background:#fff;border-radius:28px 28px 0 0;
+    box-shadow:0 -8px 40px rgba(0,0,0,.18);display:flex;flex-direction:column;
+    padding:0 16px 10px;z-index:5;overflow:hidden}
+  .grab{width:36px;height:5px;border-radius:3px;background:#E0E0E3;margin:7px auto 0;flex:0 0 auto}
+
+  .topbar{display:flex;align-items:center;margin-top:8px;flex:0 0 auto}
+  .seg{display:flex;background:var(--pad);border-radius:11px;padding:3px}
+  .seg button{border:0;background:transparent;font:inherit;font-size:14px;color:var(--sub);
+    padding:6px 13px;border-radius:9px;cursor:pointer;white-space:nowrap}
+  .seg button.on{background:#fff;color:var(--ink);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.10)}
+  .close{margin-left:auto;width:30px;height:30px;border:0;border-radius:50%;background:var(--pad);
+    color:var(--sub);font:inherit;font-size:15px;line-height:1;cursor:pointer;display:grid;place-items:center}
+
+  .dates{display:flex;align-items:center;margin-top:12px;flex:0 0 auto}
+  .dates .d{font-size:12.5px;color:var(--sub)}
+  .dates .d b{color:var(--ink);font-weight:600}
+  .again{margin-left:auto;border:0;background:var(--accent-soft);color:var(--accent);
+    font:inherit;font-size:12px;font-weight:600;padding:6px 12px;border-radius:999px;cursor:pointer}
+
+  /* 分类：4×2 大色块 */
+  .cats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px 6px;margin-top:12px;flex:0 0 auto}
+  .cat{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;padding-bottom:2px}
+  .cat .tile{width:64px;height:64px;border-radius:18px;background:var(--pad);display:grid;place-items:center;
+    font-size:30px;transition:.15s;position:relative}
+  .cat.on .tile{background:var(--accent);box-shadow:0 6px 14px -6px var(--accent)}
+  .cat.on .tile::after{content:"";position:absolute;inset:-5px;border-radius:22px;
+    box-shadow:inset 0 0 0 2px var(--accent)}
+  .cat span{font-size:11.5px;color:var(--sub)}
+  .cat.on span{color:var(--accent);font-weight:650}
+
+  /* 金额 */
+  .amtrow{display:flex;align-items:baseline;gap:6px;margin-top:16px;flex:0 0 auto;cursor:text}
+  .amtrow .cur{font-size:26px;font-weight:700;color:var(--accent)}
+  .amtrow .num{font-size:44px;font-weight:700;color:var(--accent);letter-spacing:-.03em;
+    font-variant-numeric:tabular-nums;line-height:1}
+  .amtrow .caret{width:2px;height:.82em;background:var(--accent);display:inline-block;
+    animation:blink 1.1s step-end infinite;align-self:center;margin-left:1px}
+  @keyframes blink{50%{opacity:0}}
+
+  /* 评分 */
+  .grades{display:flex;gap:7px;margin-top:12px;align-items:center;flex:0 0 auto}
+  .grades .gl{font-size:11px;color:var(--faint);margin-right:2px}
+  .g{border:0;background:var(--pad);color:var(--sub);font:inherit;font-size:12px;
+    padding:6px 11px;border-radius:999px;cursor:pointer}
+  .g.on{background:var(--accent-soft);color:var(--accent);font-weight:650}
+
+  /* 备注卡 */
+  .notecard{margin-top:12px;background:#fff;border-radius:18px;border:1px solid #F0F0F2;
+    box-shadow:0 2px 10px rgba(0,0,0,.04);flex:0 0 auto}
+  .nrow{display:flex;align-items:center;padding:12px 14px;gap:10px}
+  .nrow .ph{font-size:14px;color:var(--faint)}
+  .nrow .plus{margin-left:auto;width:24px;height:24px;border-radius:7px;border:1px dashed var(--dash);
+    display:grid;place-items:center;color:var(--faint);font-size:14px}
+  .nsep{height:0;border-top:1px dashed var(--dash);margin:0 14px}
+  .nrow .k{font-size:12.5px;color:var(--sub)}
+  .nrow .v{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;cursor:pointer}
+  .nrow .cardic{width:22px;height:16px;border-radius:4px;background:linear-gradient(140deg,#5B8DEF,#2B58C4);
+    display:inline-block}
+  .nrow .chev{color:var(--faint);font-size:14px;font-weight:400}
+
+  /* 键盘 */
+  .kbwrap{margin-top:12px;background:var(--pad);border-radius:24px;padding:10px;flex:0 0 auto}
+  .kb{display:flex;gap:8px}
+  .kpads{flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .kpads button{height:56px;border:0;border-radius:13px;background:#fff;color:var(--ink);
+    font:inherit;font-size:25px;font-weight:500;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.05);transition:.1s}
+  .kpads button:active{transform:scale(.96);background:#F0F0F2}
+  .kside{width:64px;display:flex;flex-direction:column;gap:8px}
+  .kside .del{height:56px;border:0;border-radius:13px;background:#fff;cursor:pointer;
+    display:grid;place-items:center;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+  .kside .del i{width:26px;height:18px;border-radius:5px;background:var(--red);position:relative;display:block}
+  .kside .del i::after{content:"";position:absolute;left:8px;top:4px;width:10px;height:2px;background:#fff;
+    box-shadow:0 4px 0 #fff,0 -4px 0 #fff;transform:rotate(0)}
+  .kside .today{height:56px;border:0;border-radius:13px;background:#fff;color:var(--sub);
+    font:inherit;font-size:12.5px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+  .kside .ok{flex:1;border:0;border-radius:13px;background:var(--accent);color:#fff;
+    font:inherit;font-size:15px;font-weight:650;cursor:pointer;display:grid;place-items:center;
+    box-shadow:0 6px 16px -8px var(--accent)}
+  .kside .ok:active{opacity:.85}
+
+  /* 账户浮层 */
+  .accmask{position:absolute;inset:0;background:rgba(0,0,0,.22);z-index:8;display:none}
+  .accmask.on{display:block}
+  .accsheet{position:absolute;left:16px;right:16px;bottom:16px;background:#fff;border-radius:22px;
+    padding:16px 16px 18px;z-index:9;box-shadow:0 20px 50px rgba(0,0,0,.22);display:none}
+  .accsheet.on{display:block}
+  .accsheet h3{margin:0 0 12px;font-size:13px;color:var(--sub);font-weight:600}
+  .accgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .accgrid .a{display:flex;align-items:center;gap:9px;padding:11px 12px;border-radius:14px;background:var(--pad);
+    font-size:13px;cursor:pointer}
+  .accgrid .a.on{background:var(--accent-soft);color:var(--accent);font-weight:650;
+    box-shadow:inset 0 0 0 1.5px var(--accent)}
+  .accgrid .a i{width:22px;height:16px;border-radius:4px;background:linear-gradient(140deg,#5B8DEF,#2B58C4);flex:0 0 22px}
+
+  /* toast */
+  .toast{position:absolute;left:50%;bottom:120px;transform:translate(-50%,10px);z-index:30;
+    background:rgba(29,28,26,.9);color:#fff;font-size:12px;padding:9px 16px;border-radius:999px;
+    opacity:0;transition:.22s;pointer-events:none;white-space:nowrap}
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+
+  /* 说明（桌面右侧） */
+  .notes{width:300px;flex:0 0 300px;max-height:calc(100% - 40px);overflow-y:auto;background:#fff;
+    border-radius:18px;padding:20px;box-shadow:0 8px 24px rgba(0,0,0,.06)}
+  .notes::-webkit-scrollbar{width:0}
+  .notes h2{margin:0 0 10px;font-size:16px;font-weight:650}
+  .notes p{margin:0 0 12px;font-size:12px;line-height:1.8;color:#4A4741}
+  .notes p b{color:#1D1C1A;font-weight:650}
+  .notes h4{margin:16px 0 7px;font-size:10px;letter-spacing:.12em;color:#9A968D;font-weight:700}
+  .notes ul{margin:0;padding-left:15px;font-size:11.5px;line-height:1.85;color:#4A4741}
+  .notes ul li{margin-bottom:2px}
+  .notes .src{font-size:11px;line-height:1.75;color:#6B6862;background:#FAF8F4;border-radius:12px;padding:10px 12px;margin-top:10px}
+  .notes .src b{color:#1D1C1A}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="t">DooDoo <small>记一笔 · 参考三图重做</small></div>
+  <div class="accs">
+    <span class="lbl">主色</span>
+    <span class="dot on" data-acc="green" style="background:#2FB344"></span>
+    <span class="dot" data-acc="orange" style="background:#E09B2D"></span>
+    <span class="dot" data-acc="blue" style="background:#4A6CF7"></span>
+    <span class="dot" data-acc="ink" style="background:#1D1C1A"></span>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="devwrap" id="devwrap"><div class="device" id="dev" data-acc="green"></div></div>
+  <div class="notes">
+    <h2>参考三图后的改法</h2>
+    <p>这三个界面共用一套语言：<b>浅灰底 + 白色大圆角卡片 + 3D 图标的大色块 + 巨大的彩色金额 + 自带功能列的键盘</b>。之前那版是「白纸 + 细线 + 克制的灰」，方向正好相反。</p>
+
+    <h4>逐项对应</h4>
+    <ul>
+      <li>顶部分段：支出 / 收入 / 还款 / 转账（照图 2 的胶囊，不是纯文字）</li>
+      <li>分类：<b>4×2 大色块 64×64 圆角 18</b>，选中实色填充 + 外圈描边（图 1）</li>
+      <li>金额：<b>44pt 粗体 + 主色</b>，不是黑色（图 1 绿 / 图 2 橙 / 图 3 蓝）</li>
+      <li>备注卡：白卡圆角 18 + 虚线分隔 + 「选择账户 ›」（图 1）</li>
+      <li>键盘：3 列数字 + <b>右侧功能列</b>（删除 / 今天 / 保存长条）（图 1）</li>
+      <li>「再记」胶囊：浅主色底（图 1 右上）</li>
+    </ul>
+
+    <h4>没照搬的</h4>
+    <ul>
+      <li>二级分类：PRD 定死 8 类，v1 没有二级，所以只有一层</li>
+      <li>相机 / AI 助手：不在 v1 范围</li>
+      <li>模板行：需要新数据能力，先不做</li>
+    </ul>
+
+    <div class="src"><b>主色可切换</b>：右上四个点。绿=图 1、橙=图 2、蓝=图 3、墨=现在 App 的克制版。选中态、金额、保存键会一起变。</div>
+  </div>
+</div>
+
+<script>
+var CATS = [
+  {k:'吃',  e:'🥐', bg:'#FFF1E6'}, {k:'穿', e:'👕', bg:'#FFEEF3'},
+  {k:'住',  e:'🏠', bg:'#EFF7E8'}, {k:'行', e:'🚇', bg:'#EAF2FF'},
+  {k:'乐',  e:'🎮', bg:'#F3EEFF'}, {k:'医', e:'💊', bg:'#E8F6F4'},
+  {k:'情',  e:'🐱', bg:'#FFF8E4'}, {k:'其他', e:'✨', bg:'#F3F1EE'}
+];
+var GRADES = ['夯','飘','拉','NPC'];
+var ACCS = [
+  {n:'花呗', c1:'#5B8DEF', c2:'#2B58C4'},
+  {n:'建行 5044', c1:'#0E5FA8', c2:'#123B2F'},
+  {n:'京东白条', c1:'#E0483C', c2:'#8E1B1B'},
+  {n:'余额宝', c1:'#F2A93B', c2:'#DD6B22'}
+];
+var S = {type:'expense', cat:'吃', acc:'花呗', grade:'夯', amount:'32.00', accSheet:false, toast:false};
+
+function amtText(){ return S.amount === '' ? '0' : S.amount; }
+
+function segHTML(){
+  var list = [['expense','支出'],['income','收入'],['repay','还款'],['transfer','转账']];
+  return '<div class="seg">' + list.map(function(t){
+    return '<button data-act="type" data-val="' + t[0] + '" class="' + (S.type === t[0] ? 'on' : '') + '">' + t[1] + '</button>';
+  }).join('') + '</div>';
+}
+function catsHTML(){
+  return '<div class="cats">' + CATS.map(function(c){
+    return '<div class="cat ' + (S.cat === c.k ? 'on' : '') + '" data-act="cat" data-val="' + c.k + '">'
+      + '<span class="tile">' + c.e + '</span><span>' + c.k + '</span></div>';
+  }).join('') + '</div>';
+}
+function gradesHTML(){
+  return '<div class="grades"><span class="gl">值不值</span>' + GRADES.map(function(g){
+    return '<button class="g ' + (S.grade === g ? 'on' : '') + '" data-act="grade" data-val="' + g + '">' + g + '</button>';
+  }).join('') + '</div>';
+}
+function kbHTML(){
+  var pads = ['1','2','3','4','5','6','7','8','9','.','0','00'];
+  return '<div class="kbwrap"><div class="kb">'
+    + '<div class="kpads">' + pads.map(function(k){
+        return '<button data-act="key" data-val="' + k + '">' + k + '</button>';
+      }).join('') + '</div>'
+    + '<div class="kside">'
+      + '<button class="del" data-act="key" data-val="del"><i></i></button>'
+      + '<button class="today" data-act="today">今天</button>'
+      + '<button class="ok" data-act="save">完成</button>'
+    + '</div>'
+  + '</div></div>';
+}
+function underHTML(){
+  return '<div class="under">'
+    + '<div class="uhead"><b>DooDoo</b><span>◧ ⚙</span></div>'
+    + '<div class="ucard">'
+      + '<div class="ul">NOV</div>'
+      + '<div class="ud">08　<span style="font-size:12px;color:#8E8E93;font-weight:400">今天</span></div>'
+      + '<div class="ur"><span class="ui" style="background:#FFF1E6">🥐</span><span class="ut">好利来</span><span class="uv">−¥32.00</span></div>'
+      + '<div class="ur"><span class="ui" style="background:#EAF2FF">🚇</span><span class="ut">地铁</span><span class="uv">−¥4.00</span></div>'
+      + '<div class="ur"><span class="ui" style="background:#FFF8E4">🐱</span><span class="ut">麦富迪猫粮</span><span class="uv">−¥129.00</span></div>'
+      + '<div class="ur" style="border-bottom:0"><span class="ui" style="background:#F3F0EA">＋</span><span class="ut" style="color:#8E8E93">记一笔</span></div>'
+    + '</div>'
+    + '<div class="uveil"></div>'
+  + '</div>';
+}
+function accSheetHTML(){
+  return '<div class="accmask ' + (S.accSheet ? 'on' : '') + '" data-act="closesheet"></div>'
+    + '<div class="accsheet ' + (S.accSheet ? 'on' : '') + '">'
+      + '<h3>这笔从哪出</h3>'
+      + '<div class="accgrid">' + ACCS.map(function(a){
+          return '<div class="a ' + (S.acc === a.n ? 'on' : '') + '" data-act="acc" data-val="' + a.n + '">'
+            + '<i style="background:linear-gradient(140deg,' + a.c1 + ',' + a.c2 + ')"></i>' + a.n + '</div>';
+        }).join('') + '</div>'
+    + '</div>';
+}
+function panelHTML(){
+  return '<div class="panel">'
+    + '<span class="grab"></span>'
+    + '<div class="topbar">' + segHTML() + '<button class="close" data-act="close">×</button></div>'
+    + '<div class="dates"><span class="d">今天 · <b>11月8日</b></span><button class="again" data-act="again">再记</button></div>'
+    + catsHTML()
+    + '<div class="amtrow" data-act="kb"><span class="cur">¥</span><span class="num">' + amtText() + '</span><i class="caret"></i></div>'
+    + gradesHTML()
+    + '<div class="notecard">'
+      + '<div class="nrow" data-act="note"><span class="ph">备注 · 加一句</span><span class="plus">＋</span></div>'
+      + '<div class="nsep"></div>'
+      + '<div class="nrow"><span class="k">选择账户</span>'
+        + '<span class="v" data-act="opensheet"><i class="cardic"></i>' + S.acc + '<span class="chev">›</span></span></div>'
+    + '</div>'
+    + kbHTML()
+  + '</div>';
+}
+function bodyHTML(){
+  return underHTML() + panelHTML() + accSheetHTML()
+    + '<div class="toast' + (S.toast ? ' on' : '') + '" id="toast">已记下 · ¥' + amtText() + '</div>';
+}
+
+var dev = document.getElementById('dev');
+function render(){ dev.innerHTML = bodyHTML(); fit(); }
+function fit(){
+  var s = Math.min((window.innerHeight - 52 - 24) / 844, (window.innerWidth - 340) / 390, 1);
+  s = Math.max(s, 0.55);
+  var w = document.getElementById('devwrap');
+  w.style.width = (390 * s) + 'px';
+  w.style.height = (844 * s) + 'px';
+  dev.style.transform = 'scale(' + s + ')';
+}
+window.addEventListener('resize', fit);
+
+function save(){
+  S.toast = true; render();
+  setTimeout(function(){
+    S.toast = false;
+    var t = document.getElementById('toast');
+    if(t) t.classList.remove('on');
+  }, 1500);
+}
+function key(k){
+  var a = S.amount;
+  if(k === 'del'){ S.amount = a.slice(0, -1); render(); return; }
+  if(k === '.'){ if(a.indexOf('.') < 0) S.amount = (a || '0') + '.'; render(); return; }
+  if(k === '00'){
+    if(a.indexOf('.') >= 0) return;
+    S.amount = (a === '' || a === '0') ? '0' : a + '00';
+    render(); return;
+  }
+  var parts = a.split('.');
+  if(parts[1] && parts[1].length >= 2) return;
+  S.amount = (a === '' || a === '0') ? k : a + k;
+  render();
+}
+
+document.addEventListener('click', function(e){
+  var el = e.target.closest('[data-act]');
+  if(!el) return;
+  var act = el.dataset.act, val = el.dataset.val;
+
+  if(act === 'type'){ S.type = val; render(); return; }
+  if(act === 'cat'){ S.cat = val; render(); return; }
+  if(act === 'grade'){ S.grade = val; render(); return; }
+  if(act === 'key'){ key(val); return; }
+  if(act === 'opensheet'){ S.accSheet = true; render(); return; }
+  if(act === 'closesheet'){ S.accSheet = false; render(); return; }
+  if(act === 'acc'){ S.acc = val; S.accSheet = false; render(); return; }
+  if(act === 'save'){ save(); return; }
+  if(act === 'again'){ save(); return; }
+  if(act === 'close'){ S.accSheet = false; render(); return; }
+  if(act === 'today'){ S.accSheet = false; render(); return; }
+  return;
+});
+
+document.querySelectorAll('.dot').forEach(function(d){
+  d.addEventListener('click', function(){
+    var key2 = d.dataset.acc;
+    dev.setAttribute('data-acc', key2);
+    document.querySelectorAll('.dot').forEach(function(x){ x.classList.toggle('on', x === d); });
+    var map = {
+      green:  ['#2FB344', 'rgba(47,179,68,.12)'],
+      orange: ['#E09B2D', 'rgba(224,155,45,.12)'],
+      blue:   ['#4A6CF7', 'rgba(74,108,247,.12)'],
+      ink:    ['#1D1C1A', 'rgba(29,28,26,.08)']
+    };
+    dev.style.setProperty('--accent', map[key2][0]);
+    dev.style.setProperty('--accent-soft', map[key2][1]);
+  });
+});
+
+render();
+</script>
+</body>
+</html>

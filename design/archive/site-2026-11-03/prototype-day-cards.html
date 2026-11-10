@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F2F2F6">
+<title>DooDoo · 流水账</title>
+<style>
+  :root{
+    --green:#34C759; --green-d:#1C8B3E; --green-deep:#0E6B2E;
+    --ink:#111114; --i2:#6B6B73; --i3:#9A9AA2;
+    --line:#EDEDF0; --bg:#F2F2F6;
+    --c-hang:#D4537E; --c-piao:#378ADD; --c-la:#534AB7; --c-npc:#9A9AA2;
+  }
+  *{box-sizing:border-box;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:#E9E8E4;overflow:hidden;
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+
+  .app{
+    position:relative;margin:0 auto;background:var(--bg);
+    width:100%;max-width:430px;height:100dvh;overflow-y:auto;overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;scroll-behavior:smooth;
+  }
+  @media (min-width:520px){
+    body{display:flex;align-items:center;justify-content:center;padding:24px}
+    .app{height:min(920px, calc(100dvh - 48px));border-radius:44px;
+      box-shadow:0 2px 6px rgba(0,0,0,.07),0 30px 70px -30px rgba(0,0,0,.4);border:1px solid #DEDDD8}
+  }
+
+  .hdr{position:sticky;top:0;z-index:20;padding:14px 20px 10px;
+    background:rgba(242,242,246,.97);
+    border-bottom:1px solid rgba(0,0,0,.04)}
+  .hrow{display:flex;align-items:baseline;justify-content:space-between}
+  .hrow .t{font-size:19px;font-weight:600;letter-spacing:-.3px}
+  .hrow .s{font-size:12px;color:var(--i2)}
+  .hrow .s b{color:var(--ink);font-weight:600;font-size:13px;margin-left:3px}
+
+  .strip{display:flex;align-items:flex-end;gap:2px;height:44px;margin-top:9px}
+  .strip i{flex:1;display:block;border-radius:1.5px;transition:opacity .18s;min-height:3px}
+  .strip i.off{opacity:.42}
+  .strip i.on{opacity:1}
+  .marker{position:relative;height:0}
+  .marker span{position:absolute;top:-4px;width:100%;height:2px;border-radius:1px;background:var(--ink);
+    transition:left .18s cubic-bezier(.3,.8,.3,1)}
+
+  main{padding-bottom:104px}
+
+  .today{margin:14px 14px 8px;background:#fff;border-radius:22px;padding:16px 18px 8px;
+    box-shadow:0 1px 2px rgba(0,0,0,.04),0 14px 30px -24px rgba(0,0,0,.35);
+    border:1px solid #EDEDF0}
+  .today .th{display:flex;align-items:flex-start;justify-content:space-between}
+  .today .d{font-size:15px;font-weight:600;letter-spacing:-.2px}
+  .today .d em{font-style:normal;font-size:11px;color:var(--i3);font-weight:500;margin-left:5px}
+  .today .n{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.3px}
+  .today .sub{font-size:11.5px;color:var(--i3);margin-top:3px}
+
+  .row{display:flex;align-items:center;gap:11px;padding:9px 0}
+  .ico{width:32px;height:32px;border-radius:10px;flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+  .meta{flex:1;min-width:0}
+  .t1{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .t2{font-size:11px;color:var(--i3);margin-top:1px}
+  .amt{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .amt.in{color:var(--green-d)}
+
+  .more{display:block;width:100%;border:0;background:transparent;font:inherit;
+    font-size:12px;color:var(--i2);text-align:center;padding:9px 0 12px;cursor:pointer}
+  .more:active{opacity:.6}
+
+  .day{padding:0 18px;cursor:pointer;transition:background .15s}
+  .day:active{background:rgba(0,0,0,.03)}
+  .day .inner{display:flex;align-items:center;justify-content:space-between;
+    min-height:36px;padding:0}
+  .day .l{display:flex;align-items:center;gap:6px}
+  .day .dt{font-size:13px;color:var(--i2);font-variant-numeric:tabular-nums}
+  .day .dot{width:5px;height:5px;border-radius:50%;background:var(--green);opacity:0}
+  .day.worth .dot{opacity:1}
+  .day .n{font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums;color:#3A3A40}
+  .day.empty .n{color:#C2C2C8;font-weight:400;font-size:12.5px}
+  .day.hi .n{font-size:14.5px}
+
+  .detail{overflow:hidden;max-height:0;transition:max-height .32s cubic-bezier(.3,.8,.3,1)}
+  .detail.open{max-height:420px}
+  .detail .row{padding:7px 0 7px 2px}
+
+  .mcard{margin:16px 14px 0;background:#F8F8F5;border:1px solid #E7E7E1;border-radius:18px;
+    padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+  .mcard:active{background:#F2F2EE}
+  .mcard .mt{font-size:14px;font-weight:600}
+  .mcard .ms{font-size:11.5px;color:var(--i3);margin-top:3px}
+  .mcard .arrow{transition:transform .25s}
+  .mcard.open .arrow{transform:rotate(180deg)}
+  .mgroup{overflow:hidden;max-height:0;transition:max-height .4s cubic-bezier(.3,.8,.3,1)}
+  .mgroup.open{max-height:3000px}
+
+  .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;margin:0 auto;max-width:430px;
+    height:calc(64px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);
+    background:rgba(255,255,255,.97);
+    border-top:1px solid rgba(0,0,0,.06);display:flex;align-items:center;justify-content:space-around}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9.5px;color:var(--i3)}
+  .tab.on{color:var(--green-d);font-weight:600}
+  .plus{width:46px;height:46px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;
+    box-shadow:0 4px 14px -2px rgba(52,199,89,.5);margin-top:-18px}
+  .plus:active{transform:scale(.94)}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <header class="hdr">
+    <div class="hrow">
+      <span class="t">11 月</span>
+      <span class="s">支出<b>¥6,842</b></span>
+    </div>
+    <div class="strip" id="strip"></div>
+    <div class="marker"><span id="mk" style="left:0"></span></div>
+  </header>
+
+  <main>
+    <section class="today" data-idx="0" data-amt="224">
+      <div class="th">
+        <div>
+          <div class="d">今天<em>11 月 5 日 · 周三</em></div>
+          <div class="sub">3 笔 · 早上那杯咖啡是夯</div>
+        </div>
+        <div class="n">−224.40</div>
+      </div>
+      <div id="todayRows">
+        <div class="row">
+          <div class="ico" style="background:#FDEFF3"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9h12l-1 10.5a1 1 0 0 1-1 .9H8a1 1 0 0 1-1-.9z" stroke="#D4537E" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 9V6.5a3 3 0 0 1 6 0V9" stroke="#D4537E" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+          <div class="meta"><div class="t1">星巴克</div><div class="t2">09:12 · 弹性支出 · 夯</div></div>
+          <div class="amt">−32.00</div>
+        </div>
+        <div class="row">
+          <div class="ico" style="background:#E9F4FD"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5.5 8.5h13l1.3 10.2a1 1 0 0 1-1 1.3H5.2a1 1 0 0 1-1-1.3z" stroke="#378ADD" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 9V6.8a3 3 0 0 1 6 0V9" stroke="#378ADD" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+          <div class="meta"><div class="t1">盒马鲜生</div><div class="t2">12:40 · 生活所需 · 飘</div></div>
+          <div class="amt">−186.40</div>
+        </div>
+        <div class="hide" id="todayMore" style="display:none">
+          <div class="row">
+            <div class="ico" style="background:#FBF0E4"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="6" y="4.5" width="12" height="13" rx="3" stroke="#BA7517" stroke-width="1.8"/><path d="M6 12.5h12" stroke="#BA7517" stroke-width="1.8"/><path d="M7.5 20.5l.8-3M16.5 20.5l-.8-3" stroke="#BA7517" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+            <div class="meta"><div class="t1">地铁</div><div class="t2">08:05 · 固定支出 · NPC</div></div>
+            <div class="amt">−6.00</div>
+          </div>
+        </div>
+      </div>
+      <button class="more" id="moreBtn">展开另外 1 笔</button>
+    </section>
+
+    <div id="days"></div>
+
+    <div class="mcard open" data-target="g10">
+      <div>
+        <div class="mt">10 月</div>
+        <div class="ms">34 笔 · ¥6,842.30 · 最夯是一场火锅</div>
+      </div>
+      <svg class="arrow" width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="#A8A89E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="mgroup open" id="g10"></div>
+
+    <div class="mcard" data-target="g9">
+      <div>
+        <div class="mt">9 月</div>
+        <div class="ms">38 笔 · ¥7,140.00 · 最夯是搬家那天</div>
+      </div>
+      <svg class="arrow" width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="#A8A89E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="mgroup" id="g9"></div>
+  </main>
+
+  <nav class="tabbar">
+    <span class="tab on"><svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M4 10.5L12 4l8 6.5V20a1 1 0 0 1-1 1h-4v-5H9v5H5a1 1 0 0 1-1-1z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>首页</span>
+    <span class="tab"><svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M5 6h14M5 12h14M5 18h9" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>账单</span>
+    <span class="plus"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 6v12M6 12h12" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg></span>
+    <span class="tab"><svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M5 19V11M12 19V5M19 19v-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>排行</span>
+    <span class="tab"><svg width="21" height="21" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9" r="3.4" stroke="currentColor" stroke-width="1.9"/><path d="M5 20c1.2-3.5 3.8-5.2 7-5.2s5.8 1.7 7 5.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>我的</span>
+  </nav>
+</div>
+
+<script>
+(function(){
+  const NOV = [
+    {d:'11 月 4 日', w:'周二', amt:2400, items:[['房租','固定支出 · NPC','−2,400.00','#F1EFFA','house']]},
+    {d:'11 月 3 日', w:'周一', amt:6,    items:[['地铁','固定支出 · NPC','−6.00','#FBF0E4','train']]},
+    {d:'11 月 2 日', w:'周日', amt:0,    items:[]},
+    {d:'11 月 1 日', w:'周六', amt:386,  items:[['和朋友的火锅','弹性支出 · 夯','−386.00','#FDEFF3','bag'],['电影票','弹性支出 · 夯','−88.00','#F1EFFA','ticket']]}
+  ];
+
+  function rnd(seed){ let x = Math.sin(seed) * 10000; return x - Math.floor(x); }
+
+  const OCT = [];
+  for (let i = 31; i >= 1; i--) {
+    const r = rnd(i * 7.3);
+    let amt = 0;
+    if (r > 0.18) amt = Math.round(18 + rnd(i * 3.1) * 320);
+    if (r > 0.93) amt = Math.round(1200 + rnd(i * 2.2) * 1600);
+    OCT.push({d:'10 月 ' + i + ' 日', w:'', amt:amt, items: amt ? [['日常支出','','−' + amt.toFixed(2),'#EDEDF2','dot']] : []});
+  }
+
+  const SEP = [];
+  for (let i = 30; i >= 1; i--) {
+    const r = rnd(i * 4.7 + 9);
+    let amt = 0;
+    if (r > 0.2) amt = Math.round(20 + rnd(i * 5.5) * 380);
+    SEP.push({d:'9 月 ' + i + ' 日', w:'', amt:amt, items: amt ? [['日常支出','','−' + amt.toFixed(2),'#EDEDF2','dot']] : []});
+  }
+
+  const ICONS = {
+    house:'<path d="M4.5 10.5L12 4.5l7.5 6v9a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1z" stroke="#534AB7" stroke-width="1.8" stroke-linejoin="round"/>',
+    train:'<rect x="6" y="4.5" width="12" height="13" rx="3" stroke="#BA7517" stroke-width="1.8"/><path d="M6 12.5h12" stroke="#BA7517" stroke-width="1.8"/><path d="M7.5 20.5l.8-3M16.5 20.5l-.8-3" stroke="#BA7517" stroke-width="1.7" stroke-linecap="round"/>',
+    bag:'<path d="M6 9h12l-1 10.5a1 1 0 0 1-1 .9H8a1 1 0 0 1-1-.9z" stroke="#D4537E" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 9V6.5a3 3 0 0 1 6 0V9" stroke="#D4537E" stroke-width="1.8" stroke-linecap="round"/>',
+    ticket:'<circle cx="12" cy="12" r="8" stroke="#534AB7" stroke-width="1.8"/>',
+    dot:'<circle cx="12" cy="12" r="7" stroke="#8A8A90" stroke-width="1.8"/>'
+  };
+
+  function tone(a){
+    if (a === 0) return null;
+    if (a < 100) return '#F5FBF7';
+    if (a < 500) return '#E8F6EC';
+    if (a < 1500) return '#DCEFE2';
+    return '#CBE7D4';
+  }
+  function inkFor(a){ return a >= 1500 ? '#1B4D2A' : (a >= 500 ? '#2E6B3E' : '#5C8A66'); }
+  function hFor(a){ return a === 0 ? 20 : a < 100 ? 34 : a < 500 ? 42 : 52; }
+
+  function renderList(arr, mount){
+    arr.forEach(function(it){
+      const el = document.createElement('div');
+      el.className = 'day' + (it.amt === 0 ? ' empty' : '') + (it.amt >= 500 ? ' worth hi' : '');
+      const h = hFor(it.amt);
+      const bg = tone(it.amt);
+      el.style.background = bg ? bg : 'transparent';
+      if (!bg) el.style.boxShadow = 'inset 0 -1px 0 #F6F6F8';
+      el.style.padding = '0 18px';
+      el.innerHTML =
+        '<div class="inner" style="height:' + h + 'px">' +
+          '<div class="l"><span class="dt">' + it.d + '</span><i class="dot"></i></div>' +
+          '<span class="n">' + (it.amt === 0 ? '没花钱' : '−' + it.amt.toLocaleString()) + '</span>' +
+        '</div>' +
+        '<div class="detail">' + (it.items || []).map(function(x){
+          return '<div class="row"><div class="ico" style="background:' + x[3] + '"><svg width="16" height="16" viewBox="0 0 24 24" fill="none">' + (ICONS[x[4]] || ICONS.dot) + '</svg></div>' +
+                 '<div class="meta"><div class="t1">' + x[0] + '</div><div class="t2">' + x[1] + '</div></div>' +
+                 '<div class="amt">' + x[2] + '</div></div>';
+        }).join('') + '</div>';
+
+      el.addEventListener('click', function(){
+        const d = el.querySelector('.detail');
+        if (!d) return;
+        d.classList.toggle('open');
+      });
+      mount.appendChild(el);
+    });
+  }
+
+  const daysEl = document.getElementById('days');
+  renderList(NOV, daysEl);
+  renderList(OCT, document.getElementById('g10'));
+  renderList(SEP, document.getElementById('g9'));
+
+  const app = document.getElementById('app');
+  const strip = document.getElementById('strip');
+  const mk = document.getElementById('mk');
+
+  const all = [document.querySelector('.today')].concat(Array.from(daysEl.children), Array.from(document.getElementById('g10').children));
+
+  const K = Array.from(document.querySelectorAll('.tabbar .tab')).length;
+  const bars = [];
+  const maxA = Math.max.apply(null, [2400].concat(OCT.map(function(x){return x.amt})));
+
+  [{amt:224}].concat(NOV, OCT.slice(0, 26)).forEach(function(it, i){
+    const b = document.createElement('i');
+    const rel = Math.sqrt((it.amt || 0) / maxA);
+    b.style.height = (3 + rel * 41) + 'px';
+    b.style.background = i === 0 ? '#1C8B3E' : (it.amt === 0 ? '#DCDCE2' : '#7FBF95');
+    b.className = 'off';
+    strip.appendChild(b);
+    bars.push(b);
+  });
+
+  // 今天那根用主色标出来
+
+  const moreBtn = document.getElementById('moreBtn');
+  const todayMore = document.getElementById('todayMore');
+  let opened = false;
+  moreBtn.addEventListener('click', function(){
+    opened = !opened;
+    todayMore.style.display = opened ? 'block' : 'none';
+    moreBtn.textContent = opened ? '收起' : '展开另外 1 笔';
+  });
+
+  document.querySelectorAll('.mcard').forEach(function(c){
+    c.addEventListener('click', function(){
+      const g = document.getElementById(c.dataset.target);
+      const isOpen = c.classList.toggle('open');
+      g.classList.toggle('open', isOpen);
+    });
+  });
+
+  let ticking = false;
+  function sync(){
+    const hh = document.querySelector('.hdr').offsetHeight;
+    let idx = 0;
+    for (let i = 0; i < all.length; i++) {
+      const r = all[i].getBoundingClientRect();
+      if (r.bottom > hh + 40) { idx = i; break; }
+    }
+    const n = bars.length; if (idx > n - 1) idx = n - 1;
+    for (let i = 0; i < bars.length; i++) bars[i].className = (i === idx && i < n) ? 'on' : 'off';
+    if (bars[idx]) {
+      const bw = bars[0].offsetWidth + 2;
+      mk.style.left = (idx * bw) + 'px';
+      mk.style.width = bars[0].offsetWidth + 'px';
+    }
+  }
+  app.addEventListener('scroll', function(){
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function(){ sync(); ticking = false; });
+  }, {passive:true});
+
+  setTimeout(sync, 60);
+})();
+</script>
+</body>
+</html>

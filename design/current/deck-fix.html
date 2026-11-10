@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DooDoo · 卡堆修正</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden}
+  body{background:#EDEAE4;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",sans-serif;color:#1D1C1A;display:flex;flex-direction:column;align-items:center}
+
+  .bar{width:100%;height:56px;flex:0 0 56px;display:flex;align-items:center;gap:14px;padding:0 20px;border-bottom:1px solid #E2DFD9;background:#F4F1EC;overflow:hidden;z-index:5}
+  .brand{font-size:13px;font-weight:650;white-space:nowrap}
+  .chips{display:flex;gap:6px;flex:0 0 auto}
+  .chip{border:1px solid #DEDAD2;background:#FBFAF7;color:#4A4741;font:inherit;font-size:12px;padding:6px 12px;border-radius:999px;cursor:pointer}
+  .chip.on{background:#1D1C1A;color:#fff;border-color:#1D1C1A}
+  .hint{margin-left:auto;font-size:11.5px;color:#8A867D;line-height:1.45;max-width:540px;overflow:hidden}
+
+  .stage{flex:1;min-width:0;min-height:0;width:100%;position:relative;overflow:hidden}
+  .device{position:absolute;left:50%;top:20px;margin-left:-195px;width:390px;height:844px;transform-origin:top center}
+  .screen{position:absolute;inset:0;overflow:hidden;border-radius:44px;background:#F7F5F1;box-shadow:0 0 0 1px #DAD6CE,0 30px 70px rgba(0,0,0,.16)}
+
+  .statusbar{position:absolute;top:0;left:0;right:0;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;font-size:12px;font-weight:600;z-index:90}
+  .statusbar i{display:block;width:15px;height:9px;border:.8px solid #1D1C1A;border-radius:2px;position:relative}
+  .statusbar i::after{content:"";position:absolute;inset:1.5px;background:#1D1C1A;border-radius:1px}
+
+  .hd{position:absolute;top:52px;left:20px;right:20px;height:34px;display:flex;align-items:center;z-index:50}
+  .hd .logo{font-size:21px;font-weight:700;letter-spacing:-.02em}
+
+  .deck{position:absolute;top:100px;left:0;right:0;bottom:44px}
+  .card{position:absolute;top:0;background:#fff;border-radius:24px;transform-origin:bottom center}
+  .c0{left:16px;right:16px;z-index:40;padding:20px 18px 24px;display:flex;flex-direction:column;
+      box-shadow:0 1px 2px rgba(0,0,0,.03),0 10px 28px rgba(0,0,0,.05)}
+
+  .ch{display:flex;justify-content:space-between;align-items:flex-start}
+  .dwrap{display:flex;align-items:baseline;gap:6px}
+  .mon{font-size:11px;color:#A8A39A;letter-spacing:.08em}
+  .dnum{font-size:32px;font-weight:600;letter-spacing:-.02em;line-height:1}
+  .wday{font-size:12px;color:#A8A39A}
+  .totals{display:flex;align-items:baseline;gap:6px}
+  .totals .lbl{font-size:11px;color:#A8A39A}
+  .totals .exp{font-size:16px;font-weight:600;color:#C0392B;font-variant-numeric:tabular-nums}
+  .hr{height:1px;background:#EFECE5;margin:14px 0 2px}
+  .rows{flex:1}
+  .tx{display:flex;align-items:center;gap:12px;padding:10px 0}
+  .ic{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;flex:0 0 42px}
+  .ic img{width:27px;height:27px;display:block}
+  .tt{font-size:14px;font-weight:500}
+  .ts{font-size:11.5px;color:#A8A39A;margin-top:2px}
+  .ta{margin-left:auto;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+  .cardfoot{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#B0ACA3;padding-top:12px}
+
+  /* ============ S1 现状：层厚 10 ============ */
+  .s1 .c0{bottom:30px}
+  .s1 .c1{left:26px;right:26px;bottom:20px;z-index:30;transform:translateX(-5px) rotate(-1deg)}
+  .s1 .c2{left:25px;right:25px;bottom:10px;z-index:20;transform:translateX(4px) rotate(.9deg)}
+  .s1 .c3{left:28px;right:28px;bottom:0;z-index:10;transform:translateX(-4px) rotate(-1.3deg)}
+  .s1 .c1,.s1 .c2,.s1 .c3{box-shadow:0 1px 0 rgba(29,28,26,.10),0 4px 8px rgba(29,28,26,.05),inset 0 0 0 1px rgba(29,28,26,.11)}
+
+  /* ============ S2 层厚 14 + 明度梯度 ============ */
+  .s2 .c0{bottom:42px}
+  .s2 .c1{left:26px;right:26px;bottom:28px;z-index:30;transform:translateX(-5px) rotate(-1deg);
+          background:#FCFBF8;box-shadow:0 1px 0 rgba(29,28,26,.15),0 4px 9px rgba(29,28,26,.06)}
+  .s2 .c2{left:25px;right:25px;bottom:14px;z-index:20;transform:translateX(4px) rotate(.9deg);
+          background:#F9F6F0;box-shadow:0 1px 0 rgba(29,28,26,.16),0 5px 10px rgba(29,28,26,.07)}
+  .s2 .c3{left:28px;right:28px;bottom:0;z-index:10;transform:translateX(-4px) rotate(-1.3deg);
+          background:#F5F1E9;box-shadow:0 1px 0 rgba(29,28,26,.17),0 6px 12px rgba(29,28,26,.07)}
+
+  /* ============ S3 层厚 24（超过圆角半径） ============ */
+  .s3 .c0{bottom:72px}
+  .s3 .c1{left:26px;right:26px;bottom:48px;z-index:30;transform:translateX(-5px) rotate(-1deg)}
+  .s3 .c2{left:25px;right:25px;bottom:24px;z-index:20;transform:translateX(4px) rotate(.9deg)}
+  .s3 .c3{left:28px;right:28px;bottom:0;z-index:10;transform:translateX(-4px) rotate(-1.3deg)}
+  .s3 .c1,.s3 .c2,.s3 .c3{box-shadow:0 1px 0 rgba(29,28,26,.12),0 4px 9px rgba(29,28,26,.05),inset 0 0 0 1px rgba(29,28,26,.10)}
+
+  /* ============ S4 侧向散叠：靠左右露边数层 ============ */
+  .s4 .c0{bottom:36px}
+  .s4 .c1{left:24px;right:22px;bottom:24px;z-index:30;transform:rotate(-.7deg);
+          background:#FCFBF8;box-shadow:0 1px 0 rgba(29,28,26,.15),0 4px 9px rgba(29,28,26,.06),inset 0 0 0 1px rgba(29,28,26,.10)}
+  .s4 .c2{left:32px;right:30px;bottom:12px;z-index:20;transform:rotate(.6deg);
+          background:#F9F6F0;box-shadow:0 1px 0 rgba(29,28,26,.16),0 5px 10px rgba(29,28,26,.07),inset 0 0 0 1px rgba(29,28,26,.10)}
+  .s4 .c3{left:40px;right:38px;bottom:0;z-index:10;transform:rotate(-.9deg);
+          background:#F5F1E9;box-shadow:0 1px 0 rgba(29,28,26,.17),0 6px 12px rgba(29,28,26,.07),inset 0 0 0 1px rgba(29,28,26,.10)}
+</style>
+</head>
+<body>
+<div class="bar">
+  <div class="brand">卡堆修正</div>
+  <div class="chips" id="chips">
+    <button class="chip on" data-v="s1">S1 现状 10pt</button>
+    <button class="chip" data-v="s2">S2 14pt + 灰阶</button>
+    <button class="chip" data-v="s3">S3 24pt 硬层厚</button>
+    <button class="chip" data-v="s4">S4 侧向露边</button>
+  </div>
+  <div class="hint" id="hint"></div>
+</div>
+<div class="stage"><div class="device" id="dev"></div></div>
+
+<script>
+var TX = [
+  { ic:'Croissant', t:'好利来', s:'吃 · 花呗', a:'32.00', bg:'#FFF1E6' },
+  { ic:'LightRail', t:'地铁', s:'行 · 建行5044', a:'4.00', bg:'#EAF2FF' },
+  { ic:'Cat', t:'麦富迪猫粮', s:'情 · 白条', a:'129.00', bg:'#F3EEFF' },
+  { ic:'HotBeverage', t:'星巴克', s:'吃 · 花呗', a:'28.00', bg:'#FFF1E6' }
+];
+function cardHTML(){
+  var rows = TX.map(function(r){
+    return '<div class="tx"><div class="ic" style="background:' + r.bg + '">'
+      + '<img src="../../assets/emoji/picked/' + r.ic + '.png" alt="">'
+      + '</div><div><div class="tt">' + r.t + '</div><div class="ts">' + r.s + '</div></div>'
+      + '<div class="ta">−¥' + r.a + '</div></div>';
+  }).join('');
+  return '<div class="card c0">'
+    + '<div class="ch"><div class="dwrap"><span class="mon">NOV</span><span class="dnum">06</span><span class="wday">今天</span></div>'
+    + '<div class="totals"><span class="lbl">支出</span><span class="exp">−¥193.00</span></div></div>'
+    + '<div class="hr"></div><div class="rows">' + rows + '</div>'
+    + '<div class="cardfoot"><span>今天 · 11月6日</span><span>4 笔</span></div></div>';
+}
+var BACK = '<div class="card c3"></div><div class="card c2"></div><div class="card c1"></div>';
+
+var V = {
+  s1:{ hint:'现状：层厚 10pt，白色底 + 0.11 描边。圆角 24pt 大于层厚，条带两端掉进圆弧，只剩几根淡线。' },
+  s2:{ hint:'层厚 14pt，后层逐级压深到 #F5F1E9，每层顶住一条 1px 硬缝。靠明度差数层，不靠加厚。' },
+  s3:{ hint:'层厚 24pt = 圆角半径，条带中段终于全是直边。代价：四层吃掉 72pt，前卡矮一截，底部显得厚实。' },
+  s4:{ hint:'层厚 12pt，但后层逐级左右各内缩 8pt。层数从两侧竖直边读，绕开圆角问题；卡堆看起来更散。' }
+};
+var dev = document.getElementById('dev');
+var hintEl = document.getElementById('hint');
+var cur = 's1';
+function render(){
+  dev.innerHTML = '<div class="screen ' + cur + '">'
+    + '<div class="statusbar"><span>9:41</span><span><i></i></span></div>'
+    + '<div class="hd"><span class="logo">DooDoo</span></div>'
+    + '<div class="deck">' + BACK + cardHTML() + '</div></div>';
+  hintEl.textContent = V[cur].hint;
+}
+document.getElementById('chips').addEventListener('click', function(e){
+  var b = e.target.closest('.chip'); if (!b) return;
+  [].slice.call(this.children).forEach(function(c){ c.classList.toggle('on', c === b); });
+  cur = b.dataset.v; render();
+});
+if (location.search.indexOf('zoom') >= 0) {
+  var st = document.createElement('style');
+  st.textContent = '.device{transform:scale(2) !important;transform-origin:0 100% !important;margin-left:-390px !important;left:50% !important}';
+  document.head.appendChild(st);
+} else {
+  function fit(){
+    var s = Math.min((window.innerWidth - 40) / 390, (window.innerHeight - 56 - 40) / 844, 1);
+    dev.style.transform = 'scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit); fit();
+}
+render();
+</script>
+</body>
+</html>

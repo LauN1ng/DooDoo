@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>tab 材质 · 五版对照</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#EDEAE4;font-family:-apple-system,"PingFang SC",sans-serif;color:#1D1C1A;padding:22px 24px 30px}
+  h1{font-size:19px;margin:0 0 4px;letter-spacing:-.3px}
+  .sub{font-size:12.5px;color:#6F6B63;line-height:1.75;margin:0 0 18px;max-width:1180px}
+  .diag{background:#fff;border-radius:12px;padding:14px 18px;box-shadow:0 6px 18px rgba(0,0,0,.06);margin-bottom:20px;max-width:1180px}
+  .diag h2{font-size:13.5px;margin:0 0 8px}
+  .diag p{font-size:12.5px;line-height:1.75;color:#5F5E5A;margin:0 0 6px}
+  .diag b{color:#1D1C1A}
+  .row{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap}
+  .col{width:302px;flex:0 0 302px}
+  .hd{display:flex;align-items:baseline;gap:7px;margin-bottom:8px}
+  .hd b{font-size:13px}
+  .hd em{font-style:normal;font-size:11px;color:#8A867D}
+  .tag{font-size:10px;padding:2px 7px;border-radius:999px;font-weight:600;margin-left:auto}
+  .bad{background:#FBEDEB;color:#B4443A}
+  .mid{background:#FAF0DF;color:#8A6410}
+  .ok{background:#EAF3EC;color:#2F7A48}
+  img{width:302px;display:block;border-radius:10px;box-shadow:0 8px 22px rgba(0,0,0,.10)}
+  .note{font-size:11.5px;line-height:1.65;color:#6F6B63;margin-top:9px}
+  .note b{color:#1D1C1A}
+  table{width:100%;max-width:1180px;border-collapse:collapse;margin-top:26px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+  th,td{border-bottom:1px solid #EFECE5;padding:9px 12px;font-size:12px;text-align:left;vertical-align:top}
+  th{background:#FAF9F6;font-weight:600;font-size:11.5px;color:#5F5E5A}
+  td:first-child{color:#5F5E5A;width:112px}
+  tr:last-child td{border-bottom:none}
+  .fix{margin-top:24px;background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 6px 18px rgba(0,0,0,.06);max-width:1180px}
+  .fix h2{font-size:14px;margin:0 0 8px}
+  .fix li{font-size:12px;line-height:1.75;color:#6F6B63;margin-left:16px}
+  .fix code{background:#F1EFE8;border-radius:4px;padding:1px 5px;font-size:11.5px}
+</style>
+</head>
+<body>
+<h1>tab 材质 · 五版对照</h1>
+<p class="sub">同一套卡堆（散叠 3 层、层厚 10pt、白卡）+ 便签「本月 ↘12.4%」，只换底部导航的<b>材质</b>，不动位置、不动数量、不动图标。</p>
+
+<div class="diag">
+  <h2>先说诊断：现在的墨键为什么不搭</h2>
+  <p>不是位置问题（D2 那轮已验证「只压前卡、层厚带完整穿过」是对的），是<b>材质和重量</b>问题。</p>
+  <p>整页的语言是「暖白 #F7F5F1 + 白纸卡 + 极轻双层阴影 + 若有若无的层叠」，强调色用量不到 5%（红只给支出）。而墨键是 <b>#1D1C1A 纯黑实心胶囊 126×40</b>——它是全屏第二重的元素（仅次于 FAB），一个孤立的、和纸毫无关系的黑色硬件。</p>
+  <p>HeyCost 那类 App 的 tab <b>几乎不可见</b>。墨键比它重太多，也比 DooDoo 自己的纸卡语言重太多。这就是"不搭"的来源。</p>
+</div>
+
+<div class="row">
+  <div class="col">
+    <div class="hd"><b>A</b><em>无容器 · 浅底托</em><span class="tag mid">轻</span></div>
+    <img src="mt-a.png" alt="A 方案">
+    <div class="note">每个图标一枚 34pt 浅底圆角方托（和 emoji 的 42px 浅底容器同一套语言），选中项底托转白 + 加深 + 顶部一条 12pt 墨线。<br>零胶囊，重量最轻，但<b>仍压在层叠边缘上</b>，需要底托托住才读得清。</div>
+  </div>
+  <div class="col">
+    <div class="hd"><b>B</b><em>三张独立纸签</em><span class="tag ok">推荐</span></div>
+    <img src="mt-b.png" alt="B 方案">
+    <div class="note">三张 40×36 独立小纸签，选中那张<b>填墨</b>（不是抬起——白底上抬起读不出来）。<br>与卡堆同一套纸材质：描边 + 窄投影。三个按钮读得清，且黑签与右侧黑 FAB <b>同族</b>，两个重物呼应而非割裂。</div>
+  </div>
+  <div class="col">
+    <div class="hd"><b>C</b><em>玻璃胶囊</em><span class="tag bad">白浮白</span></div>
+    <img src="mt-c.png" alt="C 方案">
+    <div class="note">玻璃 + 淡墨图标，最接近 <code>index.html</code> 最初的形态。<br><b>实测不成立</b>：底色 <code>rgba(246,243,238,.92)</code> 与白卡只差 2%，胶囊边界读不出，读成"白卡上贴了张白纸"。<b>白浮白行不通</b>这条老教训又一次复现。</div>
+  </div>
+  <div class="col">
+    <div class="hd"><b>D</b><em>墨键（现状）</em><span class="tag bad">对照组</span></div>
+    <img src="mt-d.png" alt="D 方案">
+    <div class="note">纯黑实心胶囊 + 独立黑 FAB。<br>两个纯黑重物分居两端，中间 178pt 空地。两个黑物之间<b>没有任何材质呼应</b>——这才是"不搭"的真正来源，不是位置。</div>
+  </div>
+  <div class="col">
+    <div class="hd"><b>E</b><em>顶栏 · 底部只留 +</em><span class="tag mid">最干净</span></div>
+    <img src="mt-e.png" alt="E 方案">
+    <div class="note">tab 进页头右侧（18px 细线图标 + 选中墨点），底部只留 FAB。卡堆层叠<b>零遮挡</b>。<br>代价：单手够屏幕顶最难，而资产页是重度页面；页头还要给便签让位（<code>.vE .note{top:6px}</code>）。</div>
+  </div>
+</div>
+
+<table>
+  <tr><th>对比项</th><th>A 浅底托</th><th>B 纸签</th><th>C 玻璃</th><th>D 墨键</th><th>E 顶栏</th></tr>
+  <tr><td>材质语言</td><td>浅底方托（同 emoji）</td><td>白纸签（同卡堆）</td><td>玻璃</td><td>纯黑硬件</td><td>无容器裸图标</td></tr>
+  <tr><td>容器面积</td><td>3×34² 小</td><td>3×40×36 中</td><td>124×40 中</td><td>126×36 中</td><td>0</td></tr>
+  <tr><td>与纸卡协调</td><td>好</td><td><b>好</b></td><td>差（边界读不出）</td><td>差（硬件感）</td><td>好</td></tr>
+  <tr><td>与黑 FAB 呼应</td><td>无</td><td><b>有</b>（同为墨）</td><td>无</td><td>有但割裂</td><td>无</td></tr>
+  <tr><td>选中态可读性</td><td>好</td><td><b>好</b></td><td>弱</td><td>好</td><td>好</td></tr>
+  <tr><td>遮挡卡堆</td><td>压层叠边缘</td><td>压层叠边缘</td><td>压层叠边缘</td><td>压层叠边缘</td><td><b>零</b></td></tr>
+  <tr><td>拇指可达</td><td>好</td><td>好</td><td>好</td><td>好</td><td>差</td></tr>
+  <tr><td>结论</td><td>备选</td><td><b>推荐</b></td><td>否</td><td>否（现状）</td><td>备选</td></tr>
+</table>
+
+<div class="fix">
+  <h2>为什么 B 是推荐：它同时解掉两个问题</h2>
+  <ul>
+    <li><b>材质归位</b>：纸签用与卡堆后层完全相同的配方（<code>0 0 0 1px rgba(29,28,26,.13)</code> + <code>0 2px 4px rgba(29,28,26,.06)</code>），所以它读成"另一张小纸"，而不是"贴在纸上的黑色控件"。</li>
+    <li><b>两个黑物互相呼应</b>：选中签填墨后与右侧黑 FAB 同为 <code>#1D1C1A</code>，重量对等、语义不同（导航 vs 主动作），不再是两个互不相干的黑块。</li>
+    <li><b>选中态用填墨不用抬起</b>：白纸签上"抬起 4pt"完全读不出来（第一版实测），只有填充色变化是明度差，稳。</li>
+    <li><b>不做玻璃</b>：白卡 + 玻璃 = 白浮白，2% 色差。这条老教训已经复现过一次，不要再来第三次。</li>
+  </ul>
+</div>
+</body>
+</html>

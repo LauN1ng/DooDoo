@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DooDoo · 主页方案 A / B / C / D</title>
+<style>
+  :root{
+    --green:#34C759; --green-d:#1C8B3E; --green-deep:#0E6B2E;
+    --ink:#111114; --i2:#6B6B73; --i3:#9A9AA2;
+    --line:#EBEBEE; --bg:#F2F2F6;
+    --c-hang:#D4537E; --c-piao:#378ADD; --c-la:#534AB7; --c-npc:#9A9AA2;
+    --s:.72;
+  }
+  *{box-sizing:border-box;-webkit-font-smoothing:antialiased}
+  body{
+    margin:0;background:#EDECE8;color:var(--ink);padding:44px 24px 64px;
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  }
+  .board{max-width:790px;margin:0 auto}
+  .board>header{max-width:640px;margin-bottom:34px}
+  h1{font-size:26px;margin:0 0 10px;letter-spacing:-.4px;font-weight:600}
+  .board>header p{margin:0;font-size:13.5px;line-height:1.75;color:#6B6B68}
+  .board>header b{color:#111114;font-weight:600}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:44px 16px;justify-items:center}
+  figure{margin:0;width:calc(390px * var(--s))}
+  .frame{width:calc(390px * var(--s));height:calc(844px * var(--s));position:relative;border-radius:calc(40px * var(--s));overflow:hidden;
+    box-shadow:0 2px 5px rgba(0,0,0,.07),0 20px 44px -20px rgba(0,0,0,.32);background:#0E0E10}
+  figcaption{margin-top:14px;font-size:13px;font-weight:600}
+  figcaption span{display:block;font-size:12px;font-weight:400;color:#7A7A76;margin-top:4px;line-height:1.6}
+  figcaption i{font-style:normal;font-size:11px;color:#9A9A94;display:block;margin-top:6px}
+
+  .phone{width:390px;height:844px;transform:scale(var(--s));transform-origin:top left;background:var(--bg);
+    display:flex;flex-direction:column;overflow:hidden}
+  .sb{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;font-size:13.5px;font-weight:600;flex:0 0 auto}
+  .sb .r{display:flex;gap:4px;align-items:center}
+  .sb .bar{width:17px;height:10px;border-radius:2px;background:currentColor;opacity:.9}
+  .sb .bat{width:23px;height:11px;border-radius:3px;border:1.2px solid currentColor;position:relative}
+  .sb .bat::after{content:"";position:absolute;inset:1.6px;background:currentColor;border-radius:1px}
+  .body{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:6px 22px 0;flex:0 0 auto}
+  .mon{font-size:15px;font-weight:600;letter-spacing:-.2px}
+  .mon small{font-size:11px;color:var(--i3);font-weight:500;margin-left:5px}
+  .icobtn{width:30px;height:30px;border-radius:50%;background:#E7E7EC;display:flex;align-items:center;justify-content:center}
+
+  .row{display:flex;align-items:center;gap:10px;padding:8px 22px;flex:0 0 auto}
+  .ico{width:31px;height:31px;border-radius:10px;flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+  .meta{flex:1;min-width:0}
+  .t1{font-size:13.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .t2{font-size:11px;color:var(--i3);margin-top:1px}
+  .amt{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .amt.in{color:var(--green-d)}
+
+  .tabbar{margin-top:auto;flex:0 0 auto;height:64px;background:rgba(255,255,255,.94);border-top:1px solid var(--line);
+    display:flex;align-items:center;justify-content:space-around;padding-bottom:8px;z-index:5}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9.5px;color:var(--i3)}
+  .tab.on{color:var(--green-d);font-weight:600}
+  .plus{width:46px;height:46px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;
+    box-shadow:0 4px 12px -2px rgba(52,199,89,.5);margin-top:-18px}
+
+  .ghd{display:flex;align-items:center;justify-content:space-between;margin:14px 22px 0;flex:0 0 auto}
+  .ghd span{font-size:11.5px;color:var(--i3);font-weight:600;letter-spacing:.06em}
+  .ghd em{font-style:normal;font-size:11.5px;color:var(--i3)}
+
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:38px;gap:5px;margin:14px 20px 0;flex:0 0 auto}
+  .cal .wk{font-size:9.5px;color:#B4B2A9;text-align:center;align-self:end;padding-bottom:2px}
+  .cal .d{border-radius:9px;background:#E9E9EE;position:relative}
+  .cal .d.today{outline:2px solid #111114;outline-offset:1px}
+  .cal .d .num{position:absolute;left:3px;top:2px;font-size:8px;color:rgba(255,255,255,.85)}
+  .cal .d.lite .num{color:#8A8A90}
+
+  .dcard{flex:0 0 auto;background:#fff;border-radius:20px;margin:12px 16px 0;padding:14px 16px 8px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 10px 26px -20px rgba(0,0,0,.3)}
+  .dcard.ghost{opacity:.55;transform:scale(.96);transform-origin:top center;margin-top:6px}
+  .dcard .dh{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px}
+  .dcard .dd{font-size:19px;font-weight:600;letter-spacing:-.3px}
+  .dcard .dd em{font-style:normal;font-size:11px;color:var(--i3);font-weight:500;margin-left:6px}
+  .dcard .dn{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+  .dcard .row{padding:7px 0}
+  .dcard .dsum{font-size:11px;color:var(--i3);padding-bottom:6px;border-top:1px solid var(--line);margin-top:4px;padding-top:7px}
+
+  .huge{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding-bottom:40px}
+  .huge .k{font-size:12px;color:var(--i2);letter-spacing:.04em}
+  .huge .v{font-size:62px;font-weight:600;letter-spacing:-2.4px;margin:6px 0 0;font-variant-numeric:tabular-nums;line-height:1}
+  .huge .v .cur{font-size:30px;letter-spacing:-.5px}
+  .huge .s{font-size:12px;color:var(--i3);margin-top:8px}
+  .bar2{width:220px;height:7px;border-radius:4px;background:#E4E4E9;margin-top:18px;overflow:hidden}
+  .bar2 i{display:block;height:100%;background:var(--green);border-radius:4px;width:68%}
+  .barlab{display:flex;justify-content:space-between;width:220px;font-size:10.5px;color:var(--i3);margin-top:6px}
+
+  .acards{display:flex;gap:9px;margin:14px 16px 0;overflow:hidden;flex:0 0 auto}
+  .acard{flex:0 0 128px;border-radius:14px;padding:11px 12px;color:#fff;position:relative;overflow:hidden;height:78px}
+  .acard .an{font-size:10.5px;opacity:.9}
+  .acard .av{font-size:16px;font-weight:600;margin-top:6px;font-variant-numeric:tabular-nums}
+  .acard .ad{font-size:9.5px;opacity:.85;margin-top:2px}
+</style>
+</head>
+<body>
+<div class="board">
+  <header>
+    <h1>主页 · 四个结构方案</h1>
+    <p>都不是「数字＋图＋条＋列表」那套。分别赌不同的东西：<b>A</b> 赌时间感、<b>B</b> 赌叙事、<b>C</b> 赌情绪、<b>D</b> 赌资产。挑一个定方向，细节再往里填。</p>
+  </header>
+
+  <div class="grid">
+
+    <figure>
+      <div class="frame"><div class="phone">
+        <div class="sb"><span>07:49</span><span class="r"><i class="bar"></i><i class="bat"></i></span></div>
+        <div class="body">
+          <div class="topbar">
+            <span class="mon">11 月<small>2026</small></span>
+            <span class="icobtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M7 12h10M10 17h4" stroke="#8A8A90" stroke-width="1.9" stroke-linecap="round"/></svg></span>
+          </div>
+
+          <p style="margin:10px 22px 0;font-size:12px;color:var(--i2)">本月支出 <b style="font-size:15px;color:#111114;letter-spacing:-.3px">¥6,842.30</b></p>
+
+          <div class="cal" id="cal"></div>
+
+          <div style="display:flex;align-items:center;gap:5px;margin:12px 22px 0;font-size:10px;color:var(--i3)">
+            <span>少</span>
+            <i style="width:12px;height:9px;border-radius:2px;background:#E9E9EE;display:block"></i>
+            <i style="width:12px;height:9px;border-radius:2px;background:#BFE8CB;display:block"></i>
+            <i style="width:12px;height:9px;border-radius:2px;background:#7BD496;display:block"></i>
+            <i style="width:12px;height:9px;border-radius:2px;background:#34C759;display:block"></i>
+            <i style="width:12px;height:9px;border-radius:2px;background:#1C8B3E;display:block"></i>
+            <span>多</span>
+            <span style="margin-left:auto;color:var(--i2)">12 天没花钱</span>
+          </div>
+
+          <div class="ghd"><span>今天</span><em>3 笔 · ¥224.40</em></div>
+          <div class="row">
+            <div class="ico" style="background:#FDEFF3"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M6 9h12l-1 10.5a1 1 0 0 1-1 .9H8a1 1 0 0 1-1-.9z" stroke="#D4537E" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 9V6.5a3 3 0 0 1 6 0V9" stroke="#D4537E" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+            <div class="meta"><div class="t1">星巴克</div><div class="t2">09:12 · 弹性支出 · 夯</div></div>
+            <div class="amt">−¥32.00</div>
+          </div>
+          <div class="row">
+            <div class="ico" style="background:#E9F4FD"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5.5 8.5h13l1.3 10.2a1 1 0 0 1-1 1.3H5.2a1 1 0 0 1-1-1.3z" stroke="#378ADD" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 9V6.8a3 3 0 0 1 6 0V9" stroke="#378ADD" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+            <div class="meta"><div class="t1">盒马鲜生</div><div class="t2">12:40 · 生活所需 · 飘</div></div>
+            <div class="amt">−¥186.40</div>
+          </div>
+          <div class="row">
+            <div class="ico" style="background:#FBF0E4"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="6" y="4.5" width="12" height="13" rx="3" stroke="#BA7517" stroke-width="1.8"/><path d="M6 12.5h12" stroke="#BA7517" stroke-width="1.8"/><path d="M7.5 20.5l.8-3M16.5 20.5l-.8-3" stroke="#BA7517" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+            <div class="meta"><div class="t1">地铁</div><div class="t2">08:05 · 固定支出 · NPC</div></div>
+            <div class="amt">−¥6.00</div>
+          </div>
+
+          <div class="tabbar">
+            <span class="tab on"><i><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 10.5L12 4l8 6.5V20a1 1 0 0 1-1 1h-4v-5H9v5H5a1 1 0 0 1-1-1z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg></i>首页</span>
+            <span class="tab"><i><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 6h14M5 12h14M5 18h9" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></i>账单</span>
+            <span class="plus"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 6v12M6 12h12" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg></span>
+            <span class="tab"><i><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 19V11M12 19V5M19 19v-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></i>排行</span>
+            <span class="tab"><i><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9" r="3.4" stroke="currentColor" stroke-width="1.9"/><path d="M5 20c1.2-3.5 3.8-5.2 7-5.2s5.8 1.7 7 5.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></i>我的</span>
+          </div>
+        </div>
+      </div></div>
+      <figcaption>A · 消费日历
+        <span>一屏看完一个月，颜色深浅就是当天花多少。点某天展开当天流水。</span>
+        <i>赌的是时间感；代价是“今天花了多少”要下滑</i>
+      </figcaption>
+    </figure>
+
+    <figure>
+      <div class="frame"><div class="phone">
+        <div class="sb"><span>07:49</span><span class="r"><i class="bar"></i><i class="bat"></i></span></div>
+        <div class="body">
+          <div class="topbar">
+            <span class="mon">流水账<small>34 笔</small></span>
+            <span class="icobtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M7 12h10M10 17h4" stroke="#8A8A90" stroke-width="1.9" stroke-linecap="round"/></svg></span>
+          </div>
+
+          <div class="dcard">
+            <div class="dh">
+              <div class="dd">今天<em>11 月 5 日 · 周三</em></div>
+              <div class="dn">−¥224.40</div>
+            </div>
+            <div class="row">
+              <div class="ico" style="background:#FDEFF3"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M6 9h12l-1 10.5a1 1 0 0 1-1 .9H8a1 1 0 0 1-1-.9z" stroke="#D4537E" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 9V6.5a3 3 0 0 1 6 0V9" stroke="#D4537E" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+              <div class="meta"><div class="t1">星巴克</div><div class="t2">09:12 · 弹性支出 · 夯</div></div>
+              <div class="amt">−¥32.00</div>
+            </div>
+            <div class="row">
+              <div class="ico" style="background:#E9F4FD"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5.5 8.5h13l1.3 10.2a1 1 0 0 1-1 1.3H5.2a1 1 0 0 1-1-1.3z" stroke="#378ADD" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 9V6.8a3 3 0 0 1 6 0V9" stroke="#378ADD" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+              <div class="meta"><div class="t1">盒马鲜生</div><div class="t2">12:40 · 生活所需 · 飘</div></div>
+              <div class="amt">−¥186.40</div>
+            </div>
+            <div class="row">
+              <div class="ico" style="background:#FBF0E4"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="6" y="4.5" width="12" height="13" rx="3" stroke="#BA7517" stroke-width="1.8"/><path d="M6 12.5h12" stroke="#BA7517" stroke-width="1.8"/><path d="M7.5 20.5l.8-3M16.5 20.5l-.8-3" stroke="#BA7517" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+              <div class="meta"><div class="t1">地铁</div><div class="t2">08:05 · 固定支出 · NPC</div></div>
+              <div class="amt">−¥6.00</div>
+            </div>
+            <div class="dsum">3 笔 · 最夯的一笔是早上的咖啡</div>
+          </div>
+
+          <div class="dcard ghost">
+            <div class="dh">
+              <div class="dd">昨天<em>11 月 4 日 · 周二</em></div>
+              <div class="dn">−¥2,458.00</div>
+            </div>
+            <div class="row">
+              <div class="ico" style="background:#F1EFFA"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4.5 10.5L12 4.5l7.5 6v9a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1z" stroke="#534AB7" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
+              <div class="meta"><div class="t1">房租</div><div class="t2">固定支出 · NPC</div></div>
+              <div class="amt">−¥2,400.00</div>
+            </div>
+            <div class="dsum">2 笔 · 房租扣掉，这天基本没花别的</div>
+          </div>
+
+          <div class="dcard ghost">
+            <div class="dh">
+              <div class="dd">11 月 3 日<em>周一</em></div>
+              <div class="dn">−¥268.00</div>
+            </div>
+            <div class="dsum" style="border-top:0;padding-top:2px">3 笔 · 买菜、话费、一杯奶茶</div>
+          </div>
+
+          <div class="tabbar">
+            <span class="tab on"><i><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 10.5L12 4l8 6.5V20a1 1 0 0 1-1 1h-4v-5H9v5H5a1 1 0 0 1-1-1z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg></i>首页</span>
+            <span class="tab"><i><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 6h14M5 12h14M5 18h9" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></i>账单</span>
+            <span class="plus"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 6v12M6 12h12" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg></span>
+            <span class="tab"><i><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 19V11M12 19V5M19 19v-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></i>排行</span>
+            <span class="tab"><i><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9" r="3.4" stroke="currentColor" stroke-width="1.9"/><path d="M5 20c1.2-3.5 3.8-5.2 7-5.2s5.8 1.7 7 5.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></i>我的</span>
+          </div>
+        </div>
+      </div></div>
+      <figcaption>B · 一天一张卡
+        <span>像日记本，每天一张卡，下滑翻历史。卡片底部自动写一句当天小结。</span>
+        <i>赌的是叙事感；代价是没有月度总览</i>
+      </figcaption>
+    </figure>
+
+    <figure>
+      <div class="frame"><div class="phone">
+        <div class="sb"><span>07:49</span><span class="r"><i class="bar"></i><i class="bat"></i></span></div>
+        <div class="body">
+          <div class="topbar">
+            <span class="mon">11 月</span>
+            <span class="icobtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="#8A8A90" stroke-width="1.9"/><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2" stroke="#8A8A90" stroke-width="1.9" stroke-linecap="round"/></svg></span>
+          </div>
+
+          <div class="huge">
+            <div class="k">这个月还能花</div>
+            <div class="v"><span class="cur">¥</span>3,157</div>
+            <div class="s">每天可用 ¥242 · 还剩 13 天</div>
+            <div class="bar2"><i></i></div>
+            <div class="barlab"><span>已花 6,842</span><span>预算 10,000</span></div>
+          </div>
+
+          <div style="margin:0 22px 10px;padding-top:14px;border-top:1px solid var(--line)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+              <span style="font-size:11px;color:var(--i3);font-weight:600;letter-spacing:.06em">刚刚</span>
+              <span style="font-size:11px;color:var(--i3)">今天已花 3 笔</span>
+            </div>
+          </div>
+          <div class="row" style="padding-top:0">
+            <div class="ico" style="background:#FDEFF3"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M6 9h12l-1 10.5a1 1 0 0 1-1 .9H8a1 1 0 0 1-1-.9z" stroke="#D4537E" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 9V6.5a3 3 0 0 1 6 0V9" stroke="#D4537E" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+            <div class="meta"><div class="t1">星巴克</div><div class="t2">09:12 · 弹性支出 · 夯</div></div>
+            <div class="amt">−¥32.00</div>
+          </div>
+          <div class="row">
+            <div class="ico" style="background:#E9F4FD"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5.5 8.5h13l1.3 10.2a1 1 0 0 1-1 1.3H5.2a1 1 0 0 1-1-1.3z" stroke="#378ADD" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 9V6.8a3 3 0 0 1 6 0V9" stroke="#378ADD" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+            <div class="meta"><div class="t1">盒马鲜生</div><div class="t2">12:40 · 生活所需 · 飘</div></div>
+            <div class="amt">−¥186.40</div>
+          </div>
+          <div class="row">
+            <div class="ico" style="background:#FBF0E4"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="6" y="4.5" width="12" height="13" rx="3" stroke="#BA7517" stroke-width="1.8"/><path d="M6 12.5h12" stroke="#BA7517" stroke-width="1.8"/><path d="M7.5 20.5l.8-3M16.5 20.5l-.8-3" stroke="#BA7517" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+            <div class="meta"><div class="t1">地铁</div><div class="t2">08:05 · 固定支出 · NPC</div></div>
+            <div class="amt">−¥6.00</div>
+          </div>
+
+          <div class="tabbar">
+            <span class="tab on"><i><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 10.5L12 4l8 6.5V20a1 1 0 0 1-1 1h-4v-5H9v5H5a1 1 0 0 1-1-1z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg></i>首页</span>
+            <span class="tab"><i><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 6h14M5 12h14M5 18h9" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></i>账单</span>
+            <span class="plus"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 6v12M6 12h12" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg></span>
+            <span class="tab"><i><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 19V11M12 19V5M19 19v-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></i>排行</span>
+            <span class="tab"><i><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9" r="3.4" stroke="currentColor" stroke-width="1.9"/><path d="M5 20c1.2-3.5 3.8-5.2 7-5.2s5.8 1.7 7 5.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></i>我的</span>
+          </div>
+        </div>
+      </div></div>
+      <figcaption>C · 一个数
+        <span>首屏只回答「这个月还能花多少」，一个字都不多给。刷卡看详情。</span>
+        <i>赌的是情绪；代价是信息极少，可能被说“空”</i>
+      </figcaption>
+    </figure>
+
+    <figure>
+      <div class="frame"><div class="phone">
+        <div class="sb"><span>07:49</span><span class="r"><i class="bar"></i><i class="bat"></i></span></div>
+        <div class="body">
+          <div class="topbar">
+            <span class="mon">我的账户</span>
+            <span class="icobtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#8A8A90" stroke-width="1.9" stroke-linecap="round"/></svg></span>
+          </div>
+
+          <p style="margin:12px 22px 0;font-size:11.5px;color:var(--i3)">总资产</p>
+          <p style="margin:2px 22px 0;font-size:36px;font-weight:600;letter-spacing:-1.2px;font-variant-numeric:tabular-nums;line-height:1.05">
+            <span style="font-size:21px">¥</span>42,860<span style="font-size:23px">.50</span>
+          </p>
+          <p style="display:flex;align-items:center;gap:4px;margin:5px 22px 0;font-size:12.5px;font-weight:600;color:var(--green-d)">
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M6 10V2M2.5 5.5L6 2l3.5 3.5" stroke="#1C8B3E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            本月 +3,240.15 <span style="color:var(--i3);font-weight:500">比上月多 8%</span>
+          </p>
+
+          <div style="margin:6px 10px 0">
+            <svg viewBox="0 0 350 108" style="width:100%;height:88px;display:block" preserveAspectRatio="none">
+              <defs><linearGradient id="gc" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#34C759" stop-opacity=".22"/><stop offset="100%" stop-color="#34C759" stop-opacity="0"/>
+              </linearGradient></defs>
+              <path d="M0 92 C 30 91, 54 86, 82 84 S 130 78, 162 73 S 214 64, 250 58 S 316 48, 344 45 L344 108 L0 108 Z" fill="url(#gc)"/>
+              <path d="M0 92 C 30 91, 54 86, 82 84 S 130 78, 162 73 S 214 64, 250 58 S 316 48, 344 45" fill="none" stroke="#34C759" stroke-width="2.6" stroke-linecap="round"/>
+              <circle cx="344" cy="45" r="4.4" fill="#fff" stroke="#34C759" stroke-width="2.4"/>
+            </svg>
+          </div>
+
+          <div class="acards">
+            <div class="acard" style="background:linear-gradient(135deg,#48CE72,#238F49)">
+              <div class="an">招商银行 8857</div>
+              <div class="av">¥23,486</div>
+              <div class="ad">↑ +16.0%</div>
+            </div>
+            <div class="acard" style="background:linear-gradient(135deg,#5B8DEF,#3A63C7)">
+              <div class="an">支付宝</div>
+              <div class="av">¥6,240</div>
+              <div class="ad">↑ +4.2%</div>
+            </div>
+            <div class="acard" style="background:linear-gradient(135deg,#7C7C86,#4A4A52)">
+              <div class="an">信用卡</div>
+              <div class="av">−¥4,120</div>
+              <div class="ad">已用 46%</div>
+            </div>
+          </div>
+
+          <div class="ghd"><span>今天</span><em>3 笔 · ¥224.40</em></div>
+          <div class="row">
+            <div class="ico" style="background:#FDEFF3"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M6 9h12l-1 10.5a1 1 0 0 1-1 .9H8a1 1 0 0 1-1-.9z" stroke="#D4537E" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 9V6.5a3 3 0 0 1 6 0V9" stroke="#D4537E" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+            <div class="meta"><div class="t1">星巴克</div><div class="t2">09:12 · 弹性支出 · 夯</div></div>
+            <div class="amt">−¥32.00</div>
+          </div>
+          <div class="row">
+            <div class="ico" style="background:#E9F4FD"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5.5 8.5h13l1.3 10.2a1 1 0 0 1-1 1.3H5.2a1 1 0 0 1-1-1.3z" stroke="#378ADD" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 9V6.8a3 3 0 0 1 6 0V9" stroke="#378ADD" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+            <div class="meta"><div class="t1">盒马鲜生</div><div class="t2">12:40 · 生活所需 · 飘</div></div>
+            <div class="amt">−¥186.40</div>
+          </div>
+          <div class="row">
+            <div class="ico" style="background:#FBF0E4"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="6" y="4.5" width="12" height="13" rx="3" stroke="#BA7517" stroke-width="1.8"/><path d="M6 12.5h12" stroke="#BA7517" stroke-width="1.8"/><path d="M7.5 20.5l.8-3M16.5 20.5l-.8-3" stroke="#BA7517" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+            <div class="meta"><div class="t1">地铁</div><div class="t2">08:05 · 固定支出 · NPC</div></div>
+            <div class="amt">−¥6.00</div>
+          </div>
+
+          <div class="tabbar">
+            <span class="tab on"><i><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 10.5L12 4l8 6.5V20a1 1 0 0 1-1 1h-4v-5H9v5H5a1 1 0 0 1-1-1z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg></i>首页</span>
+            <span class="tab"><i><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 6h14M5 12h14M5 18h9" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></i>账单</span>
+            <span class="plus"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 6v12M6 12h12" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg></span>
+            <span class="tab"><i><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 19V11M12 19V5M19 19v-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></i>排行</span>
+            <span class="tab"><i><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9" r="3.4" stroke="currentColor" stroke-width="1.9"/><path d="M5 20c1.2-3.5 3.8-5.2 7-5.2s5.8 1.7 7 5.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></i>我的</span>
+          </div>
+        </div>
+      </div></div>
+      <figcaption>D · 资产优先
+        <span>跟 Copilot 一个思路：先看钱的总量在怎么变，再横滑看单个账户，流水垫底。</span>
+        <i>赌的是积累感；代价是“记一笔”被挤到中间那个按钮</i>
+      </figcaption>
+    </figure>
+
+  </div>
+</div>
+
+<script>
+  const DAYS = 30, FIRST = 0;
+  const vals = [3,0,1,2,0,0,4,2,3,0,1,5,3,0,0,2,4,6,2,0,1,3,0,2,5,3,4,2,0,1];
+  const swatch = v => v === 0 ? '#E9E9EE' : v <= 1 ? '#D8F0E0' : v <= 2 ? '#BFE8CB' : v <= 3 ? '#7BD496' : v <= 5 ? '#34C759' : '#1C8B3E';
+  const txt = v => v === 0 ? '#9A9AA2' : v <= 2 ? '#4E7A5C' : '#FFFFFF';
+  const cal = document.getElementById('cal');
+  ['日','一','二','三','四','五','六'].forEach(w => {
+    const d = document.createElement('div'); d.className = 'wk'; d.textContent = w; cal.appendChild(d);
+  });
+  for (let i = 0; i < FIRST; i++) cal.appendChild(document.createElement('div'));
+  for (let d = 1; d <= DAYS; d++) {
+    const v = vals[d - 1];
+    const el = document.createElement('div');
+    el.className = 'd' + (d === 5 ? ' today' : '') + (v <= 2 ? ' lite' : '');
+    el.style.background = swatch(v);
+    el.innerHTML = '<span class="num" style="color:' + txt(v) + '">' + d + '</span>';
+    cal.appendChild(el);
+  }
+</script>
+</body>
+</html>

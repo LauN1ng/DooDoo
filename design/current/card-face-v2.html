@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>卡面 v2 · 资源进包后的实际排版</title>
+<style>
+  :root{
+    --page:#F7F5F1; --ink:#1D1C1A; --ink2:#6B6862; --sub:#A8A39A; --faint:#C6C2B9; --line:#EFECE5;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:34px 40px 60px;background:var(--page);color:var(--ink);
+       font:14px/1.6 -apple-system,"SF Pro Text","PingFang SC",system-ui,sans-serif}
+  h1{font-size:21px;margin:0 0 4px;letter-spacing:-.2px}
+  .lead{color:var(--ink2);font-size:13px;margin:0 0 26px}
+  h2{font-size:13px;margin:34px 0 12px;color:var(--ink2);font-weight:600;letter-spacing:.02em}
+  .note{font-size:12px;color:var(--sub);margin:8px 0 0}
+  code{font:12px/1.5 ui-monospace,"SF Mono",Menlo,monospace;background:#EDEAE3;padding:1px 5px;border-radius:4px}
+
+  /* ---------- 卡面：底图 + 纹理 + 文字，与 SwiftUI CardFace 逐项对应 ---------- */
+  .face{position:relative;border-radius:13px;overflow:hidden;flex:none;
+        box-shadow:0 2px 3.5px rgba(0,0,0,.17);color:#fff;
+        display:flex;align-items:flex-end;justify-content:space-between}
+  /* 底图：SVG 按比例填满再裁（和 aspectRatio(.fill) + clipShape 一致） */
+  .face .art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center}
+  /* 纹理：灰度图平铺，overlay 混合 */
+  .face .tex{position:absolute;inset:0;background-repeat:repeat;mix-blend-mode:overlay}
+  .face .grain{position:absolute;inset:0;background-image:url(../../assets/textures/tex-grain.png);
+               background-repeat:repeat;mix-blend-mode:overlay;opacity:.06}
+  .face .tx{position:relative;display:flex;align-items:flex-end;justify-content:space-between;
+            width:100%;gap:4px}
+  .face .l{min-width:0}
+  .face .r{text-align:right;flex:none}
+  .face .t1{font-weight:600;line-height:1.18;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .face .t2{opacity:.76;line-height:1.3;white-space:nowrap}
+  .face .n1{opacity:.5;font-weight:700;letter-spacing:.5px}
+  .face .n2{opacity:.85;letter-spacing:.4px;font-variant-numeric:tabular-nums}
+
+  /* 四档 */
+  .deck  {width:132px;height:82px;padding:0 11px 9px}
+  .deck  .t1{font-size:12.5px}.deck  .t2{font-size:9px}.deck  .n1{font-size:6.5px}.deck  .n2{font-size:8.5px}
+  .detail{width:144px;height:96px;padding:0 12px 10px;border-radius:15px}
+  .detail .t1{font-size:13.5px}.detail .t2{font-size:9.5px}.detail .n1{font-size:7px}.detail .n2{font-size:9px}
+  .entry {width:158px;height:100px;padding:0 12px 10px;border-radius:16px}
+  .entry .t1{font-size:13px}.entry .t2{font-size:9px}.entry .n1{font-size:7px}.entry .n2{font-size:9px}
+  .mini  {width:112px;height:72px;padding:0 9px 7px}
+  .mini  .t1{font-size:10.5px}.mini  .t2{font-size:8px}.mini  .n2{font-size:7.5px}
+  .mini .n1{display:none}
+
+  .row{display:flex;gap:22px;align-items:flex-end;flex-wrap:wrap}
+  .wall{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:16px 14px}
+  .cap{font-size:11.5px;color:var(--sub);margin-top:6px}
+  .cap b{color:var(--ink2);font-weight:600}
+
+  /* 卡堆 */
+  .stack{position:relative;width:146px;height:114px}
+  .stack .layer{position:absolute;bottom:0;left:0}
+  .stack .l0{bottom:0;z-index:3}
+  .stack .l1{bottom:16px;left:4px;transform:rotate(.8deg);transform-origin:bottom;z-index:2;filter:brightness(.9)}
+  .stack .l2{bottom:32px;left:-4px;transform:rotate(-1deg);transform-origin:bottom;z-index:1;filter:brightness(.8)}
+  .stack .badge{position:absolute;right:9px;bottom:6px;background:var(--ink);color:#fff;
+                font:600 11px/1 -apple-system,sans-serif;padding:6px 8px;border-radius:20px;z-index:9}
+
+  /* 评分行（模拟 EntryView.gradeRow） */
+  .grades{display:flex;align-items:center;gap:7px;padding:12px 18px;background:#fff;
+          border-radius:16px;width:fit-content;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+  .glabel{font-size:10.5px;color:var(--faint);padding-right:1px}
+  .gchip{display:flex;align-items:center;gap:3px;padding:6px 10px 6px 7px;border-radius:99px;
+         background:#fff;border:1px solid var(--line);font-size:11.5px;color:var(--ink2);cursor:default}
+  .gchip img{width:18px;height:18px;display:block}
+  .gchip.on{background:var(--ink);border-color:transparent;color:#fff;font-weight:600}
+  .gskip{font-size:11px;color:var(--faint);margin-left:6px}
+
+  .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--ink2);margin-top:10px}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .sw{width:12px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,.08)}
+</style>
+</head>
+<body>
+
+<h1>卡面 v2 · 资源进包后的实际排版</h1>
+<p class="lead">底图换成 <code>Card&lt;Brand&gt;V&lt;variant&gt;</code> 资源（21 品牌 × 3 色阶），纹理用 <code>TexMatte</code> / <code>TexMetal</code> / <code>TexGrain</code> 平铺叠加，文字仍由 SwiftUI 按账户数据实时绘制。下面按 App 里的四档尺寸 1:1 排。</p>
+
+<h2>一、资产页卡堆（132×82）</h2>
+<div class="row">
+  <div>
+    <div class="stack">
+      <div class="layer l2"><div class="face deck"><img class="art" src="../../assets/brands/faces/card-ccb-v1.svg"></div></div>
+      <div class="layer l1"><div class="face deck"><img class="art" src="../../assets/brands/faces/card-cmb-v1.svg"></div></div>
+      <div class="layer l0">
+        <div class="face deck">
+          <img class="art" src="../../assets/brands/faces/card-ccb-v0.svg">
+          <div class="tex" style="background-image:url(../../assets/textures/tex-matte.png);opacity:.40"></div>
+          <div class="grain"></div>
+          <div class="tx"><div class="l"><div class="t1">中国建设银行</div><div class="t2">储蓄卡</div></div>
+            <div class="r"><div class="n1">UNIONPAY</div><div class="n2">•••• 5044</div></div></div>
+        </div>
+      </div>
+      <div class="badge">3</div>
+    </div>
+    <div class="cap"><b>后两层只用底图</b>，不画文字（规格 6.2）</div>
+  </div>
+
+  <div>
+    <div class="face deck">
+      <img class="art" src="../../assets/brands/faces/card-cmb-v0.svg">
+      <div class="tex" style="background-image:url(../../assets/textures/tex-matte.png);opacity:.40"></div>
+      <div class="grain"></div>
+      <div class="tx"><div class="l"><div class="t1">招商银行</div><div class="t2">信用卡</div></div>
+        <div class="r"><div class="n1">UNIONPAY</div><div class="n2">•••• 8857</div></div></div>
+    </div>
+    <div class="cap">实体卡：芯片左上 · 行徽右上</div>
+  </div>
+
+  <div>
+    <div class="face deck">
+      <img class="art" src="../../assets/brands/faces/card-huabei-v0.svg">
+      <div class="tex" style="background-image:url(../../assets/textures/tex-matte.png);opacity:.40"></div>
+      <div class="grain"></div>
+      <div class="tx"><div class="l"><div class="t1">花呗</div><div class="t2">信用卡</div></div>
+        <div class="r"><div class="n1">CREDIT</div><div class="n2">•••• 0000</div></div></div>
+    </div>
+    <div class="cap">虚拟卡：无芯片 · 行徽放大到左上</div>
+  </div>
+
+  <div>
+    <div class="face deck">
+      <img class="art" src="../../assets/brands/faces/card-yuebao-v0.svg">
+      <div class="tex" style="background-image:url(../../assets/textures/tex-matte.png);opacity:.40"></div>
+      <div class="grain"></div>
+      <div class="tx"><div class="l"><div class="t1">余额宝</div><div class="t2">储蓄卡</div></div>
+        <div class="r"><div class="n1">WALLET</div><div class="n2"></div></div></div>
+    </div>
+    <div class="cap">余额宝 <code>#F7500E</code>（v1.3 实测色）</div>
+  </div>
+</div>
+
+<h2>二、四档尺寸（deck 132×82 / detail 144×96 / entry 158×100 / mini 112×72）</h2>
+<div class="row">
+  <div>
+    <div class="face detail">
+      <img class="art" src="../../assets/brands/faces/card-ccb-v0.svg">
+      <div class="tex" style="background-image:url(../../assets/textures/tex-matte.png);opacity:.40"></div><div class="grain"></div>
+      <div class="tx"><div class="l"><div class="t1">中国建设银行</div><div class="t2">储蓄卡</div></div>
+        <div class="r"><div class="n1">UNIONPAY</div><div class="n2">•••• 5044</div></div></div>
+    </div><div class="cap">.detail 144×96</div>
+  </div>
+  <div>
+    <div class="face entry">
+      <img class="art" src="../../assets/brands/faces/card-cmb-v0.svg">
+      <div class="tex" style="background-image:url(../../assets/textures/tex-matte.png);opacity:.40"></div><div class="grain"></div>
+      <div class="tx"><div class="l"><div class="t1">招商银行</div><div class="t2">信用卡</div></div>
+        <div class="r"><div class="n1">UNIONPAY</div><div class="n2">•••• 8857</div></div></div>
+    </div><div class="cap">.entry 158×100</div>
+  </div>
+  <div>
+    <div class="face mini">
+      <img class="art" src="../../assets/brands/faces/card-ccb-v0.svg">
+      <div class="tex" style="background-image:url(../../assets/textures/tex-matte.png);opacity:.40"></div><div class="grain"></div>
+      <div class="tx"><div class="l"><div class="t1">建设银行</div><div class="t2">储蓄卡</div></div>
+        <div class="r"><div class="n2">•••• 0565</div></div></div>
+    </div><div class="cap">.entryCompact 112×72<br>小卡不显示卡组织</div>
+  </div>
+</div>
+
+<h2>三、21 个品牌 × 原色（v0）</h2>
+<div class="wall">
+  <div><div class="face deck"><img class="art" src="../../assets/brands/faces/card-icbc-v0.svg"><div class="tex" style="background-image:url(../../assets/textures/tex-matte.png);opacity:.40"></div><div class="grain"></div><div class="tx"><div class="l"><div class="t1">中国工商银行</div><div class="t2">储蓄卡</div></div><div class="r"><div class="n1">UNIONPAY</div><div class="n2">•••• 0000</div></div></div></div><div class="cap"><b>工商银行</b></div></div>
+  <div><div class="face deck"><img class="art" src="../../assets/brands/faces/card-abc-v0.svg"><div class="tex" style="background-image:url(../../assets/textures/tex-matte.png);opacity:.40"></div><div class="grain"></div><div class="tx"><div class="l"><div class="t1">中国农业银行</div><div class="t2">储蓄卡</div></div><div class="r"><div class="n1">UNIONPAY</div><div class="n2">•••• 0000</div></div></div></div><div class="cap"><b>农业银行</b></div></div>
+  <div><div class="face deck"><img class="art" src="../../assets/brands/faces/card-boc-v0.svg"><div class="tex" style="background-image:url(../../assets/textures/tex-matte.png);opacity:.40"></div><div class="grain"></div><div class="tx"><div class="l"><div class="t1">中国银行</div><div class="t2">储蓄卡</div></div><div class="r"><div class="n1">UNIONPAY</div><div class="n2">•••• 0000</div></div></div></div><div class="cap"><b>中国银行</b></div></div>
+  <div><div class="face deck"><img class="art" src="../../assets/brands/faces/card-ccb-v0.svg"><div class="tex" style="background-image:url(../../assets/textures/tex-matte.png);opacity:.40"></div><div class="grain"></div><div class="tx"><div class="l"><div class="t1">中国建设银行</div><div class="t2">储蓄卡</div></div><div class="r"><div class="n1">UNIONPAY</div><div class="n2">•••• 5044</div></div></div></div><div class="cap"><b>建设银行</b></div></div>
+  <div><div class="face deck"><img class="art" src="../../assets/brands/faces/card-bocom-v0.svg"><div class="tex" style="background-image:url(../../assets/textures/tex-matte.png);opacity:.40"></div><div class="grain"></div><div class="tx"><div class="l"><div class="t1">交通银行</div><div class="t2">储蓄卡</div></div><div class="r"><div class="n1">UNIONPAY</div><div class="n2">•••• 0000</div></div></div></div><div class="cap"><b>交通银行</b></div></div>
+  <div><div class="face deck"><img class="art" src="../../assets/brands/faces/card-psbc-v0.svg"><div class="tex" style="background-image:url(../../assets/textures/tex-matte.png);opacity:.40"></div><div class="grain"></div><div class="tx"><div class="l"><div class="t1">中国邮政储蓄银行</div><div class="t2">储蓄卡</div></div><div class="r"><div class="n1">UNIONPAY</div><div class="n2">•••• 0000</div></div></div></div><div class="cap"><b>邮储银行</b>（长名截断）</div></div>
+  <div><div class="face deck"><img class="art" src="../../assets/brands/faces/card-cmb-v0.svg"><div class="tex" style="background-image:url(../../assets/textures/tex-matte.png);opacity:.40"></div><div class="grain"></div><div class="tx"><div class="l"><div class="t1">招商银行</div><div class="t2">信用卡</div></div><div class="r"><div class="n1">UNIONPAY</div><div class="n2">•••• 8857</div></div></div></div><div class="cap"><b>招商银行</b></div></div>
+  <div><div class="face deck"><img class="art" src="../../assets/brands/faces/card-bosc-v0.svg"><div class="tex" style="background-image:url(../../assets/textures/tex-matte.png);opacity:.40"></div><div class="grain"></div><div class="tx"><div class="l"><div class="t1">上海银行</div><div class="t2">信用卡</div></div><div class="r"><div class="n1">UNIONPAY</div><div class="n2"></div></div></div></div><div class="cap"><b>上海银行</b></div></div>
+  <div><div class="face deck"><img class="art" src="../../assets/brands/faces/card-alipay-v0.svg"><div class="tex" style="background-image:url(../../assets/textures/tex-matte.png);opacity:.40"></div><div class="grain"></div><div class="tx"><div class="l"><div class="t1">支付宝</div><div class="t2">储蓄卡</div></div><div class="r"><div class="n1">WALLET</div><div class="n2"></div></div></div></div><div class="cap"><b>支付宝</b></div></div>
+  <div><div class="face deck"><img class="art" src="../../assets/brands/faces/card-yuebao-v0.svg"><div class="tex" style="background-image:url(../../assets/textures/tex-matte.png);opacity:.40"></div><div class="grain"></div><div class="tx"><div class="l"><div class="t1">余额宝</div><div class="t2">储蓄卡</div></div><div class="r"><div class="n1">WALLET</div><div class="n2"></div></div></div></div><div class="cap"><b>余额宝</b></div></div>
+  <div><div class="face deck"><img class="art" src="../../assets/brands/faces/card-huabei-v0.svg"><div class="tex" style="background-image:url(../../assets/textures/tex-matte.png);opacity:.40"></div><div class="grain"></div><div class="tx"><div class="l"><div class="t1">花呗</div><div class="t2">信用卡</div></div><div class="r"><div class="n1">CREDIT</div><div class="n2"></div></div></div></div><div class="cap"><b>花呗</b></div></div>
+  <div><div class="face deck"><img class="art" src="../../assets/brands/faces/card-wechat-v0.svg"><div class="tex" style="background-image:url(../../assets/textures/tex-matte.png);opacity:.40"></div><div class="grain"></div><div class="tx"><div class="l"><div class="t1">微信支付</div><div class="t2">储蓄卡</div></div><div class="r"><div class="n1">WALLET</div><div class="n2"></div></div></div></div><div class="cap"><b>微信支付</b></div></div>
+  <div><div class="face deck"><img class="art" src="../../assets/brands/faces/card-jd-v0.svg"><div class="tex" style="background-image:url(../../assets/textures/tex-matte.png);opacity:.40"></div><div class="grain"></div><div class="tx"><div class="l"><div class="t1">京东</div><div class="t2">储蓄卡</div></div><div class="r"><div class="n1">WALLET</div><div class="n2"></div></div></div></div><div class="cap"><b>京东</b></div></div>
+  <div><div class="face deck"><img class="art" src="../../assets/brands/faces/card-baitiao-v0.svg"><div class="tex" style="background-image:url(../../assets/textures/tex-matte.png);opacity:.40"></div><div class="grain"></div><div class="tx"><div class="l"><div class="t1">京东白条</div><div class="t2">信用卡</div></div><div class="r"><div class="n1">CREDIT</div><div class="n2"></div></div></div></div><div class="cap"><b>京东白条</b></div></div>
+  <div><div class="face deck"><img class="art" src="../../assets/brands/faces/card-jdgold-v0.svg"><div class="tex" style="background-image:url(../../assets/textures/tex-metal.png);opacity:.46"></div><div class="grain"></div><div class="tx"><div class="l"><div class="t1">京东小金库</div><div class="t2">储蓄卡</div></div><div class="r"><div class="n1">WALLET</div><div class="n2"></div></div></div></div><div class="cap"><b>小金库</b>（metal 纹理）</div></div>
+  <div><div class="face deck"><img class="art" src="../../assets/brands/faces/card-douyin-v0.svg"><div class="tex" style="background-image:url(../../assets/textures/tex-matte.png);opacity:.40"></div><div class="grain"></div><div class="tx"><div class="l"><div class="t1">抖音</div><div class="t2">信用卡</div></div><div class="r"><div class="n1">CREDIT</div><div class="n2"></div></div></div></div><div class="cap"><b>抖音月付</b></div></div>
+  <div><div class="face deck"><img class="art" src="../../assets/brands/faces/card-douyinloan-v0.svg"><div class="tex" style="background-image:url(../../assets/textures/tex-metal.png);opacity:.46"></div><div class="grain"></div><div class="tx"><div class="l"><div class="t1">抖音放心借</div><div class="t2">信用卡</div></div><div class="r"><div class="n1">INSTALLMENT</div><div class="n2"></div></div></div></div><div class="cap"><b>放心借</b></div></div>
+  <div><div class="face deck"><img class="art" src="../../assets/brands/faces/card-ezhaodai-v0.svg"><div class="tex" style="background-image:url(../../assets/textures/tex-metal.png);opacity:.46"></div><div class="grain"></div><div class="tx"><div class="l"><div class="t1">招行 e招贷</div><div class="t2">信用卡</div></div><div class="r"><div class="n1">INSTALLMENT</div><div class="n2"></div></div></div></div><div class="cap"><b>e招贷</b></div></div>
+  <div><div class="face deck"><img class="art" src="../../assets/brands/faces/card-cmcc-v0.svg"><div class="tex" style="background-image:url(../../assets/textures/tex-matte.png);opacity:.40"></div><div class="grain"></div><div class="tx"><div class="l"><div class="t1">中移金科</div><div class="t2">信用卡</div></div><div class="r"><div class="n1">INSTALLMENT</div><div class="n2"></div></div></div></div><div class="cap"><b>中移金科</b></div></div>
+  <div><div class="face deck"><img class="art" src="../../assets/brands/faces/card-loan-personal-v0.svg"><div class="tex" style="background-image:url(../../assets/textures/tex-matte.png);opacity:.40"></div><div class="grain"></div><div class="tx"><div class="l"><div class="t1">个人借款</div><div class="t2">借款</div></div><div class="r"><div class="n2"></div></div></div></div><div class="cap"><b>个人借款</b>（无行徽）</div></div>
+  <div><div class="face deck"><img class="art" src="../../assets/brands/faces/card-cash-v0.svg"><div class="tex" style="background-image:url(../../assets/textures/tex-matte.png);opacity:.40"></div><div class="grain"></div><div class="tx"><div class="l"><div class="t1">现金</div><div class="t2">现金</div></div><div class="r"><div class="n2"></div></div></div></div><div class="cap"><b>现金</b>（无行徽）</div></div>
+</div>
+
+<h2>四、同品牌三档色阶（variant 0 / 1 / 2）</h2>
+<div class="row">
+  <div><div class="face deck"><img class="art" src="../../assets/brands/faces/card-cmb-v0.svg"><div class="tx"><div class="l"><div class="t1">招商银行</div><div class="t2">信用卡</div></div><div class="r"><div class="n1">UNIONPAY</div><div class="n2">•••• 8857</div></div></div></div><div class="cap">v0 原色</div></div>
+  <div><div class="face deck"><img class="art" src="../../assets/brands/faces/card-cmb-v1.svg"><div class="tx"><div class="l"><div class="t1">招商银行</div><div class="t2">储蓄卡</div></div><div class="r"><div class="n1">UNIONPAY</div><div class="n2">•••• 0361</div></div></div></div><div class="cap">v1 压暗</div></div>
+  <div><div class="face deck"><img class="art" src="../../assets/brands/faces/card-cmb-v2.svg"><div class="tx"><div class="l"><div class="t1">招商银行</div><div class="t2">储蓄卡</div></div><div class="r"><div class="n1">UNIONPAY</div><div class="n2"></div></div></div></div><div class="cap">v2 提亮（工资卡）</div></div>
+</div>
+<p class="note">色阶固化在资源文件里，SwiftUI 不再对颜色做运行时计算——之前 <code>variant</code> 字段是存了但没用上的。</p>
+
+<h2>五、记一笔评分行（正式徽章替换 emoji）</h2>
+<div class="grades">
+  <span class="glabel">值不值</span>
+  <span class="gchip on"><img src="../../assets/grade/final/grade-hang-40@2x.png">夯</span>
+  <span class="gchip"><img src="../../assets/grade/final/grade-piao-40@2x.png">飘</span>
+  <span class="gchip"><img src="../../assets/grade/final/grade-la-40@2x.png">拉</span>
+  <span class="gchip"><img src="../../assets/grade/final/grade-npc-40@2x.png">NPC</span>
+  <span class="gskip">跳过</span>
+</div>
+<p class="note">图标 18×18 显示（素材 40pt 出 @2x/@3x）；选中态沿用墨色实底 + 白字，徽章保留原色。</p>
+
+<div class="legend">
+  <span><i class="sw" style="background:#A30030"></i>招行 #A30030（旧 #E03A45）</span>
+  <span><i class="sw" style="background:#0066B3"></i>建行 #0066B3（旧 #2E8FD8）</span>
+  <span><i class="sw" style="background:#F7500E"></i>余额宝 #F7500E（旧 #3FC8E0）</span>
+  <span><i class="sw" style="background:#4781F0"></i>花呗 #4781F0（旧 #6B7BFF）</span>
+</div>
+
+</body>
+</html>

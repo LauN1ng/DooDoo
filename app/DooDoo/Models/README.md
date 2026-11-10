@@ -1,6 +1,6 @@
 # Models · SwiftData 模型
 
-> 状态：**M2a 已落四个模型**——`AppSettings` / `Account` / `Category` / `Transaction`，外加 `BrandPalette`（卡面配色，不是模型）。分期与账单等 M3 再加。
+> 状态：**M2b**——四个模型 `AppSettings` / `Account` / `Category` / `Transaction`，外加两个非模型的类型文件：`BrandPalette`（卡面配色）、`SpendGrade`（评分四档枚举）。分期与账单等 M3 再加。
 
 ## 三条踩过的坑
 

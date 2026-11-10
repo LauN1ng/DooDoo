@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DooDoo · 账户详情原型</title>
+<style>
+  :root{
+    --green:#34C759; --green-deep:#1C8B3E; --green-ink:#0E6B2E;
+    --ink:#111114; --ink-2:#6B6B73; --ink-3:#9A9AA2;
+    --line:#EBEBEE; --bg:#F2F2F6;
+  }
+  *{box-sizing:border-box;-webkit-font-smoothing:antialiased}
+  body{
+    margin:0;min-height:100vh;background:#EDECE8;
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    display:flex;flex-direction:column;align-items:center;padding:36px 16px 48px;gap:16px;color:var(--ink);
+  }
+  .phone{
+    width:390px;max-width:100%;height:844px;border-radius:46px;background:#0E0E10;position:relative;overflow:hidden;
+    box-shadow:0 2px 6px rgba(0,0,0,.08), 0 26px 60px -22px rgba(0,0,0,.34);
+  }
+  .statusbar{
+    height:44px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 26px;color:#fff;font-size:14px;font-weight:600;
+  }
+  .statusbar .right{display:flex;gap:5px;align-items:center}
+  .sheet{
+    position:absolute;left:0;right:0;top:44px;bottom:0;background:var(--bg);
+    border-radius:30px 30px 0 0;overflow:hidden;display:flex;flex-direction:column;
+  }
+  .grab{width:38px;height:5px;border-radius:3px;background:#D3D3D8;margin:9px auto 0;flex:0 0 auto}
+  .head{display:flex;align-items:center;justify-content:space-between;padding:12px 22px 0;flex:0 0 auto}
+  .kicker{font-size:11px;letter-spacing:.18em;color:var(--ink-3);font-weight:600}
+  .dots{color:var(--ink-3);font-size:15px;letter-spacing:1px}
+
+  .cardface{
+    width:148px;height:88px;border-radius:14px;margin:16px auto 0;position:relative;overflow:hidden;flex:0 0 auto;
+    background:linear-gradient(135deg,#48CE72 0%,#25A250 58%,#197F3C 100%);
+    box-shadow:0 8px 18px -8px rgba(31,143,63,.5);
+  }
+  .cardface::after{
+    content:"";position:absolute;inset:0;
+    background:linear-gradient(118deg,rgba(255,255,255,.26) 0%,rgba(255,255,255,0) 42%);
+  }
+  .cardface .bank{position:absolute;left:13px;top:11px;color:#fff;font-size:10.5px;letter-spacing:.08em;opacity:.95}
+  .cardface .chip{
+    position:absolute;left:13px;top:32px;width:21px;height:15px;border-radius:3.5px;
+    background:linear-gradient(135deg,#F6E7B0,#D9BE72);opacity:.95;
+  }
+  .cardface .num{position:absolute;left:13px;bottom:11px;color:#fff;font-size:10px;letter-spacing:.1em;opacity:.9}
+
+  .name{text-align:center;font-size:17px;font-weight:600;margin:12px 0 0;letter-spacing:-.2px}
+  .chg{
+    display:flex;align-items:center;justify-content:center;gap:4px;margin-top:5px;
+    font-size:13px;font-weight:600;color:var(--green-deep);font-variant-numeric:tabular-nums;
+  }
+  .balance{
+    text-align:center;font-size:39px;font-weight:600;letter-spacing:-1.2px;margin:4px 0 0;
+    font-variant-numeric:tabular-nums;line-height:1.1;
+  }
+  .balance .cur{font-size:23px;margin-right:1px;letter-spacing:-.4px}
+  .balance .dec{font-size:25px}
+  .sub{text-align:center;font-size:12.5px;color:var(--ink-3);margin:3px 0 0}
+
+  .chartwrap{margin:10px 10px 0;flex:0 0 auto}
+  .chart{display:block;width:100%;height:132px}
+  .chart .area{opacity:0;animation:fadeIn .8s .25s forwards}
+  .chart .line{stroke-dasharray:520;stroke-dashoffset:520;animation:draw 1.1s cubic-bezier(.3,.8,.3,1) forwards}
+  .chart .dot{opacity:0;animation:fadeIn .4s 1s forwards}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  @keyframes fadeIn{to{opacity:1}}
+  .ranges{display:flex;justify-content:center;gap:4px;margin-top:0}
+  .ranges button{
+    border:0;background:transparent;font:inherit;font-size:12.5px;color:var(--ink-3);
+    padding:6px 12px;border-radius:999px;cursor:pointer;transition:.18s;
+  }
+  .ranges button.on{background:#E4E4E9;color:var(--ink);font-weight:500}
+  .stamp{text-align:center;font-size:11.5px;color:var(--ink-3);margin:5px 0 0}
+
+  .divider{display:flex;align-items:center;gap:11px;margin:14px 22px 0;flex:0 0 auto}
+  .divider span{font-size:10.5px;letter-spacing:.16em;color:var(--ink-3);font-weight:600;white-space:nowrap}
+  .divider i{flex:1;height:1px;background:var(--line);display:block}
+
+  .rows{margin:2px 22px 0;flex:1 1 auto;overflow:hidden}
+  .row{display:flex;align-items:center;gap:11px;padding:8px 0}
+  .ico{width:33px;height:33px;border-radius:11px;flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+  .row .meta{flex:1;min-width:0}
+  .row .t1{font-size:14px;font-weight:500;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .t2{font-size:11.5px;color:var(--ink-3);margin-top:1px}
+  .row .amt{font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .amt.in{color:var(--green-deep)}
+  .amt.out{color:var(--ink)}
+
+  .footer{flex:0 0 auto;display:flex;justify-content:center;padding:10px 0 22px}
+  .footer a{
+    padding:9px 20px;border-radius:999px;background:#fff;border:1px solid var(--line);
+    font-size:12.5px;color:var(--ink);text-decoration:none;font-weight:500;
+    box-shadow:0 1px 2px rgba(0,0,0,.04);
+  }
+  .caption{font-size:12.5px;color:#8A8A82;text-align:center;line-height:1.7;max-width:420px}
+
+  @media (max-width:430px){
+    body{padding:0 0 24px}
+    .phone{height:100vh;border-radius:0;box-shadow:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="statusbar">
+    <span>07:49</span>
+    <span class="right">
+      <svg width="17" height="11" viewBox="0 0 17 11" fill="none"><rect x="0" y="7" width="3" height="4" rx="1" fill="#fff"/><rect x="4.5" y="5" width="3" height="6" rx="1" fill="#fff"/><rect x="9" y="2.5" width="3" height="8.5" rx="1" fill="#fff"/><rect x="13.5" y="0" width="3" height="11" rx="1" fill="#fff"/></svg>
+      <svg width="16" height="11" viewBox="0 0 16 11" fill="none"><path d="M8 9.6l1.9-2A2.7 2.7 0 0 0 8 6.9a2.7 2.7 0 0 0-1.9.7z" fill="#fff"/><path d="M3.6 5.3A6.3 6.3 0 0 1 8 3.6c1.7 0 3.2.6 4.4 1.7" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/><path d="M1.4 2.9A9.6 9.6 0 0 1 8 .8c2.5 0 4.8.8 6.6 2.1" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3.2" stroke="rgba(255,255,255,.4)"/><rect x="2" y="2" width="15.5" height="8" rx="2" fill="#fff"/><path d="M23 4.2v3.6a2 2 0 0 0 0-3.6z" fill="rgba(255,255,255,.5)"/></svg>
+    </span>
+  </div>
+
+  <div class="sheet">
+    <div class="grab"></div>
+    <div class="head">
+      <span class="kicker">储蓄卡</span>
+      <span class="dots">···</span>
+    </div>
+
+    <div class="cardface">
+      <span class="bank">招商银行</span>
+      <span class="chip"></span>
+      <span class="num">·· ·· ·· 8857</span>
+    </div>
+
+    <p class="name">招商银行 储蓄卡</p>
+    <p class="chg">
+      <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 10V2M2.5 5.5L6 2l3.5 3.5" stroke="#1C8B3E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span id="chgNum">+16.0%</span>
+    </p>
+    <p class="balance"><span class="cur">¥</span><span id="intPart">23,486</span><span class="dec" id="decPart">.50</span></p>
+    <p class="sub">当前余额</p>
+
+    <div class="chartwrap">
+      <svg class="chart" viewBox="0 0 350 132" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#34C759" stop-opacity="0.24"/>
+            <stop offset="100%" stop-color="#34C759" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path id="areaPath" class="area" fill="url(#g1)"
+          d="M0 112 C 26 110, 44 104, 66 102 S 100 96, 128 91 S 168 84, 196 77 S 244 63, 280 54 S 326 44, 344 40 L344 132 L0 132 Z"/>
+        <path id="linePath" class="line" fill="none" stroke="#34C759" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"
+          d="M0 112 C 26 110, 44 104, 66 102 S 100 96, 128 91 S 168 84, 196 77 S 244 63, 280 54 S 326 44, 344 40"/>
+        <circle class="dot" cx="344" cy="40" r="4.5" fill="#fff" stroke="#34C759" stroke-width="2.4"/>
+      </svg>
+      <div class="ranges">
+        <button class="on" data-r="3">3 月</button>
+        <button data-r="6">6 月</button>
+        <button data-r="12">1 年</button>
+        <button data-r="0">全部</button>
+      </div>
+      <p class="stamp">最后一笔记账 · 今天 09:12</p>
+    </div>
+
+    <div class="divider"><i></i><span>近期流水</span><i></i></div>
+
+    <div class="rows">
+      <div class="row">
+        <div class="ico" style="background:#E7F6EC">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 18V7M7.5 11.5L12 7l4.5 4.5" stroke="#1C8B3E" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="meta"><div class="t1">工资入账</div><div class="t2">今天 09:12 · 收入</div></div>
+        <div class="amt in">+¥8,500.00</div>
+      </div>
+
+      <div class="row">
+        <div class="ico" style="background:#F1EFFA">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M4.5 10.5L12 4.5l7.5 6v9a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1z" stroke="#534AB7" stroke-width="1.7" stroke-linejoin="round"/><path d="M9.5 20.5v-5h5v5" stroke="#534AB7" stroke-width="1.7" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="meta"><div class="t1">房租</div><div class="t2">11-03 · 固定支出 · NPC</div></div>
+        <div class="amt out">−¥2,400.00</div>
+      </div>
+
+      <div class="row">
+        <div class="ico" style="background:#E9F4FD">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M5.5 8.5h13l1.3 10.2a1 1 0 0 1-1 1.3H5.2a1 1 0 0 1-1-1.3z" stroke="#378ADD" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 9V6.8a3 3 0 0 1 6 0V9" stroke="#378ADD" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </div>
+        <div class="meta"><div class="t1">盒马鲜生</div><div class="t2">11-03 · 生活所需 · 飘</div></div>
+        <div class="amt out">−¥186.40</div>
+      </div>
+
+      <div class="row">
+        <div class="ico" style="background:#FDEFF3">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M6 9h12l-1 10.5a1 1 0 0 1-1 .9H8a1 1 0 0 1-1-.9z" stroke="#D4537E" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 9V6.5a3 3 0 0 1 6 0V9" stroke="#D4537E" stroke-width="1.7" stroke-linecap="round"/><path d="M9.5 13.5v3M14.5 13.5v3" stroke="#D4537E" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="meta"><div class="t1">星巴克</div><div class="t2">11-02 · 弹性支出 · 夯</div></div>
+        <div class="amt out">−¥32.00</div>
+      </div>
+    </div>
+
+    <div class="footer"><a href="#">管理账户</a></div>
+  </div>
+</div>
+
+<p class="caption">账户详情 · 储蓄卡版本。区间切换可点击，曲线会重绘、余额会滚动。</p>
+
+<script>
+  const S = {
+    int: document.getElementById('intPart'),
+    dec: document.getElementById('decPart'),
+    chg: document.getElementById('chgNum'),
+    line: document.getElementById('linePath'),
+    area: document.getElementById('areaPath'),
+    dot: document.querySelector('.chart .dot')
+  };
+
+  const DATA = {
+    '3':  {v: 23486.50, pct: '+16.0%',
+      d: "M0 112 C 26 110, 44 104, 66 102 S 100 96, 128 91 S 168 84, 196 77 S 244 63, 280 54 S 326 44, 344 40", endY: 40},
+    '6':  {v: 20182.00, pct: '+34.9%',
+      d: "M0 124 C 30 122, 52 116, 76 111 S 118 99, 148 92 S 196 74, 228 64 S 288 45, 344 36", endY: 36},
+    '12': {v: 16740.30, pct: '+82.4%',
+      d: "M0 128 C 36 126, 64 121, 92 114 S 140 96, 172 86 S 226 62, 262 52 S 316 34, 344 28", endY: 28},
+    '0':  {v: 12800.00, pct: '+134.6%',
+      d: "M0 130 C 40 129, 70 125, 104 118 S 156 100, 190 88 S 246 60, 286 46 S 330 30, 344 25", endY: 25}
+  };
+
+  function fmt(n){
+    const s = n.toFixed(2), [i, d] = s.split('.');
+    return [i.replace(/\B(?=(\d{3})+(?!\d))/g, ','), d];
+  }
+
+  function countTo(target, dur){
+    const start = performance.now();
+    const from = parseFloat((S.int.textContent + '.' + S.dec.textContent).replace(/,/g, '')) || 0;
+    function tick(t){
+      const p = Math.min(1, (t - start) / dur);
+      const e = 1 - Math.pow(1 - p, 3);
+      const v = from + (target - from) * e;
+      const [i, d] = fmt(v);
+      S.int.textContent = i; S.dec.textContent = '.' + d;
+      if (p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  document.querySelectorAll('.ranges button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.ranges button').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      const d = DATA[b.dataset.r];
+      S.line.setAttribute('d', d.d);
+      S.area.setAttribute('d', d.d + ' L344 132 L0 132 Z');
+      S.dot.setAttribute('cy', d.endY);
+      S.chg.textContent = d.pct;
+      S.line.style.animation = 'none';
+      S.area.style.animation = 'none';
+      void S.line.offsetWidth;
+      S.line.style.animation = 'draw 1.05s cubic-bezier(.3,.8,.3,1) forwards';
+      S.area.style.animation = 'fadeIn .8s .2s forwards';
+      countTo(d.v, 620);
+    });
+  });
+
+  setTimeout(() => countTo(23486.50, 900), 120);
+</script>
+</body>
+</html>

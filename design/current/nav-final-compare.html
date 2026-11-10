@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>首页底部导航 · A/B/C 三版对照</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#EDEAE4;font-family:-apple-system,"PingFang SC",sans-serif;color:#1D1C1A;padding:22px 24px 30px}
+  h1{font-size:19px;margin:0 0 4px;letter-spacing:-.3px}
+  .sub{font-size:12.5px;color:#6F6B63;line-height:1.7;margin:0 0 18px;max-width:1180px}
+  .row{display:flex;gap:22px;align-items:flex-start}
+  .col{width:390px;flex:0 0 390px}
+  .hd{display:flex;align-items:baseline;gap:7px;margin-bottom:8px}
+  .hd b{font-size:13px}
+  .hd em{font-style:normal;font-size:11px;color:#8A867D}
+  .tag{font-size:10px;padding:2px 7px;border-radius:999px;font-weight:600}
+  .bad{background:#FBEDEB;color:#B4443A}
+  .mid{background:#FAF0DF;color:#8A6410}
+  .ok{background:#EAF3EC;color:#2F7A48}
+  img{width:390px;display:block;border-radius:10px;box-shadow:0 8px 22px rgba(0,0,0,.10)}
+  .note{font-size:11.5px;line-height:1.65;color:#6F6B63;margin-top:9px}
+  .note b{color:#1D1C1A}
+  table{width:100%;max-width:1180px;border-collapse:collapse;margin-top:26px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+  th,td{border-bottom:1px solid #EFECE5;padding:9px 12px;font-size:12px;text-align:left;vertical-align:top}
+  th{background:#FAF9F6;font-weight:600;font-size:11.5px;color:#5F5E5A}
+  td:first-child{color:#5F5E5A;width:110px}
+  tr:last-child td{border-bottom:none}
+  .fix{margin-top:24px;background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 6px 18px rgba(0,0,0,.06);max-width:1180px}
+  .fix h2{font-size:14px;margin:0 0 8px}
+  .fix li{font-size:12px;line-height:1.75;color:#6F6B63;margin-left:16px}
+  .fix code{background:#F1EFE8;border-radius:4px;padding:1px 5px;font-size:11.5px}
+</style>
+</head>
+<body>
+<h1>首页底部导航 · A/B/C 三版对照</h1>
+<p class="sub">同一套卡堆（散叠 3 层、层厚 10pt、白卡），只换底部导航结构。三个 tab 统一为「流水 / 资产 / 设置」，第三个图标已从 <b>统计</b> 改回 <b>设置</b>（PRD 明确不做月度统计图表）。</p>
+
+<div class="row">
+  <div class="col">
+    <div class="hd"><b>A</b><em>墨键 + 独立 +</em><span class="tag ok">推荐</span></div>
+    <img src="nav-a.png" alt="A 方案">
+    <div class="note"><b>墨键</b> rgba(29,28,26,.88)、高 36、单层投影，停在最上层卡面上；<b>+</b> 46pt 圆球压右侧。<br>层厚带完整从两个控件下方穿过，卡片一张不少。两个黑物分居两端，中间 178pt 空地是纸的呼吸。</div>
+  </div>
+  <div class="col">
+    <div class="hd"><b>B</b><em>顶部分段 + 底部仅 +</em><span class="tag mid">可接受</span></div>
+    <img src="nav-b.png" alt="B 方案">
+    <div class="note"><b>顶部</b>流水 / 资产 / 设置 文字分段，选中项加墨色下划线；底部只剩 46pt <b>+</b>。<br>卡堆零遮挡，最干净。但导航要伸到屏幕顶——大屏单手够顶部最费力，资产页又是重度页面，每次切过去都难受。</div>
+  </div>
+  <div class="col">
+    <div class="hd"><b>C</b><em>导航与 + 合簇</em><span class="tag mid">可接受</span></div>
+    <img src="nav-c.png" alt="C 方案">
+    <div class="note"><b>右下</b>一枚 157×44 墨键，3 个图标 + 竖线分隔 + +。底部重物只有一枚，最克制。<br>但 + 与导航同级＝同一枚按钮里两种语义，用户想记一笔时容易点错；且左下角整片空，视觉重心全部压在右侧。</div>
+  </div>
+</div>
+
+<table>
+  <tr><th>对比项</th><th>A 墨键 + 独立 +</th><th>B 顶部分段</th><th>C 合簇</th></tr>
+  <tr><td>层级靠什么</td><td>墨色压前卡（D2 已验证）</td><td>顶部天然高于内容</td><td>一枚黑物压卡面</td></tr>
+  <tr><td>层厚带</td><td>完整穿过</td><td>完整穿过</td><td>完整穿过</td></tr>
+  <tr><td>拇指可达</td><td>好</td><td>差（够屏幕顶）</td><td>最好</td></tr>
+  <tr><td>黑物数量</td><td>2</td><td>1</td><td>1</td></tr>
+  <tr><td>+ 的语义</td><td>独立球，误触低</td><td>独立球，误触最低</td><td>与导航同级，误触高</td></tr>
+  <tr><td>底部重物分布</td><td>两端各一</td><td>仅右</td><td>仅右</td></tr>
+  <tr><td>主要代价</td><td>两黑块像两件不相干的东西</td><td>违背 iOS 惯例；顶部重排</td><td>+ 与导航混淆；左下全空</td></tr>
+  <tr><td>结论</td><td><b>推荐</b></td><td>否</td><td>否</td></tr>
+</table>
+
+<div class="fix">
+  <h2>顺带要修的两处不一致</h2>
+  <ul>
+    <li><code>home-final.html</code> 第三个图标是 <code>chart</code>（统计），但 PRD「明确不做」月度统计图表；<code>index.html</code> 同一位置是 <code>settings</code> → 统一回 <b>设置</b>。</li>
+    <li>PRD 第七节仍写「流水 / 还款 / 资产 / 设置」四个 tab 并标注「导航形式待定」，但第 4 轮已砍掉还款 tab（收进信用账户 + 记一笔三段）→ PRD 应同步改成三 tab，否则实现时会有人照 PRD 把还款 tab 加回来。</li>
+  </ul>
+</div>
+</body>
+</html>

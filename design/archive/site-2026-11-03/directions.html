@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>记账 App · 四个结构方向</title>
+<style>
+:root{--ink:#111;--ink2:#8A8478;--ink3:#BDB7AB;--bg:#F7F5F1;}
+*{box-sizing:border-box;-webkit-font-smoothing:antialiased;}
+body{
+  margin:0;padding:34px 24px 56px;background:#EFEBE4;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue","PingFang SC","Microsoft YaHei UI",sans-serif;color:var(--ink);
+}
+header{max-width:1340px;margin:0 auto 26px;}
+header h1{margin:0 0 8px;font-size:19px;font-weight:600;letter-spacing:-.4px;}
+header p{margin:0;font-size:13px;line-height:1.75;color:#6B6558;max-width:880px;}
+header p b{color:#2A251E;}
+
+.row{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;max-width:1380px;margin:0 auto;}
+.col{width:290px;display:flex;flex-direction:column;gap:10px;}
+
+.tagline{font-size:12px;font-weight:600;letter-spacing:-.1px;}
+.tagline span{display:block;font-size:11px;font-weight:400;color:#7C766C;margin-top:3px;line-height:1.55;}
+
+.ph{
+  width:290px;height:620px;border-radius:40px;overflow:hidden;position:relative;
+  box-shadow:0 22px 48px rgba(60,48,30,.15), 0 2px 6px rgba(60,48,30,.05);
+  display:flex;flex-direction:column;
+}
+.nb{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:50px;height:14px;border-radius:8px;background:#111;z-index:9;}
+.sb{height:30px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:10px;font-weight:600;z-index:8;}
+
+/* A editorial */
+.a{background:#FAF8F4;color:#111;}
+.a .ct{padding:0 20px;overflow:hidden;}
+.a .date{font-size:34px;font-weight:700;letter-spacing:-1.8px;line-height:1;padding-top:10px;}
+.a .date i{font-style:normal;font-size:11px;font-weight:500;letter-spacing:0;color:#8A8478;margin-left:8px;}
+.a .sum{display:flex;justify-content:space-between;align-items:flex-end;padding:16px 0 12px;}
+.a .sum b{font-size:26px;font-weight:700;letter-spacing:-1.4px;font-variant-numeric:tabular-nums;}
+.a .sum span{font-size:10px;color:#8A8478;letter-spacing:.02em;}
+.a .rule{height:2px;background:#111;}
+.a .gh{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:#8A8478;font-weight:700;padding:14px 0 8px;}
+.a .li{display:flex;align-items:baseline;gap:8px;padding:7px 0;font-size:13px;}
+.a .li .nm{font-weight:600;letter-spacing:-.2px;}
+.a .li .ac{font-size:10px;color:#BDB7AB;}
+.a .li .ld{flex:1;border-bottom:1px dotted #C9C3B7;transform:translateY(-3px);}
+.a .li .am{font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.3px;}
+.a .li .am.in{color:#2E7D4F;}
+.a .btn{margin:14px 20px 0;height:44px;border:1.5px solid #111;border-radius:0;display:flex;align-items:center;justify-content:center;font-size:11px;letter-spacing:.16em;font-weight:700;}
+
+/* B blocks */
+.b{background:#EFEBE4;color:#111;}
+.b .ct{padding:0 14px;overflow:hidden;}
+.b .blk{border-radius:26px;padding:16px;margin-top:12px;}
+.b .dark{background:#111;color:#fff;}
+.b .dark .k{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.55);font-weight:600;}
+.b .dark .v{font-size:31px;font-weight:600;letter-spacing:-1.6px;margin-top:6px;font-variant-numeric:tabular-nums;}
+.b .dark .s{font-size:10px;color:rgba(255,255,255,.5);margin-top:6px;}
+.b .peach{background:#FFEBDA;display:flex;align-items:center;gap:12px;}
+.b .peach .l{flex:1;}
+.b .peach .k{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#9C6B47;font-weight:600;}
+.b .peach .v{font-size:21px;font-weight:600;letter-spacing:-.9px;margin-top:5px;font-variant-numeric:tabular-nums;}
+.b .peach img{width:54px;height:54px;object-fit:contain;}
+.b .peach .fb{display:none;font-size:32px;}
+.b .peach .fb.on{display:block;}
+.b .white{background:#fff;}
+.b .wh{display:flex;justify-content:space-between;align-items:baseline;padding:2px 2px 4px;}
+.b .wh b{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8A8478;}
+.b .wh span{font-size:10px;color:#BDB7AB;}
+.b .r{display:flex;align-items:center;gap:10px;padding:6px 0;}
+.b .r img{width:28px;height:28px;object-fit:contain;}
+.b .r .fb{display:none;font-size:17px;}
+.b .r .fb.on{display:block;}
+.b .r .n{flex:1;font-size:12.5px;font-weight:500;}
+.b .r .m{font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;}
+.b .r .m.in{color:#2E7D4F;}
+.b .cta{margin:13px 14px 0;height:46px;border-radius:23px;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:500;letter-spacing:.08em;}
+
+/* C table */
+.c{background:#FFFFFF;color:#111;}
+.c .ct{padding:0 18px;overflow:hidden;}
+.c .hdr{display:flex;justify-content:space-between;align-items:baseline;padding:12px 0 10px;}
+.c .hdr b{font-size:17px;font-weight:600;letter-spacing:-.5px;}
+.c .hdr span{font-size:10px;color:#8A8478;}
+.c .kpi{display:flex;justify-content:space-between;align-items:baseline;padding:10px 0;border-top:1px solid #E8E3D9;border-bottom:1px solid #E8E3D9;}
+.c .kpi .k{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#8A8478;font-weight:600;}
+.c .kpi .v{font-size:22px;font-weight:600;letter-spacing:-1px;font-variant-numeric:tabular-nums;}
+.c .gh{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:#BDB7AB;font-weight:700;padding:16px 0 4px;}
+.c .li{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #F0ECE4;}
+.c .li:last-child{border-bottom:none;}
+.c .li .d{width:26px;flex:none;font-size:9.5px;color:#BDB7AB;font-variant-numeric:tabular-nums;}
+.c .li img{width:22px;height:22px;object-fit:contain;flex:none;}
+.c .li .fb{display:none;font-size:14px;width:22px;flex:none;}
+.c .li .fb.on{display:block;}
+.c .li .nm{flex:1;font-size:12.5px;font-weight:500;}
+.c .li .am{font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.2px;}
+.c .li .am.in{color:#2E7D4F;}
+.c .ft{display:flex;justify-content:space-between;padding:12px 0;font-size:10px;color:#BDB7AB;border-top:1.5px solid #111;margin-top:4px;}
+.c .cta{margin:10px 18px 0;height:44px;border-radius:10px;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:500;letter-spacing:.1em;}
+
+/* D layered */
+.d{background:#F2EEE7;color:#111;}
+.d .top{background:#1A1A1A;color:#fff;padding:14px 20px 40px;border-radius:0 0 36px 36px;}
+.d .top .k{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5);font-weight:600;}
+.d .top .v{font-size:34px;font-weight:600;letter-spacing:-1.8px;margin-top:7px;font-variant-numeric:tabular-nums;}
+.d .top .s{display:flex;gap:14px;margin-top:12px;}
+.d .top .s div{font-size:9.5px;color:rgba(255,255,255,.5);}
+.d .top .s b{display:block;font-size:13px;color:#fff;margin-top:2px;font-weight:600;}
+.d .sheet{margin:-26px 12px 0;background:#fff;border-radius:26px;padding:14px 14px 4px;box-shadow:0 8px 24px rgba(0,0,0,.08);}
+.d .rh{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:8px;}
+.d .rh b{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8A8478;}
+.d .rh span{font-size:10px;color:#BDB7AB;}
+.d .r{display:flex;align-items:center;gap:11px;padding:8px 0;border-top:1px solid #F1EDE6;}
+.d .r img{width:34px;height:34px;object-fit:contain;}
+.d .r .fb{display:none;font-size:20px;}
+.d .r .fb.on{display:block;}
+.d .r .nm{flex:1;font-size:13px;font-weight:500;}
+.d .r .ac{font-size:10px;color:#BDB7AB;margin-top:2px;}
+.d .r .am{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;}
+.d .r .am.in{color:#2E7D4F;}
+.d .cta{margin:12px 12px 0;height:46px;border-radius:23px;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:500;}
+
+.verdict{font-size:11px;line-height:1.6;color:#7C766C;border-top:1px solid #DDD6C9;padding-top:8px;}
+.verdict b{color:#3A342C;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>四个结构方向 · 同一个首页内容</h1>
+  <p>前四版我一直在换颜色，但结构始终是「白色圆角卡片从上到下堆叠」——这才是你说「排版不好看」的根源。<b>下面四种是同一天、同一批流水、四种完全不同的排版逻辑。</b>先选结构，颜色和细节后面再调。</p>
+</header>
+
+<div class="row">
+
+  <!-- A -->
+  <div class="col">
+    <div class="tagline">A · 编辑版式
+      <span>杂志排版。无卡片，粗规线切分，点线引导，超大日期。冷静、贵。</span>
+    </div>
+    <div class="ph a">
+      <div class="nb"></div>
+      <div class="sb"><span>9:41</span><span>●●● ⌁ ▮</span></div>
+      <div class="ct">
+        <div class="date">11.03<i>周二</i></div>
+        <div class="sum">
+          <div><span>净资产</span><br><b>−35,680</b></div>
+          <div style="text-align:right"><span>19 个月结清</span><br><span style="font-size:11px;font-weight:600;color:#111">2028.06</span></div>
+        </div>
+        <div class="rule"></div>
+        <div class="gh">今天 · 4 笔 · 268</div>
+        <div class="li"><span class="nm">午饭</span><span class="ac">微信</span><span class="ld"></span><span class="am">−32</span></div>
+        <div class="li"><span class="nm">咖啡</span><span class="ac">现金</span><span class="ld"></span><span class="am">−22</span></div>
+        <div class="li"><span class="nm">打车</span><span class="ac">花呗</span><span class="ld"></span><span class="am">−28</span></div>
+        <div class="li"><span class="nm">超市</span><span class="ac">招行</span><span class="ld"></span><span class="am">−186</span></div>
+        <div class="rule" style="margin-top:12px;"></div>
+        <div class="gh">昨天 · 3 笔</div>
+        <div class="li"><span class="nm">工资</span><span class="ac">招行</span><span class="ld"></span><span class="am in">+12,540</span></div>
+        <div class="li"><span class="nm">外卖</span><span class="ac">支付宝</span><span class="ld"></span><span class="am">−45</span></div>
+      </div>
+      <div class="btn">记 一 笔 ＋</div>
+    </div>
+    <div class="verdict"><b>风险</b>：最不像记账 App，第一眼可能觉得「我在看一份报表」。没有 Emoji 的容身之处。</div>
+  </div>
+
+  <!-- B -->
+  <div class="col">
+    <div class="tagline">B · 色块拼贴
+      <span>整块色卡代替白卡。深色块扛重心，橙色块放 Emoji，圆角 26px。活泼。</span>
+    </div>
+    <div class="ph b">
+      <div class="nb"></div>
+      <div class="sb"><span>9:41</span><span>●●● ⌁ ▮</span></div>
+      <div class="ct">
+        <div class="blk dark">
+          <div class="k">11 月 · 净资产</div>
+          <div class="v">−35,680</div>
+          <div class="s">19 个月结清 · 2028 年 6 月</div>
+        </div>
+        <div class="blk peach">
+          <div class="l">
+            <div class="k">本月已花</div>
+            <div class="v">¥4,286</div>
+          </div>
+          <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Cooked%20rice/3D/cooked_rice_3d.png" alt="">
+          <span class="fb">🍚</span>
+        </div>
+        <div class="blk white">
+          <div class="wh"><b>今天</b><span>4 笔 · −268</span></div>
+          <div class="r">
+            <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Cooked%20rice/3D/cooked_rice_3d.png" alt=""><span class="fb">🍚</span>
+            <span class="n">午饭</span><span class="m">−32</span>
+          </div>
+          <div class="r">
+            <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Hot%20beverage/3D/hot_beverage_3d.png" alt=""><span class="fb">☕</span>
+            <span class="n">咖啡</span><span class="m">−22</span>
+          </div>
+          <div class="r">
+            <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Automobile/3D/automobile_3d.png" alt=""><span class="fb">🚗</span>
+            <span class="n">打车</span><span class="m">−28</span>
+          </div>
+          <div class="r">
+            <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Money%20bag/3D/money_bag_3d.png" alt=""><span class="fb">💰</span>
+            <span class="n">工资</span><span class="m in">+12,540</span>
+          </div>
+        </div>
+        <div class="cta">＋ 记一笔</div>
+      </div>
+    </div>
+    <div class="verdict"><b>风险</b>：色块多了容易碎，深色块和橙色块抢戏，Emoji 变成装饰而不是主角。</div>
+  </div>
+
+  <!-- C -->
+  <div class="col">
+    <div class="tagline">C · 表格账本
+      <span>像一张精算过的账页。高行距、细线、日期窄列、金额右对齐。克制。</span>
+    </div>
+    <div class="ph c">
+      <div class="nb"></div>
+      <div class="sb"><span>9:41</span><span>●●● ⌁ ▮</span></div>
+      <div class="ct">
+        <div class="hdr"><b>11 月</b><span>2026</span></div>
+        <div class="kpi"><span class="k">净资产</span><span class="v">−35,680</span></div>
+        <div class="gh">今天 · 周二</div>
+        <div class="li"><span class="d">03</span><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Cooked%20rice/3D/cooked_rice_3d.png" alt=""><span class="fb">🍚</span><span class="nm">午饭</span><span class="am">−32</span></div>
+        <div class="li"><span class="d"></span><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Hot%20beverage/3D/hot_beverage_3d.png" alt=""><span class="fb">☕</span><span class="nm">咖啡</span><span class="am">−22</span></div>
+        <div class="li"><span class="d"></span><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Automobile/3D/automobile_3d.png" alt=""><span class="fb">🚗</span><span class="nm">打车</span><span class="am">−28</span></div>
+        <div class="li"><span class="d"></span><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Shopping%20cart/3D/shopping_cart_3d.png" alt=""><span class="fb">🛒</span><span class="nm">超市</span><span class="am">−186</span></div>
+        <div class="gh">昨天 · 周一</div>
+        <div class="li"><span class="d">02</span><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Money%20bag/3D/money_bag_3d.png" alt=""><span class="fb">💰</span><span class="nm">工资</span><span class="am in">+12,540</span></div>
+        <div class="li"><span class="d"></span><img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Steaming%20bowl/3D/steaming_bowl_3d.png" alt=""><span class="fb">🍜</span><span class="nm">外卖</span><span class="am">−45</span></div>
+        <div class="ft"><span>本月已花 4,286</span><span>19 个月结清</span></div>
+      </div>
+      <div class="cta">记一笔</div>
+    </div>
+    <div class="verdict"><b>风险</b>：最「正确」也最保守，容易变成一张 Excel。精致靠对齐，差 1px 就塌。</div>
+  </div>
+
+  <!-- D -->
+  <div class="col">
+    <div class="tagline">D · 双层构图
+      <span>深色顶卡出血到底，白卡负边距压上去。有深度、有层次。</span>
+    </div>
+    <div class="ph d">
+      <div class="nb" style="background:#111"></div>
+      <div class="sb" style="color:#fff"><span>9:41</span><span>●●● ⌁ ▮</span></div>
+      <div class="top">
+        <div class="k">11 月 · 净资产</div>
+        <div class="v">−35,680</div>
+        <div class="s">
+          <div>总负债<b>35,680</b></div>
+          <div>可用<b>8,000</b></div>
+          <div>结清<b>19 个月</b></div>
+        </div>
+      </div>
+      <div class="sheet">
+        <div class="rh"><b>今天</b><span>4 笔 · −268</span></div>
+        <div class="r">
+          <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Cooked%20rice/3D/cooked_rice_3d.png" alt=""><span class="fb">🍚</span>
+          <div style="flex:1"><div class="nm">午饭</div><div class="ac">微信支付</div></div>
+          <span class="am">−32</span>
+        </div>
+        <div class="r">
+          <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Hot%20beverage/3D/hot_beverage_3d.png" alt=""><span class="fb">☕</span>
+          <div style="flex:1"><div class="nm">咖啡</div><div class="ac">现金</div></div>
+          <span class="am">−22</span>
+        </div>
+        <div class="r">
+          <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Automobile/3D/automobile_3d.png" alt=""><span class="fb">🚗</span>
+          <div style="flex:1"><div class="nm">打车</div><div class="ac">花呗</div></div>
+          <span class="am">−28</span>
+        </div>
+        <div class="r">
+          <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Shopping%20cart/3D/shopping_cart_3d.png" alt=""><span class="fb">🛒</span>
+          <div style="flex:1"><div class="nm">超市</div><div class="ac">招行储蓄卡</div></div>
+          <span class="am">−186</span>
+        </div>
+        <div class="r">
+          <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Money%20bag/3D/money_bag_3d.png" alt=""><span class="fb">💰</span>
+          <div style="flex:1"><div class="nm">工资</div><div class="ac">招行储蓄卡</div></div>
+          <span class="am in">+12,540</span>
+        </div>
+      </div>
+      <div class="cta">＋ 记一笔</div>
+    </div>
+    <div class="verdict"><b>风险</b>：最深色占了大半屏，整体会偏沉；层次感是加分项但也是最常见的流行做法。</div>
+  </div>
+
+</div>
+
+<script>
+document.querySelectorAll('img').forEach(function(img){
+  var path = img.getAttribute('src').replace(/^https?:\/\/[^\/]+/, '');
+  var hosts = ['https://fastly.jsdelivr.net','https://gcore.jsdelivr.net']; var i=0;
+  img.addEventListener('error', function(){
+    if (i < hosts.length) { img.src = hosts[i++] + path; return; }
+    img.style.display='none';
+    var fb = img.nextElementSibling;
+    if (fb && fb.classList.contains('fb')) fb.classList.add('on');
+  });
+});
+</script>
+</body>
+</html>
