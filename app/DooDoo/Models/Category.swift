@@ -123,11 +123,11 @@ extension Category {
 
         // MARK: 二级 · 住（6）
         .init(key: "home.rent", parentKey: "home", name: "房租", icon: "Key", emoji: "🛏", tint: "#F1F4EA", isIncome: false),
-        .init(key: "home.utility", parentKey: "home", name: "水电", icon: "HighVoltage", emoji: "💡", tint: "#F1F4EA", isIncome: false),
+        .init(key: "home.utility", parentKey: "home", name: "电费", icon: "HighVoltage", emoji: "💡", tint: "#F1F4EA", isIncome: false),
+        .init(key: "home.water", parentKey: "home", name: "水费", icon: "Droplet", emoji: "💧", tint: "#F1F4EA", isIncome: false),
         .init(key: "home.property", parentKey: "home", name: "物业", icon: "OfficeBuilding", emoji: "🏢", tint: "#F1F4EA", isIncome: false),
         .init(key: "home.furniture", parentKey: "home", name: "家居", icon: "CouchAndLamp", emoji: "🪑", tint: "#F1F4EA", isIncome: false),
         .init(key: "home.repair", parentKey: "home", name: "维修", icon: "HammerAndWrench", emoji: "🔧", tint: "#F1F4EA", isIncome: false),
-        .init(key: "home.water", parentKey: "home", name: "水费", icon: "Droplet", emoji: "💧", tint: "#F1F4EA", isIncome: false),
 
         // MARK: 二级 · 行（7）
         .init(key: "transport.metro", parentKey: "transport", name: "地铁", icon: "Metro", emoji: "🚇", tint: "#EAF2FF", isIncome: false),
