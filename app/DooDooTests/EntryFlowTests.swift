@@ -109,10 +109,10 @@ struct EntryFlowTests {
         let netSum = savingsBalance + creditBalance
 
         #expect(fee == dec("0.10"))
-        #expect(savingsBalance == dec("4000.00"), "转出账户扣本金 1000，不额外扣手续费")
+        #expect(savingsBalance == dec("4000.00"), "转账 999.90 + 手续费流水 0.10 = 共扣 1000")
         #expect(creditBalance == dec("-2217.52"), "转入账户只入账 999.90")
         #expect(netSum == dec("1782.48"), "两边余额之和比原来少 0.10，正好是手续费")
-        #expect(total == dec("0.10"), "转账本金不算消费，只算手续费")
+        #expect(total == dec("0.10"), "转账本金不算消费，只算那条手续费流水")
     }
 
     @Test("软删除：余额与统计都回滚")

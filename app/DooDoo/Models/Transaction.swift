@@ -70,6 +70,17 @@ final class Transaction {
     /// 冗余存一份是为了统计时能直接求和，不必逐笔相减；写入一律由 `LedgerService` 计算。
     var fee: Decimal?
 
+    /// 转账与它自动生成的手续费流水共享的分组标识（M2b 补充）。
+    ///
+    /// 两个用途：
+    /// 1. **级联软删除**——删掉转账时必须把手续费那条一起删，否则留下一条
+    ///    永远回滚不掉的孤儿流水，账户余额会永久少掉一份手续费。
+    /// 2. **M3 双边关联**——升级成「转出/转入各一条」时，两条靠它配对。
+    ///
+    /// 用纯 `String` 而不是 `Transaction` 关系，是为了让老库迁移只依赖
+    /// 「可选字段」这一条 SwiftData 自动迁移就能吃下的规则（见 `Account` 顶部注释）。
+    var groupID: String?
+
     /// 消费评分（M1b 新增，PRD 9.13）。存 raw 值，`nil` = 未评分。
     /// 只有 `kind == .expense` 允许非 nil。
     var gradeRaw: String?
@@ -110,6 +121,7 @@ final class Transaction {
         category: Category? = nil,
         iconName: String? = nil,
         grade: SpendGrade? = nil,
+        groupID: String? = nil,
         createdAt: Date = .now,
         deletedAt: Date? = nil
     ) {
@@ -124,6 +136,7 @@ final class Transaction {
         self.category = category
         self.iconName = iconName
         self.gradeRaw = grade?.rawValue
+        self.groupID = groupID
         self.createdAt = createdAt
         self.deletedAt = deletedAt
     }

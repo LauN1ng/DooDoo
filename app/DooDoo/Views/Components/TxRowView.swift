@@ -23,17 +23,27 @@ struct TxRowView: View {
             } else if let from = transaction.account?.displayShortName {
                 parts.append(from)
             }
+            // 金额列写的是**到账额**（= 转出 − 手续费），和用户填的转出总额不同。
+            // 不把转出总额写出来，用户会以为自己填的 1,000 变成了 999。
+            if let fee = transaction.fee, fee > 0 {
+                parts.append("转出 ¥" + MoneyMath.money(transaction.amount))
+            }
         } else {
             if let category = transaction.category?.name { parts.append(category) }
             if let account = transaction.account?.displayShortName { parts.append(account) }
         }
 
-        // 转账行金额是「转出本金」，本金不计消费；手续费才是支出。
-        // 不在副标题写出来，用户无从判断那 0.10 到底进没进合计（真机反馈）。
-        if transaction.kind == .transfer, let fee = transaction.fee, fee > 0 {
-            parts.append("手续费 ¥" + MoneyMath.money(fee))
-        }
         return parts.isEmpty ? transaction.kind.title : parts.joined(separator: " · ")
+    }
+
+    /// 金额列要显示的数。
+    ///
+    /// 转账显示**到账额**（`amount − fee`），因为手续费已经是一条独立的支出流水：
+    /// 若这里再显示转出全额，两行相加会比付款账户实际扣款多出一份手续费，
+    /// 用户拿列表加总核对余额时永远差那一点钱（真机反馈 #13）。
+    private var displayAmount: Decimal {
+        guard transaction.kind == .transfer else { return transaction.amount }
+        return transaction.amount - (transaction.fee ?? 0)
     }
 
     private var amountColor: Color {
@@ -90,7 +100,7 @@ struct TxRowView: View {
 
             Spacer(minLength: 8)
 
-            Text(MoneyMath.signed(transaction.amount, kind: transaction.kind))
+            Text(MoneyMath.signed(displayAmount, kind: transaction.kind))
                 .font(.system(size: 14, weight: .semibold))
                 .monospacedDigit()
                 .foregroundStyle(amountColor)
@@ -98,6 +108,6 @@ struct TxRowView: View {
         }
         .padding(.vertical, 11)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title)，\(subtitle)，\(MoneyMath.signed(transaction.amount, kind: transaction.kind))")
+        .accessibilityLabel("\(title)，\(subtitle)，\(MoneyMath.signed(displayAmount, kind: transaction.kind))")
     }
 }

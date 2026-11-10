@@ -13,7 +13,7 @@
 |---|---|---|
 | `AppSettings` | M0 ✅ | 收支配色、逾期横幅开关 |
 | `Account` | M2 | 账户容器：名字 / 类型 / 额度 / 账单周期 / 还款日 / 当前余额 |
-| `Transaction` | M1 | 流水，软删除（`deletedAt`），金额一律 `Decimal` |
+| `Transaction` | M1 | 流水，软删除（`deletedAt`），金额一律 `Decimal`。M2b 加 `toAccount` / `receivedAmount` / `fee` / `groupID`——`groupID` 让转账与它自动生成的手续费流水绑定，删除时级联 |
 | `DebtPlan` | M3 | 分期计划：剩余期数 + 每期金额 + 首期还款日；利率是反算只读 |
 | `Installment` / `BillStatement` | M3 | 期数与账单期，用于「本月要还」口径 |
 | `Category` | M1 | 一级 8 类支出 + 2 类收入，各带二级子类（共 39 个内置）；`key`/`parentKey` 存层级，统计按一级 |

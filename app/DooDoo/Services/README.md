@@ -6,7 +6,7 @@
 |---|---|
 | `LedgerService.recalculateAll(in:)` | 扫全部账户与流水，`currentBalance = initialBalance + Σ effect`。数据修复、导入校验、单测都走它 |
 | `LedgerService.adjustAccountBalance(_:to:in:)` | 改余额的唯一入口：反推 `initialBalance` 再重算，视图层不许直接赋 `currentBalance` |
-| `LedgerService.flow(of:)` | 单笔流水对**两个**账户的影响（`AccountFlow{from,to}`）。还款、转账同时动两边，差额即手续费 |
+| `LedgerService.flow(of:)` | 单笔流水对**两个**账户的影响（`AccountFlow{from,to}`）。还款、转账同时动两边；**转账两边等额**（转出 = 转入 = 到账额），手续费由一条独立的 `expense` 流水承担 |
 | `LedgerService.insert(...)` | 唯一写入入口。支持 `toAccount` / `receivedAmount` / `grade`；写完整额后走**增量重算**，不再全表扫描 |
 | `LedgerService.effect(of:)` | 单边视图（= `flow.from`），给「按账户查流水」「净值曲线」用 |
 | `SeedService.prepare(context:)` | `seedVersion` 迁移 → 补图标 → 重算。首页与资产页启动时都调 |

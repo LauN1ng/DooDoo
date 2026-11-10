@@ -33,7 +33,7 @@
 | `research/` | 竞品与灵感：mobbin 截图、小红书 UI、参考图、调研结论 | `research/README.md` | 只追加 |
 | `assets/` | 美术资源：Fluent 3D Emoji（精选 492 + 全量 1545）、16 品牌色、3 纹理 | `assets/index.html` | 可改，改动写交付记录 |
 | `tools/screenshot/` | 原型截图脚本（tabbit CLI 驱动） | `tools/README.md` | 可改 |
-| `app/` | **iOS 工程**（M2b，48 条单测，编译只能靠 CI） | `app/README.md` | 代码区；`project.yml` 入库，`.xcodeproj` 不入库 |
+| `app/` | **iOS 工程**（M2b，55 条单测，编译只能靠 CI） | `app/README.md` | 代码区；`project.yml` 入库，`.xcodeproj` 不入库 |
 | `.codebuddy/` `.workbuddy/` `.agents/` `skills-lock.json` | 工具私有（技能库、日志、缓存） | — | **不要删**，不进协作流程 |
 
 ---

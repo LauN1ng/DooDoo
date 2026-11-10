@@ -56,9 +56,12 @@ enum DayMath {
         items.reduce(Decimal.zero) { sum, item in
             switch item.kind {
             case .expense:
-                return sum + item.amount + (item.fee ?? 0)
+                // 手续费现在是一条独立的 `.expense` 流水（`LedgerService.insert` 生成），
+                // 所以这里不再看 `item.fee`，否则同一笔会算成两倍。
+                return sum + item.amount
             case .transfer:
-                return sum + (item.fee ?? 0)
+                // 转账本金不是消费；它的手续费已由上面那条 `.expense` 计入。
+                return sum
             case .income, .repayment, .adjustment:
                 return sum
             }

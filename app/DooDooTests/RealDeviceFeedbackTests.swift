@@ -170,6 +170,13 @@ struct RealDeviceFeedbackTests {
         let to = Account(name: "支付宝", kind: .savings, initialBalance: dec("0"))
         context.insert(from)
         context.insert(to)
+        // 手续费流水要挂到内置分类「其他 › 手续费」，真机上是 SeedService 建的，
+        // 内存容器不会自动 seed，这里手动补一条（key 与 Category.builtIn 一致）。
+        context.insert(Category(
+            key: "misc.fee", parentKey: "misc", name: "手续费",
+            iconName: "Package", emoji: "🏦", sortOrder: 99,
+            isIncome: false, tintHex: "#F2F1ED"
+        ))
         try context.save()
 
         let vm = EntryViewModel()
@@ -184,18 +191,28 @@ struct RealDeviceFeedbackTests {
         vm.save(in: context)
 
         let txs = try context.fetch(FetchDescriptor<Transaction>())
-        #expect(txs.count == 1)
-        let tx = try #require(txs.first)
-        #expect(tx.kind == .transfer)
+        #expect(txs.count == 2, "转账本体 + 自动生成的手续费流水（PRD 9.8）")
+
+        let tx = try #require(txs.first { $0.kind == .transfer })
         #expect(tx.fee == dec("0.10"), "手续费必须落库，不能只活在 ViewModel 里")
         #expect(tx.receivedAmount == dec("999.90"))
 
-        let total = DayMath.expenseTotal([
-            TxFigure(kind: tx.kind, amount: tx.amount, date: tx.date, fee: tx.fee)
-        ])
-        #expect(total == dec("0.10"), "本金 1000 不计支出，只计手续费 0.10")
+        let feeTx = try #require(txs.first { $0.kind == .expense })
+        #expect(feeTx.amount == dec("0.10"), "手续费是一条独立的支出流水，不是藏起来的字段")
+        #expect(feeTx.account?.name == "工资卡", "手续费挂在付款方账户上")
+        #expect(feeTx.category?.key == "misc.fee", "分类必须是「其他 › 手续费」")
+        #expect(feeTx.groupID != nil, "必须有分组 ID，否则删转账会留下孤儿流水")
+        #expect(feeTx.groupID == tx.groupID, "转账与手续费共用同一个分组")
 
-        #expect(from.currentBalance == dec("4000"), "转出方扣本金 1000")
+        // 合计从库里两条一起算，不再手工拼 TxFigure——
+        // 手工拼只能证明函数本身对，证明不了「保存后的数据能算对」。
+        let figures = txs
+            .filter { $0.deletedAt == nil }
+            .map { TxFigure(kind: $0.kind, amount: $0.amount, date: $0.date, fee: $0.fee) }
+        #expect(DayMath.expenseTotal(figures) == dec("0.10"), "本金 1000 不计支出，只计手续费 0.10")
+
+        // 转账按等额走（999.90），手续费再扣 0.10，合计正好扣满 1,000。
+        #expect(from.currentBalance == dec("4000"), "转出方：999.90 + 0.10 = 扣满 1000")
         #expect(to.currentBalance == dec("999.90"), "转入方到账 999.90")
     }
 
@@ -217,10 +234,46 @@ struct RealDeviceFeedbackTests {
         vm.save(in: context)
 
         let all = try context.fetch(FetchDescriptor<Transaction>())
+        #expect(all.count == 1, "无手续费时不额外生成任何流水")
         let tx = try #require(all.first)
         #expect(tx.fee == dec("0"), "无手续费时 fee 为 0，不是 nil 也算不出支出")
+        #expect(tx.groupID == nil, "无手续费不需要分组")
         #expect(DayMath.expenseTotal([
             TxFigure(kind: tx.kind, amount: tx.amount, date: tx.date, fee: tx.fee)
         ]) == dec("0"))
+        #expect(from.currentBalance == dec("4000"), "无手续费时转出方只扣 1000")
+        #expect(to.currentBalance == dec("1000"), "转入方全额到账")
+    }
+
+    /// 手续费是独立流水，删转账时必须连带删掉，否则付款账户会永久少掉那份手续费
+    /// （余额回滚不完整，且 `recalculateAll` 之后仍然对不上）。
+    @Test("删转账：手续费流水一并软删，不留孤儿")
+    func softDeleteTransferCascadesFee() throws {
+        let context = try makeContext()
+        let from = Account(name: "工资卡", kind: .savings, initialBalance: dec("5000"))
+        let to = Account(name: "支付宝", kind: .savings, initialBalance: dec("0"))
+        context.insert(from)
+        context.insert(to)
+        try context.save()
+
+        let tx = try LedgerService.insert(
+            amount: dec("1000"), kind: .transfer, date: .now,
+            account: from, toAccount: to, receivedAmount: dec("999.90"), in: context
+        )
+        #expect(from.currentBalance == dec("4000"), "转账 999.90 + 手续费 0.10 共扣 1,000")
+
+        try LedgerService.softDelete(tx, in: context)
+
+        let all = try context.fetch(FetchDescriptor<Transaction>())
+        let alive = all.filter { $0.deletedAt == nil }
+        #expect(alive.isEmpty, "转账和它的手续费必须一起删掉")
+
+        let figures = alive.map {
+            TxFigure(kind: $0.kind, amount: $0.amount, date: $0.date, fee: $0.fee)
+        }
+        #expect(DayMath.expenseTotal(figures) == 0, "删除后当日支出归零")
+
+        #expect(from.currentBalance == dec("5000"), "付款账户全额回滚（999.90 + 0.10）")
+        #expect(to.currentBalance == dec("0"), "收款账户回滚")
     }
 }
