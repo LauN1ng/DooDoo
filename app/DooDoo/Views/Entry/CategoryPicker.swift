@@ -1,10 +1,14 @@
 import SwiftUI
+import UIKit
 
 /// 分类选择：一级色块横滑 + 二级浮层（记一笔规格冻结 v1.0 第六节）。
 ///
 /// - 一级：52×52 圆角 16，选中主色实底；
 /// - 二级：白色卡片圆角 20，5 列 × 2 行，圆底 42，选中主色 12% 底 + 1.5pt 描边；
 /// - 浮层**覆盖**下方内容（用 ZStack + offset），不推挤布局。
+/// - 图标：**Fluent3D PNG**（`Category.iconName`），`Category.emoji` 只在缺图时兜底。
+///   2026-11-11 补齐——此前这里渲染的是系统 emoji，与流水行（`TxRowView` 早已用 PNG）
+///   形成两套图标语言。
 struct CategoryPicker: View {
     let tops: [Category]
     let subs: [Category]
@@ -20,6 +24,28 @@ struct CategoryPicker: View {
 
     private let tile: CGFloat = 52
     private let subTile: CGFloat = 42
+    /// 图标在槽里的边长。Fluent3D 每张 PNG 自带约 6% 透明边距（内容占画布 87.5%），
+    /// 所以这里的数值要略大于旧 emoji 的字号，视觉重量才对得上
+    /// （32 × 0.875 ≈ 28，原 emoji 24pt 实际渲染约 28）。
+    private let topIconSize: CGFloat = 32
+    private let subIconSize: CGFloat = 26
+
+    /// 分类图标：Fluent3D PNG 优先，缺图退回 `emoji` 字符。
+    ///
+    /// 不用 `Image(category.iconName)` 直接查名：`iconName` 可能为空串（老库未回填完），
+    /// 空名会让 SwiftUI 在控制台刷 "No image named '' found" 并画一个占位框。
+    @ViewBuilder
+    private func categoryIcon(_ category: Category, size: CGFloat) -> some View {
+        if !category.iconName.isEmpty, let image = UIImage(named: category.iconName) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFit()
+                .frame(width: size, height: size)
+        } else {
+            Text(category.emoji)
+                .font(.system(size: size * 0.78))
+        }
+    }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -39,7 +65,6 @@ struct CategoryPicker: View {
 
     /// 分类选中回显（2026-11-09 真机反馈 #7）：一级色块不随二级变化，
     /// 选完浮层收起后全屏原本没有任何地方能看出选了「咖啡」。
-    /// 这里只用文字，不换图标——分类图标等 71 槽位正式映射再一起换。
     private var selectedHint: some View {
         HStack(spacing: 5) {
             Text("已选")
@@ -79,8 +104,7 @@ struct CategoryPicker: View {
     private func topItem(_ category: Category) -> some View {
         let selected = category.key == topKey
         return VStack(spacing: 5) {
-            Text(category.emoji)
-                .font(.system(size: 24))
+            categoryIcon(category, size: topIconSize)
                 .frame(width: tile, height: tile)
                 .background(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -148,8 +172,7 @@ struct CategoryPicker: View {
     private func subItem(_ category: Category) -> some View {
         let selected = category.key == subKey
         return VStack(spacing: 5) {
-            Text(category.emoji)
-                .font(.system(size: 21))
+            categoryIcon(category, size: subIconSize)
                 .frame(width: subTile, height: subTile)
                 .background(
                     Circle().fill(selected ? accentWash : Palette.page)

@@ -10,10 +10,10 @@ import SwiftData
 /// 老库会在启动时清空重建（M1 期间用户没有任何录入入口，重建是安全的）。
 @MainActor
 enum SeedService {
-    /// v3：分类改两级（一级 10 + 二级 48），流水挂到二级。
+    /// v3：分类改两级（一级 10 + 二级 51），流水挂到二级。
     static let currentSeedVersion = 3
 
-    /// 首页与资产页启动时调这一个：版本迁移 → 补图标 → 重算余额。
+    /// 首页与资产页启动时调这一个：版本迁移 → 补图标 → 补缺失分类 → 重算余额。
     static func prepare(context: ModelContext, calendar: Calendar = .current) throws {
         let settings = try ensureSettings(context)
         if settings.seedVersion < currentSeedVersion {
@@ -24,6 +24,7 @@ enum SeedService {
             try context.save()
         }
         try backfillIcons(context: context)
+        try ensureBuiltInCategories(context: context)
         try LedgerService.recalculateAll(in: context)
         try normalizeLiabilitySigns(context: context)
     }
@@ -277,6 +278,46 @@ enum SeedService {
         }
 
         if dirty { try context.save() }
+    }
+
+    /// 补建老库缺失的内置分类（2026-11-11）。
+    ///
+    /// 背景：`2e78a16` 把二级从 48 加到 51（新增 `home.water` 住/水费、
+    /// `transport.plane` 行/飞机、`transport.ship` 行/轮船），但 `currentSeedVersion`
+    /// **没有跟着 +1**。老库 `seedVersion == 3` 不满足 `< currentSeedVersion`，
+    /// 于是跳过 `seedV3`；而 `backfillIcons` 只对齐**已有**分类的图标与底色，不创建新条目。
+    /// 结果是覆盖安装后「住」下面没有「水费」、「行」下面没有「飞机」「轮船」——
+    /// 同一个 App，老库比新装少三个二级分类槽位。
+    ///
+    /// 为什么不升 `currentSeedVersion` 让它重建：升版本会走 `wipeDemoData`
+    /// 清空全部流水与账户。M2b 起用户已在真机记真实账目，重建会丢账。
+    /// 这里只按 `key` 补缺失项，幂等，重复调用无副作用。
+    ///
+    /// `sortOrder` 取 `builtIn` 下标（与 `makeCategories` 同一口径），
+    /// 保证补进去的分类落在正确位置，而不是排到父类末尾。
+    ///
+    /// 顺序约束：必须在 `backfillIcons` **之后**调用。M1 老库的分类没有 `key`，
+    /// 要先由 `backfillIcons` 按名字补出 `key`，否则这里会把它们全判成缺失、重复插入一份。
+    static func ensureBuiltInCategories(context: ModelContext) throws {
+        let existing = try context.fetch(FetchDescriptor<Category>())
+        let existingKeys = Set(existing.map(\.key).filter { !$0.isEmpty })
+        guard existingKeys.count < Category.builtIn.count else { return }
+
+        var inserted = false
+        for (index, item) in Category.builtIn.enumerated() where !existingKeys.contains(item.key) {
+            context.insert(Category(
+                key: item.key,
+                parentKey: item.parentKey,
+                name: item.name,
+                iconName: item.icon,
+                emoji: item.emoji,
+                sortOrder: index,
+                isIncome: item.isIncome,
+                tintHex: item.tint
+            ))
+            inserted = true
+        }
+        if inserted { try context.save() }
     }
 
     /// 2026-11-10 换图标后不再作为分类默认值的 5 张。

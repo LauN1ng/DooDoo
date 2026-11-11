@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 import Testing
+import UIKit
 
 @testable import DooDoo
 
@@ -190,5 +191,61 @@ struct EntryFlowTests {
 
         // 每个槽位都有图标名（2026-11-10 起二级不再复用父级图标）
         #expect(DooDoo.Category.builtIn.allSatisfy { !$0.icon.isEmpty })
+    }
+
+    @Test("老库覆盖安装：缺的三个二级分类会被补建，且可重复调用")
+    func ensureBuiltInCategoriesBackfillsOldLibrary() throws {
+        let context = try makeContext()
+
+        // 模拟 11-10 之前的老库：builtIn 去掉当天新增的三个二级，共 58 条
+        let added: Set<String> = ["home.water", "transport.plane", "transport.ship"]
+        var index = 0
+        for item in DooDoo.Category.builtIn where !added.contains(item.key) {
+            context.insert(DooDoo.Category(
+                key: item.key,
+                parentKey: item.parentKey,
+                name: item.name,
+                iconName: item.icon,
+                emoji: item.emoji,
+                sortOrder: index,
+                isIncome: item.isIncome,
+                tintHex: item.tint
+            ))
+            index += 1
+        }
+        try context.save()
+
+        let before = try context.fetch(FetchDescriptor<DooDoo.Category>())
+        #expect(before.count == 58)
+
+        try SeedService.ensureBuiltInCategories(context: context)
+
+        let after = try context.fetch(FetchDescriptor<DooDoo.Category>())
+        #expect(after.count == 61)
+        #expect(added.isSubset(of: Set(after.map(\.key))))
+        // 必须挂在正确父类下，否则「住」底下不会长出「水费」
+        #expect(after.first { $0.key == "home.water" }?.parentKey == "home")
+        #expect(after.first { $0.key == "transport.plane" }?.parentKey == "transport")
+        #expect(after.first { $0.key == "transport.ship" }?.parentKey == "transport")
+        // sortOrder 沿用 builtIn 下标，补进来的排在父类末尾而不是整个列表末尾
+        let waterOrder = after.first { $0.key == "home.water" }?.sortOrder
+        #expect(waterOrder == DooDoo.Category.builtIn.firstIndex { $0.key == "home.water" })
+
+        // 幂等：`prepare` 每次启动都会调，重复不该多出来
+        try SeedService.ensureBuiltInCategories(context: context)
+        let again = try context.fetch(FetchDescriptor<DooDoo.Category>())
+        #expect(again.count == 61)
+    }
+
+    @Test("分类图标都真正进了包，不会退回 emoji 兜底")
+    func categoryIconsShipInBundle() throws {
+        let names = Set(DooDoo.Category.builtIn.map(\.icon))
+        #expect(names.count == 57)
+
+        // 按名为空或查不到时 `CategoryPicker` 会退回 `Category.emoji`——
+        // 那正是「记一笔是系统 emoji、流水是 3D 图」两套语言的来源。
+        for name in names {
+            #expect(UIImage(named: name) != nil, "图标 \(name) 没进包，分类页会退回 emoji")
+        }
     }
 }
