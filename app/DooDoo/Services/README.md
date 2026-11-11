@@ -1,6 +1,6 @@
 # Services · 领域服务
 
-> 状态：**M3-2**——`LedgerService` 已有 `insert` / `softDelete` / `recalculateAll` / `adjustAccountBalance`；`SeedService` 按 `seedVersion` 重建演示数据；`InstallmentService` 建分期计划并展开未来期。
+> 状态：**M3-3**——`LedgerService` 已有 `insert` / `softDelete` / `recalculateAll` / `adjustAccountBalance`；`SeedService` 按 `seedVersion` 重建演示数据；`InstallmentService` 建分期计划并展开未来期。
 
 | 入口 | 职责 |
 |---|---|
@@ -13,6 +13,7 @@
 | `InstallmentService.insert(...)` | 建分期计划 + `generateFuturePeriods` 展开未来逐期。**不动余额**——分期是时间表，动钱的是还款流水 |
 | `InstallmentService.generateFuturePeriods(for:in:)` | 按剩余期数/每期金额/下一期还款日重建期表，`isManualOverride` 的那几期保留不动 |
 | `InstallmentService.count(in:)` / `mostRecentAccount(in:)` | 连录用：已录笔数与「上一笔挂的卡」 |
+| `InstallmentService.migrateLegacyRemainingPrincipal(in:)` | M3-3 修数据：老计划把「剩余应还」误存在 `remainingPrincipal` 里，搬到 `remainingDue` 并清掉历史首期，重建期表。幂等，`SeedService.prepare` 末尾调用 |
 
 | 服务 | 里程碑 | 职责 |
 |---|---|---|

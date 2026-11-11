@@ -121,14 +121,15 @@ final class InstallmentEntryViewModel {
     ///
     ///     现值 = 每期 × 总期数 − 含利息
     ///
-    /// 需要「总共几期」——没填就没有整笔分母，返回 `nil` 而不是拿剩余期数冒充
-    /// （那会把 14.13% 报成 18.40%，看着像利率随时间上涨）。
+    /// **必须显式填了「总共几期」才算**。没填时 `periods.total` 会退化成剩余期数，
+    /// 拿它当整笔分母就等于「假设这是一笔全新分期」——用户明明还剩 9 期，
+    /// 却报成「9 期整笔」的年化（14.13% 会被报成 18% 上下），比不报更误导。
+    /// 所以这里用 `totalPeriods` 而不是 `periods.total`。
     var previewAnnualRate: Decimal? {
+        guard let total = totalPeriods, total > 1, perPeriodAmount > 0 else { return nil }
         guard let interest = Self.optionalDecimal(interestText), interest > 0 else { return nil }
-        let p = periods
-        guard p.total > 1, perPeriodAmount > 0 else { return nil }
         return InstallmentMath.impliedAnnualRate(
-            periods: p.total,
+            periods: total,
             perPeriodAmount: perPeriodAmount,
             totalInterest: interest
         )
@@ -243,6 +244,10 @@ final class InstallmentEntryViewModel {
             return false
         }
         let p = periods
+        // 没填总期数就别存含利息：那时分不清它指的是整笔的利息还是剩余期的利息，
+        // 模型层会拿 totalPeriods（= 剩余期数）去算，得出一个自己不认的数字。
+        // 宁可不存，由界面提示补「总共几期」——PRD 9.5.3「不猜假利率」。
+        let hasTotalPeriods = totalPeriods != nil
         do {
             try InstallmentService.insert(
                 name: resolvedName,
@@ -251,7 +256,7 @@ final class InstallmentEntryViewModel {
                 paidPeriods: p.paid,
                 perPeriodAmount: perPeriodAmount,
                 remainingDue: remainingDue,
-                totalInterest: Self.optionalDecimal(interestText),
+                totalInterest: hasTotalPeriods ? Self.optionalDecimal(interestText) : nil,
                 totalRebate: Self.optionalDecimal(rebateText),
                 nextDueDate: dueDate,
                 in: context
