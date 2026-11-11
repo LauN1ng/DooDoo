@@ -209,7 +209,7 @@ struct InstallmentMathTests {
         #expect(split!.perPeriod * 8 + split!.firstPeriod == dec("1830.17"))
     }
 
-    @Test("余数落首期：三张真实白条账单逐期复现")
+    @Test("余数落首期：四张真实账单逐期复现（含花呗 120.06 / 120.03）")
     func splitEvenlyMatchesRealBills() {
         // 用户 2026-11-11 提供的两张干净样本。此前 M3-3 只校准了招行那一笔
         // （1830.15 ÷ 9 整除，余数落首期还是末期结果一样），所以把方向做反了。
@@ -232,12 +232,21 @@ struct InstallmentMathTests {
         let rest = InstallmentMath.splitEvenly(total: dec("10.22"), count: 2)
         #expect(rest?.firstPeriod == dec("5.11"))
         #expect(rest?.perPeriod == dec("5.11"))
+
+        // 花呗：1440.39 分 12 期 → 120.0325…，其余 120.03、首期 120.06。
+        // PRD 9.5.1 的真实账单就写着「每期 120.03」。这条同时证明**平息账单
+        // 直接用「总额 ÷ 期数」就是准的**——花呗利息 110.56 是平摊在每期 9.21 里的。
+        let huabei = InstallmentMath.splitEvenly(total: dec("1440.39"), count: 12)
+        #expect(huabei?.firstPeriod == dec("120.06"))
+        #expect(huabei?.perPeriod == dec("120.03"))
+        #expect(huabei!.firstPeriod + huabei!.perPeriod * 11 == dec("1440.39"))
     }
 
-    @Test("末期反推：四张真实账单逐分复现，含利息不均那张")
+    @Test("末期反推：四张真实账单逐分复现，含末期抵减免那张")
     func splitEndingAtMatchesRealBills() {
-        // M3-5 的核心用例。利息并不按期均分，所以「总额 ÷ 期数」只是算术平均；
-        // 末期金额账单上明写着，抄它反推中间各期，四张单全部逐分对上。
+        // M3-5 的核心用例。账单利息是**平息**（按期均分），算不准的是
+        // **减免抵在哪一期**——花呗/白条都抵最后一期。末期金额账单上明写着，
+        // 抄它反推中间各期，四张单全部逐分对上。
         //
         // A：15.34 / 3 期，末期 5.11 → 5.12 / 5.11 / 5.11（首期吃那 1 分）
         let a = InstallmentMath.splitEndingAt(total: dec("15.34"), count: 3, last: dec("5.11"))
@@ -255,7 +264,7 @@ struct InstallmentMathTests {
         #expect(c?.perPeriod == dec("203.35"))
         #expect(c?.isEven == true)
 
-        // D：利息不均那张——496.65 分 6 期，已还 2 期后剩 330.23 / 4 期，
+        // D：末期抵了退款减免那张——496.65 分 6 期，已还 2 期后剩 330.23 / 4 期，
         // 账单是 83.19 / 83.19 / 83.19 / 80.66。均摊只能给 82.58 / 82.55 × 2 / 82.55，
         // 末期差 1.89 元；末期反推逐分复原。
         let d = InstallmentMath.splitEndingAt(total: dec("330.23"), count: 4, last: dec("80.66"))

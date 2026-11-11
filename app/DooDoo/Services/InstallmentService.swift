@@ -20,7 +20,7 @@ enum InstallmentService {
     /// - `remainingDue`：账单上的「分期剩余应还」，**金额的权威来源**。给了它，
     ///   期表按它摊平、余数落首期
     /// - `lastPeriodAmount`：账单最后一期的金额（选填）。给了它，期表改走
-    ///   `splitEndingAt` 反推中间各期，末期用真值——利息不均分的账单只有这条路算得准
+    ///   `splitEndingAt` 反推中间各期，末期用真值——末期抵了减免的账单只有这条路算得准
     /// - `iconName`：列表展示用，默认 `Receipt`（bundle 里的 Fluent3D PNG 名）
     ///
     /// 边界：`remaining <= 0` 时仍建计划但**不生成期表**（已还清的历史分期，
