@@ -26,6 +26,10 @@ struct TxRollup<Item> {
     }
 }
 
+// 注意：extension 里写 `TxRollup(...)` 指的不是 `TxRollup<T>`，而是 `Self`
+// ——也就是带上同名泛型参数的 `TxRollup<Item>`。两者在这个方法里毫不相干，
+// 漏写 `<T>` 就会「cannot convert value of type 'TxRollup<Item>' to 'TxRollup<T>'」。
+// 下面四处构造全部显式写 `TxRollup<T>`，不要「顺手简化」掉。
 extension TxRollup {
     /// 把一批流水压成显示行，顺序跟随 `items` 里**主行**的位置（调用方已按时间倒序）。
     ///
@@ -47,7 +51,7 @@ extension TxRollup {
             if let group = groupOf(item) { transferGroups.insert(group) }
         }
         guard !transferGroups.isEmpty else {
-            return items.map { TxRollup(primary: $0) }
+            return items.map { TxRollup<T>(primary: $0) }
         }
 
         // 再按 groupID 收手续费，最后走一遍正文——这样主行顺序不会被打乱。
@@ -65,11 +69,11 @@ extension TxRollup {
             case .expense:
                 // 已挂到同组转账那一行，不再单独出行。
                 if let group, transferGroups.contains(group) { continue }
-                rows.append(TxRollup(primary: item))
+                rows.append(TxRollup<T>(primary: item))
             case .transfer:
-                rows.append(TxRollup(primary: item, fees: group.flatMap { feesByGroup[$0] } ?? []))
+                rows.append(TxRollup<T>(primary: item, fees: group.flatMap { feesByGroup[$0] } ?? []))
             case .income, .repayment, .adjustment:
-                rows.append(TxRollup(primary: item))
+                rows.append(TxRollup<T>(primary: item))
             }
         }
         return rows
