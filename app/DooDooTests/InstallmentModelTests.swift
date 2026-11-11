@@ -78,6 +78,36 @@ struct InstallmentModelTests {
         #expect(periods.first?.amount == dec("203.37"))
     }
 
+    @Test("填了末期金额：年化改用整笔平均，不能拿中间期金额当每期")
+    func annualRateUsesWholeLoanAverageWhenLastGiven() {
+        // 496.65 那笔：6 期、含利息 17.65、本金 479。已还 2 期、剩 4 期 330.23，
+        // 中间各期 83.19、末期 80.66。
+        let plan = Installment(
+            key: "白条", name: "白条分期", totalPeriods: 6, paidPeriods: 2,
+            perPeriodAmount: dec("83.19"), lastPeriodAmount: dec("80.66"),
+            remainingDue: dec("330.23"), totalInterest: dec("17.65"),
+            nextDueDate: day(2026, 12, 20)
+        )
+        // 整笔平均 = (2 × 83.19 + 330.23) ÷ 6 ≈ 82.77（真实 82.775，
+        // 差的 4 分是已还首期那点零头，对年化影响 < 0.05%）
+        #expect(plan.perPeriodForAnnualRate > dec("82.76"))
+        #expect(plan.perPeriodForAnnualRate < dec("82.78"))
+
+        // 拿中间期 83.19 当每期会报成 14.28%，用整笔平均才是 12.5% 上下
+        let rate = plan.estimatedAnnualRate
+        #expect(rate != nil)
+        #expect(abs(NSDecimalNumber(decimal: rate!).doubleValue - 12.5) <= 0.3)
+
+        // 没填末期时行为不变：仍用 perPeriodAmount，走原口径
+        let even = Installment(
+            key: "招行", name: "招行账单分期", totalPeriods: 12, paidPeriods: 3,
+            perPeriodAmount: dec("203.35"), remainingDue: dec("1830.15"),
+            totalInterest: dec("176.99"), nextDueDate: day(2026, 11, 25)
+        )
+        #expect(even.perPeriodForAnnualRate == dec("203.35"))
+        #expect(abs(NSDecimalNumber(decimal: even.estimatedAnnualRate!).doubleValue - 14.13) <= 0.05)
+    }
+
     @Test("年化只走整笔口径：「剩余本金」不再参与，含利息才是输入")
     func estimatedAnnualRateUsesWholeLoan() {
         // 花呗 PRD 9.5.3 例子：12 期 × 120.03、含利息 110.56 → ≈15%

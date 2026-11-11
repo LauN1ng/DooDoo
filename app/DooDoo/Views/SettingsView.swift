@@ -50,7 +50,7 @@ struct SettingsView: View {
 
                 LabeledContent("已录分期", value: "\(installments.count) 笔")
 
-                Text("已发生的分期照账单抄三个数：剩余应还、剩余期数、含利息。每期金额自动除出来（除不尽的零头进首期），还款日按卡的还款日带出。历史期只存汇总，不用逐期补录。")
+                Text("已发生的分期照账单抄三个数：剩余应还、剩余期数、含利息，还款日按卡的还款日带出。每期金额自动除出来（除不尽的零头进首期）；各期金额不一样的账单，再补抄一个「末期金额」，中间各期就按它反推，不用逐期录。")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }

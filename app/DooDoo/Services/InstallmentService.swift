@@ -18,7 +18,9 @@ enum InstallmentService {
     ///
     /// - `totalPeriods` / `paidPeriods`：由 `InstallmentIntake.periods(remaining:total:)` 得来
     /// - `remainingDue`：账单上的「分期剩余应还」，**金额的权威来源**。给了它，
-    ///   期表按它摊平、余数落首期，`firstPeriodAmount` / `lastPeriodAmount` 不再需要
+    ///   期表按它摊平、余数落首期
+    /// - `lastPeriodAmount`：账单最后一期的金额（选填）。给了它，期表改走
+    ///   `splitEndingAt` 反推中间各期，末期用真值——利息不均分的账单只有这条路算得准
     /// - `iconName`：列表展示用，默认 `Receipt`（bundle 里的 Fluent3D PNG 名）
     ///
     /// 边界：`remaining <= 0` 时仍建计划但**不生成期表**（已还清的历史分期，
@@ -94,6 +96,10 @@ enum InstallmentService {
             plan.remainingDue = principal
             plan.remainingPrincipal = nil
             plan.firstPeriodAmount = nil
+            // 旧表单的「末期金额」语义不明（可能是整笔末期，也可能是历史某期），
+            // M3-5 起这个字段会被当真值用，所以老数据一律清掉——期表回到均摊，
+            // 与迁移前行为一致，不引入新数字。
+            plan.lastPeriodAmount = nil
             migrated += 1
             try generateFuturePeriods(for: plan, calendar: calendar, in: context)
         }

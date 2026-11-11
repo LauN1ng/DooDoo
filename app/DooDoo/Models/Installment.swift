@@ -162,6 +162,22 @@ extension Installment {
         )
     }
 
+    /// 年化该用哪个「每期金额」。
+    ///
+    /// 没填末期金额时就是 `perPeriodAmount`（各期相等，二者无差别）。
+    /// 填了末期金额时**不能**再用它——那时的 `perPeriodAmount` 是**中间各期**的真值
+    /// （496.65 那笔是 83.19），末期只有 80.66。拿 83.19 当每期，年化会被报成
+    /// **14.28%**；用整笔平均 `(已还 × 每期 + 剩余应还) ÷ 总期数 = 82.775` 才是 12.53%。
+    /// 年化是整笔口径（PRD 9.5.3），要的就是这个平均数。
+    var perPeriodForAnnualRate: Decimal {
+        guard lastPeriodAmount != nil,
+              totalPeriods > 0,
+              let remainingDue, remainingDue > 0
+        else { return perPeriodAmount }
+        let paid = Decimal(max(0, paidPeriods))
+        return (paid * perPeriodAmount + remainingDue) / Decimal(totalPeriods)
+    }
+
     /// 反算年化（估算，展示用，不参与账务）。**返回百分数**：`16.43` 表示 16.43%，
     /// 展示时直接拼「%」，不要再乘 100。
     ///
@@ -186,7 +202,7 @@ extension Installment {
         }
         return InstallmentMath.impliedAnnualRate(
             periods: totalPeriods,
-            perPeriodAmount: perPeriodAmount,
+            perPeriodAmount: perPeriodForAnnualRate,
             totalInterest: totalInterest
         )
     }

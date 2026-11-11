@@ -15,8 +15,13 @@ import SwiftUI
 /// 3. 随时可以「先停，回头再录」，进度存在 `UserDefaults` 里，下次接着录。
 ///
 /// M3-3 的表单收敛：手填从 8 个框降到 3 个（剩余应还 / 总共几期 / 含利息），
-/// 每期金额由「剩余应还 ÷ 期数」派生、余数自动落**首期**。删掉的三个框
-/// （剩余本金、首期金额、末期金额）都是**账单上不存在的数**，用户怎么填都填不对。
+/// 每期金额由「剩余应还 ÷ 期数」派生、余数自动落**首期**。当时删掉的「剩余本金」
+/// 是**账单上不存在的数**，用户怎么填都填不对。
+///
+/// M3-5 把「末期金额」单独请了回来（选填）——它跟「剩余本金」性质不同，**账单上明写着**。
+/// 利息并不按期均分（496.65 分 6 期：末期只有 80.66，中间 83.19），给定总额和期数
+/// 根本推不出单期金额；抄一个末期就能反推（见 `InstallmentMath.splitEndingAt`）。
+/// 不填就退回均摊，跟 M3-4 完全一致。
 struct InstallmentEntryView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
@@ -31,7 +36,7 @@ struct InstallmentEntryView: View {
     @State private var showingTargetEditor = false
 
     private enum Field: Hashable {
-        case name, due, remaining, total, interest, rebate
+        case name, due, remaining, total, interest, last, rebate
     }
 
     private var accentStyle: AccentStyle { settingsList.first?.accent ?? .ink }
@@ -200,9 +205,9 @@ struct InstallmentEntryView: View {
             .accessibilityLabel(account.displayShortName)
     }
 
-    // MARK: - 主卡：剩余应还 / 剩余期数 / 平均每期
+    // MARK: - 主卡：剩余应还 / 剩余期数 / 每期金额 / 末期金额
 
-    /// 三个数挤一张卡：**账单上那三个数**（剩余应还、第 4/12 期里的期数）填进来，
+    /// 一张卡装下账单上那几个数（剩余应还、第 4/12 期里的期数、末期金额），
     /// 每期金额自动出来。卡片顺序就是核对顺序——从上往下读一遍，正好对上账单。
     private var mainCard: some View {
         card {
@@ -266,7 +271,7 @@ struct InstallmentEntryView: View {
 
             // 平均每期 —— 只读派生
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text("平均每期")
+                Text(vm.isUsingLastPeriod ? "中间每期" : "平均每期")
                     .font(.system(size: 13))
                     .foregroundStyle(Palette.sub)
                 Spacer(minLength: 8)
@@ -278,28 +283,67 @@ struct InstallmentEntryView: View {
             Text(perPeriodNote)
                 .font(.system(size: 10))
                 .foregroundStyle(Palette.faint)
+
+            Divider().overlay(Palette.line)
+
+            // 末期金额 —— 选填。填了就用它反推中间各期，不再算术平均
+            HStack(spacing: 6) {
+                Text("末期金额")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Palette.sub)
+                Text("选填")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(Palette.faint)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1.5)
+                    .background(
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .fill(Palette.tabBed)
+                    )
+                Spacer(minLength: 6)
+                Text("¥")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Palette.faint)
+                TextField("0.00", text: $vm.lastPeriodText)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .font(.system(size: 15, weight: .medium))
+                    .monospacedDigit()
+                    .foregroundStyle(Palette.ink)
+                    .focused($focus, equals: .last)
+                    .frame(maxWidth: 120)
+            }
+            Text("账单最后一期的金额。各期金额不一样时才填——填了中间各期就按它反推，不用均价")
+                .font(.system(size: 10))
+                .foregroundStyle(Palette.faint)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
-    /// 平均每期的来历。写在数字下面一行小字，是为了让用户能**自己验算**：
-    /// 拿「10.22 ÷ 2」能立刻对账单。
+    /// 每期金额的来历。写在数字下面一行小字，是为了让用户能**自己验算**。
     ///
-    /// 措辞的两条约束，都是被账单打出来的：
+    /// 措辞的三条约束，都是被账单打出来的：
     /// 1. 不说「每期」只说「平均每期」——平台给的是首期多、其余相同
-    ///    （15.34 ÷ 3 → 5.12 / 5.11 / 5.11），各期并不相等。
+    ///    （15.34 ÷ 3 → 5.12 / 5.11 / 5.11），各期并不相等。填了末期金额之后
+    ///    中间各期是确定的，标签换成「中间每期」。
     /// 2. 不说「末期收零头」也不说「首期收零头」这种像账本条文的词，只说
     ///    「多出的 ¥x 并进首期」——**这是我们的摊法，不是账单的规则**。
     ///    真实单期 = 本金均摊 + 该期利息，而利息不按期均分（496.65 分 6 期：
     ///    3.38 / 3.36 × 4 / 0.83），所以多期账单的金额天生跟平均值不同。
+    /// 3. 填了末期就露出算式「(总额 − 末期) ÷ (期数 − 1)」，用户能立刻用账单验算；
+    ///    这正是 M3-5 敢把「利息不均分」交给一个输入框而不是算法的原因。
     private var perPeriodNote: String {
         guard let split = vm.split else {
             return "填上面两个数，自动算出来"
         }
-        var note = "= ¥\(MoneyMath.money(vm.remainingDue)) ÷ \(vm.periods.remaining) 期均摊"
-        if split.firstPeriod != split.perPeriod {
-            note += "，多出的 ¥\(MoneyMath.money(split.firstPeriod - split.perPeriod)) 并进首期"
+        let rounding = split.firstPeriod != split.perPeriod
+            ? "，多出的 ¥\(MoneyMath.money(split.firstPeriod - split.perPeriod)) 并进首期"
+            : ""
+        if vm.isUsingLastPeriod, vm.periods.remaining > 1 {
+            return "= (¥\(MoneyMath.money(vm.remainingDue)) − 末期 ¥\(MoneyMath.money(split.lastPeriod)))"
+                + " ÷ \(vm.periods.remaining - 1) 期\(rounding)"
         }
-        return note
+        return "= ¥\(MoneyMath.money(vm.remainingDue)) ÷ \(vm.periods.remaining) 期均摊\(rounding)"
     }
 
     private func presetChip(_ title: String, selected: Bool, onTap: @escaping () -> Void) -> some View {
@@ -542,6 +586,10 @@ struct InstallmentEntryView: View {
     /// 5.12 + 5.11 × 2 = 15.34，正好等于右边。
     private var previewLeftText: String {
         guard vm.periods.remaining > 0 else { return "填完上面就能核对总额" }
+        // 填了末期就不能写「× 中间每期」——那会跟右边差额，用户一乘就发现对不上。
+        if vm.isUsingLastPeriod, let split = vm.split, vm.periods.remaining > 1 {
+            return "剩 \(vm.periods.remaining) 期 · 末期 ¥\(MoneyMath.money(split.lastPeriod))"
+        }
         if let first = vm.firstPeriodAmount {
             return "剩 \(vm.periods.remaining) 期 · 首期 ¥\(MoneyMath.money(first))"
         }

@@ -234,6 +234,77 @@ struct InstallmentMathTests {
         #expect(rest?.perPeriod == dec("5.11"))
     }
 
+    @Test("末期反推：四张真实账单逐分复现，含利息不均那张")
+    func splitEndingAtMatchesRealBills() {
+        // M3-5 的核心用例。利息并不按期均分，所以「总额 ÷ 期数」只是算术平均；
+        // 末期金额账单上明写着，抄它反推中间各期，四张单全部逐分对上。
+        //
+        // A：15.34 / 3 期，末期 5.11 → 5.12 / 5.11 / 5.11（首期吃那 1 分）
+        let a = InstallmentMath.splitEndingAt(total: dec("15.34"), count: 3, last: dec("5.11"))
+        #expect(a?.firstPeriod == dec("5.12"))
+        #expect(a?.perPeriod == dec("5.11"))
+        #expect(a?.lastPeriod == dec("5.11"))
+
+        // B：163.02 / 6 期，末期 27.17 → 整除，各期一致
+        let b = InstallmentMath.splitEndingAt(total: dec("163.02"), count: 6, last: dec("27.17"))
+        #expect(b?.perPeriod == dec("27.17"))
+        #expect(b?.isEven == true)
+
+        // C：招行 1830.15 / 9 期，末期 203.35 → 整除
+        let c = InstallmentMath.splitEndingAt(total: dec("1830.15"), count: 9, last: dec("203.35"))
+        #expect(c?.perPeriod == dec("203.35"))
+        #expect(c?.isEven == true)
+
+        // D：利息不均那张——496.65 分 6 期，已还 2 期后剩 330.23 / 4 期，
+        // 账单是 83.19 / 83.19 / 83.19 / 80.66。均摊只能给 82.58 / 82.55 × 2 / 82.55，
+        // 末期差 1.89 元；末期反推逐分复原。
+        let d = InstallmentMath.splitEndingAt(total: dec("330.23"), count: 4, last: dec("80.66"))
+        #expect(d?.firstPeriod == dec("83.19"))
+        #expect(d?.perPeriod == dec("83.19"))
+        #expect(d?.lastPeriod == dec("80.66"))
+        #expect(d?.isEven == false)
+        // 一分不差
+        #expect(d!.firstPeriod + d!.perPeriod * 2 + d!.lastPeriod == dec("330.23"))
+    }
+
+    @Test("末期反推的边界：末期吃掉全部 / 只剩一期 / 两期")
+    func splitEndingAtBoundaries() {
+        // 末期 ≥ 总额 → 中间期不存在，返 nil 让界面提示，而不是产出 0 元期
+        #expect(InstallmentMath.splitEndingAt(
+            total: dec("100"), count: 6, last: dec("100")) == nil)
+        #expect(InstallmentMath.splitEndingAt(
+            total: dec("100"), count: 6, last: dec("120")) == nil)
+        // 末期 ≤ 0 / 期数 ≤ 0 / 总额 ≤ 0
+        #expect(InstallmentMath.splitEndingAt(total: dec("100"), count: 6, last: 0) == nil)
+        #expect(InstallmentMath.splitEndingAt(total: dec("100"), count: 0, last: dec("10")) == nil)
+        // 只剩一期：末期入参被忽略，一期吃掉全额
+        let single = InstallmentMath.splitEndingAt(total: dec("80.66"), count: 1, last: dec("9.99"))
+        #expect(single?.lastPeriod == dec("80.66"))
+        #expect(single?.perPeriod == dec("80.66"))
+        // 只剩两期：中间期不存在，首期 = 总额 − 末期
+        let two = InstallmentMath.splitEndingAt(total: dec("170"), count: 2, last: dec("80.66"))
+        #expect(two?.firstPeriod == dec("89.34"))
+        #expect(two?.lastPeriod == dec("80.66"))
+    }
+
+    @Test("填了末期就按末期展开逐期，均摊不再是主路径")
+    func futurePeriodsPrefersLastPeriod() {
+        let next = calendar.date(from: DateComponents(year: 2026, month: 12, day: 20))!
+        // 496.65 那笔的剩余段：330.23 / 4 期，末期 80.66
+        let periods = InstallmentMath.futurePeriods(
+            count: 4,
+            nextDueDate: next,
+            perPeriodAmount: dec("82.55"),
+            lastPeriodAmount: dec("80.66"),
+            remainingDue: dec("330.23"),
+            calendar: calendar
+        )
+        #expect(periods.count == 4)
+        #expect(periods.map(\.amount) == [dec("83.19"), dec("83.19"), dec("83.19"), dec("80.66")])
+        #expect(periods.reduce(Decimal(0)) { $0 + $1.amount } == dec("330.23"))
+    }
+
+
     @Test("均摊的边界：一期全吃、零期或零额返回 nil")
     func splitEvenlyBoundaries() {
         let single = InstallmentMath.splitEvenly(total: dec("500"), count: 1)

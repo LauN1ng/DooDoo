@@ -16,8 +16,15 @@ import SwiftData
 /// - **剩余本金**：账单只有含息的「剩余应还」，用户填进去就撞上「现值 = 总还款额」→ 年化 0.0%
 /// - **首期/末期金额**：用户填的是历史第 1 期（203.43），而未来 9 期都是 203.35，差 0.08
 ///
-/// 现在只填 4 个数：**剩余应还 / 剩余期数 / 总共几期 / 含利息**。
+/// 现在只填 4 个必填项：**剩余应还 / 剩余期数 / 总共几期 / 含利息**，
+/// 外加 1 个选填的**末期金额**（M3-5）。
 /// 每期金额由「剩余应还 ÷ 期数」派生（余数自动落**首期**），还款日由账户带出。
+///
+/// M3-5 为什么要补那个选填框：利息并不按期均分（实测 496.65 分 6 期，
+/// 利息是 3.38 / 3.36 × 4 / 0.83，末期只有 0.83），所以「总额 ÷ 期数」只是算术平均，
+/// 跟账单末期差 1.9 元。**给定总额和期数，利息怎么分布是欠定的**——再多算法也只能猜。
+/// 账单上末期金额是明写的，抄一个数就能反推出中间各期（见 `InstallmentMath.splitEndingAt`），
+/// 四张真实账单逐分复现。不填则退回均摊，行为与 M3-4 完全一致。
 /// 派生值全部走 `InstallmentMath` / `InstallmentIntake` 的纯函数，这里不重复算钱。
 @MainActor
 @Observable
@@ -40,6 +47,14 @@ final class InstallmentEntryViewModel {
 
     /// 账单上的「含利息」，如 176.99。年化的唯一输入，不填就没有年化。
     var interestText: String = ""
+
+    /// 账单最后一期的金额（选填）。
+    ///
+    /// 利息不按期均分的账单，末期往往明显偏小（496.65 分 6 期：末期 80.66，中间 83.19）。
+    /// 填了这个数，中间各期就由「(剩余应还 − 末期) ÷ (期数 − 1)」反推，
+    /// 不再用算术平均——这是唯一能把这类账单算准的路子（见 `InstallmentMath.splitEndingAt`）。
+    /// 不填则退回均摊，跟 M3-4 行为完全一致。
+    var lastPeriodText: String = ""
 
     /// 已享减免（国家贴息等）。只做记录，不参与任何计算——
     /// 那是已经优惠掉的钱，不是还要还的钱。
@@ -92,11 +107,29 @@ final class InstallmentEntryViewModel {
         InstallmentIntake.periods(remaining: remainingPeriods, total: totalPeriods)
     }
 
-    /// 均摊结果：`perPeriod` 是后 n−1 期，`firstPeriod` 吸收余数。
-    /// 没填剩余应还或期数时为 `nil`，界面显示占位。
-    var split: InstallmentMath.Split? {
-        InstallmentMath.splitEvenly(total: remainingDue, count: periods.remaining)
+    /// 用户填的末期金额。空或非正数时为 `nil`。
+    var lastPeriodInput: Decimal? {
+        guard let value = Self.optionalDecimal(lastPeriodText), value > 0 else { return nil }
+        return value
     }
+
+    /// 各期金额。两条路径：
+    /// - 填了末期金额 → `splitEndingAt` 反推中间各期（**账单真值优先**，利息不均分也算得准）
+    /// - 没填 → `splitEvenly` 均摊、余数落首期（M3-4 的默认行为）
+    ///
+    /// 末期金额 ≥ 剩余应还时 `splitEndingAt` 返 `nil`，这里会退到均摊——
+    /// 界面靠 `validationMessage` 先把矛盾拦下来，不让它悄悄退回。
+    var split: InstallmentMath.Split? {
+        let count = periods.remaining
+        if let last = lastPeriodInput {
+            return InstallmentMath.splitEndingAt(total: remainingDue, count: count, last: last)
+                ?? InstallmentMath.splitEvenly(total: remainingDue, count: count)
+        }
+        return InstallmentMath.splitEvenly(total: remainingDue, count: count)
+    }
+
+    /// 是否走了「末期按账单」这条路（界面据此换文案）。
+    var isUsingLastPeriod: Bool { split?.lastPeriod != split?.perPeriod }
 
     /// 每期金额 = 剩余应还 ÷ 剩余期数（向下到分）。
     /// **只读**——账单上的每期金额本来就是这么除出来的，让用户手填只会填出矛盾。
@@ -134,6 +167,17 @@ final class InstallmentEntryViewModel {
         return perPeriodAmount * Decimal(periods.paid) + previewRemainingTotal
     }
 
+    /// 年化用的每期金额。
+    ///
+    /// 填了末期金额时**必须换用整笔平均**：此时 `perPeriodAmount` 是中间各期的真值
+    /// （496.65 那笔是 83.19），末期只有 80.66；拿 83.19 算年化会得到 14.28%，
+    /// 而整笔平均 82.775 才是 12.53%。年化是整笔口径，要的就是平均数。
+    private var perPeriodForRate: Decimal {
+        guard isUsingLastPeriod, let total = totalPeriods, total > 0 else { return perPeriodAmount }
+        let paid = Decimal(periods.paid)
+        return (paid * perPeriodAmount + previewRemainingTotal) / Decimal(total)
+    }
+
     /// 年化反算（估算，只展示）。**只走整笔口径**，与 `Installment.estimatedAnnualRate` 一致：
     ///
     ///     现值 = 每期 × 总期数 − 含利息
@@ -147,7 +191,7 @@ final class InstallmentEntryViewModel {
         guard let interest = Self.optionalDecimal(interestText), interest > 0 else { return nil }
         return InstallmentMath.impliedAnnualRate(
             periods: total,
-            perPeriodAmount: perPeriodAmount,
+            perPeriodAmount: perPeriodForRate,
             totalInterest: interest
         )
     }
@@ -183,6 +227,14 @@ final class InstallmentEntryViewModel {
         if remainingPeriods <= 0 { return "剩余期数要大于 0" }
         if let total = totalPeriods, total < remainingPeriods {
             return "总共 \(total) 期比剩余 \(remainingPeriods) 期还少，检查一下"
+        }
+        // 末期金额是选填，但填了就必须自洽：末期 ≥ 剩余应还 时中间期不存在，
+        // splitEndingAt 会返 nil 并静默退回均摊——那等于用户白填一遍，所以在这里拦。
+        if !lastPeriodText.trimmingCharacters(in: .whitespaces).isEmpty {
+            guard let last = lastPeriodInput else { return "末期金额要大于 0" }
+            if last >= remainingDue {
+                return "末期 ¥\(MoneyMath.money(last)) 不小于剩余应还，检查一下是不是抄错了栏"
+            }
         }
         if perPeriodAmount <= 0 { return "算不出每期金额，检查剩余应还和期数" }
         if let interest = Self.optionalDecimal(interestText), interest < 0 { return "含利息不能是负数" }
@@ -272,6 +324,7 @@ final class InstallmentEntryViewModel {
                 totalPeriods: p.total,
                 paidPeriods: p.paid,
                 perPeriodAmount: perPeriodAmount,
+                lastPeriodAmount: lastPeriodInput,
                 remainingDue: remainingDue,
                 totalInterest: hasTotalPeriods ? Self.optionalDecimal(interestText) : nil,
                 totalRebate: Self.optionalDecimal(rebateText),
@@ -294,6 +347,7 @@ final class InstallmentEntryViewModel {
         remainingText = ""
         totalText = ""
         interestText = ""
+        lastPeriodText = ""
         rebateText = ""
         showingAdvanced = false
         errorMessage = nil
