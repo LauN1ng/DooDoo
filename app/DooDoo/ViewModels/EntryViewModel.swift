@@ -60,8 +60,9 @@ final class EntryViewModel {
     // MARK: - 派生
 
     /// 合法的数字输入（POSIX 小数，避免系统区域把 `5.5` 解析成 `55`）。
+    /// 实现已收到 `MoneyMath.decimal(_:)`——两处各写一份迟早不一致。
     static func decimal(_ text: String) -> Decimal {
-        Decimal(string: text, locale: Locale(identifier: "en_US_POSIX")) ?? 0
+        MoneyMath.decimal(text)
     }
 
     var amount: Decimal { Self.decimal(amountText) }
@@ -398,13 +399,8 @@ final class EntryViewModel {
     }
 
     /// `Decimal` → 纯数字文本（不带千分位、不带货币符号）。
+    /// 实现已收到 `MoneyMath.plain(_:)`，理由同上。
     static func plainAmount(_ value: Decimal) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.usesGroupingSeparator = false
-        formatter.minimumFractionDigits = 2
-        formatter.maximumFractionDigits = 2
-        return formatter.string(from: NSDecimalNumber(decimal: value)) ?? "0.00"
+        MoneyMath.plain(value)
     }
 }

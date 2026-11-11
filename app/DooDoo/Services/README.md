@@ -1,6 +1,6 @@
 # Services · 领域服务
 
-> 状态：**M2a**——`LedgerService` 已有 `insert` / `softDelete` / `recalculateAll` / `adjustAccountBalance`；`SeedService` 按 `seedVersion` 重建演示数据。
+> 状态：**M3-2**——`LedgerService` 已有 `insert` / `softDelete` / `recalculateAll` / `adjustAccountBalance`；`SeedService` 按 `seedVersion` 重建演示数据；`InstallmentService` 建分期计划并展开未来期。
 
 | 入口 | 职责 |
 |---|---|
@@ -10,11 +10,14 @@
 | `LedgerService.insert(...)` | 唯一写入入口。支持 `toAccount` / `receivedAmount` / `grade`；写完整额后走**增量重算**，不再全表扫描 |
 | `LedgerService.effect(of:)` | 单边视图（= `flow.from`），给「按账户查流水」「净值曲线」用 |
 | `SeedService.prepare(context:)` | `seedVersion` 迁移 → 补图标 → 重算。首页与资产页启动时都调 |
+| `InstallmentService.insert(...)` | 建分期计划 + `generateFuturePeriods` 展开未来逐期。**不动余额**——分期是时间表，动钱的是还款流水 |
+| `InstallmentService.generateFuturePeriods(for:in:)` | 按剩余期数/每期金额/下一期还款日重建期表，`isManualOverride` 的那几期保留不动 |
+| `InstallmentService.count(in:)` / `mostRecentAccount(in:)` | 连录用：已录笔数与「上一笔挂的卡」 |
 
 | 服务 | 里程碑 | 职责 |
 |---|---|---|
 | `LedgerService` | M1 | **唯一允许写 `Account.currentBalance` 的地方**。流水增删改后重算受影响账户；提供 `recalculateAll()` 供数据修复与单测 |
-| `DebtPlanService` | M3 | 由「剩余期数 + 每期金额 + 首期还款日」生成期数序列，处理首/末期不同与余数 |
+| `InstallmentService` | M3 | 建计划 + 生成期表。原计划的 `DebtPlanService` 名字没用上（它只做期表，实际还要建 `Installment`） |
 
 ## 约束
 

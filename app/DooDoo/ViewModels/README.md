@@ -1,6 +1,6 @@
 # ViewModels · 状态与输入校验
 
-> 状态：**M1b 起已有实现**——`EntryViewModel.swift`（395 行），支撑记一笔四类型面板。
+> 状态：**M3-2**——`EntryViewModel.swift`（记一笔四类型）+ `InstallmentEntryViewModel.swift`（存量分期快速连录）。
 > **不是空目录。** 本文件此前写「M0 空目录」，那是 2026-11-08 的快照，已过期（2026-11-10 核准）。
 
 ## 入口
@@ -8,6 +8,7 @@
 | 文件 | 职责 |
 |---|---|
 | `EntryViewModel.swift` | `@Observable final class`。记一笔的全部草稿状态与校验，四类型共用一份：`.expense` / `.income` / `.repayment` / `.transfer` |
+| `InstallmentEntryViewModel.swift` | 存量分期连录的状态与校验。存完**只清这笔独有的字段**，账户与还款日留到下一笔；「还差 N 笔」数库不另存计数器（目标笔数在 `UserDefaults`） |
 
 它实际管这些：
 

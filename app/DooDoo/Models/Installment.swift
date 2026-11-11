@@ -8,14 +8,16 @@ import SwiftData
 ///
 /// 三条口径（PRD 9.5 总原则）：
 /// 1. **历史照账单填，未来由 App 算**——已还的期数只存 `paidPeriods` 这个汇总值，
-///    不逐期建记录；未来的期数由 `InstallmentMath.futurePeriods` 现算，也不落库。
+///    不逐期建记录；未来的期数由 `InstallmentMath.futurePeriods` 展开后**落库**到
+///    `InstallmentPeriod`（M3-2 起，见那个文件的注释：任意一期都要能被账单改正）。
 /// 2. **只填能看到的**——剩余期数、每期金额、下一期还款日三个必填；首期/末期金额、
 ///    剩余本金、总利息都是选填。
 /// 3. **金额优先，利率是结果**——没有「年化利率」输入栏。它是 `InstallmentMath.impliedAnnualRate`
 ///    反算出来的展示值，标注「估算」，不参与任何账务计算（AGENTS 7.1）。
 ///
-/// 为什么不用 `InstallmentPeriod` 子表：已还部分是汇总的、未来部分是现算的，
-/// 落库一张逐期表只会两边都不对齐；等「每期挂哪条流水」真需要时再加（见 PROGRESS M3）。
+/// 为什么历史期不落库、未来期落库：过去那一期的真实金额（含利息、贴息、退款抵扣、
+/// 余数分配）只有账单知道，App 算不出也不该猜；未来没有账单可抄，适合推算，
+/// 而且推算值要允许用户逐期改。
 @Model
 final class Installment {
     /// 稳定标识。`Transaction.installmentKey` 用它回指，不用 SwiftData 关系——
@@ -119,7 +121,8 @@ extension Installment {
         )
     }
 
-    /// 未来每一期（含日期与金额）。现算不落库，见 `InstallmentMath.futurePeriods`。
+    /// 未来每一期（含日期与金额）。口径在 `InstallmentMath.futurePeriods`；
+    /// 建计划时由 `InstallmentService.generateFuturePeriods` 落成 `InstallmentPeriod`。
     func futurePeriods(calendar: Calendar = .current) -> [InstallmentMath.Period] {
         InstallmentMath.futurePeriods(
             count: remainingPeriods,

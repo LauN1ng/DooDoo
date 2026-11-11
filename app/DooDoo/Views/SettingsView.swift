@@ -8,6 +8,12 @@ import SwiftData
 struct SettingsView: View {
     @Environment(\.modelContext) private var context
     @Query private var settings: [AppSettings]
+    @Query private var installments: [Installment]
+
+    /// 存量录入的目标笔数。与 `InstallmentIntake.Batch` 共用同一个 key。
+    @AppStorage(InstallmentIntake.Batch.targetKey) private var batchTarget = InstallmentIntake.Batch.defaultTarget
+
+    @State private var showingInstallmentEntry = false
 
     var body: some View {
         Form {
@@ -16,6 +22,35 @@ struct SettingsView: View {
                 LabeledContent("币种", value: settings.first?.currencyCode ?? "CNY")
                 LabeledContent("版本", value: appVersion)
                 Text("数据只存在这台 iPhone 上，卸载即丢失，也没有云端备份。")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            // 存量分期录入（M3-2）。放在设置里是因为它是一次性的初始化动作，
+            // 不是每天会点的功能；等资产页「本月要还」上线后，入口会挪到信用组里。
+            Section("分期") {
+                Button {
+                    showingInstallmentEntry = true
+                } label: {
+                    HStack {
+                        Text("存量分期录入")
+                            .foregroundStyle(Palette.ink)
+                        Spacer()
+                        if batchTarget > 0 {
+                            Text("还差 \(InstallmentIntake.batchRemaining(target: batchTarget, done: installments.count)) 笔")
+                                .font(.footnote)
+                                .monospacedDigit()
+                                .foregroundStyle(.secondary)
+                        }
+                        Image(systemName: "chevron.right")
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+
+                LabeledContent("已录分期", value: "\(installments.count) 笔")
+
+                Text("已发生的分期照账单填「剩余期数 / 每期金额 / 下期还款日」，App 展开未来每一期，供「本月要还」和结清预测用。历史期只存汇总，不用逐期补录。")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -30,6 +65,12 @@ struct SettingsView: View {
         .scrollContentBackground(.hidden)
         .background(Palette.page)
         .onAppear(perform: ensureDefaultSettings)
+        .sheet(isPresented: $showingInstallmentEntry) {
+            InstallmentEntryView()
+                .presentationDetents([.large])
+                .presentationCornerRadius(28)
+                .presentationDragIndicator(.visible)
+        }
     }
 
     private var appVersion: String {
