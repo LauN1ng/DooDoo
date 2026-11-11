@@ -18,19 +18,58 @@ enum InstallmentMath {
         let isLast: Bool
     }
 
+    // MARK: - 总额均摊
+
+    /// 均摊结果。`perPeriod` 是前 n−1 期，`lastPeriod` 吸收余数。
+    struct Split: Equatable, Sendable {
+        /// 单位：元。标准每期金额（已到分）。
+        let perPeriod: Decimal
+        /// 单位：元。末期金额 = 总额 − 标准额 × (n − 1)，余数全落在这里。
+        let lastPeriod: Decimal
+    }
+
+    /// 把总额按期数均摊到分，**余数落末期**。
+    ///
+    /// 这是存量录入的主路径：账单只给「剩余应还 1830.15」和「还剩 9 期」，
+    /// 每期多少是**除出来**的。不用「每期 × 期数」，是因为那样遇到末期有零头的账单
+    /// 会一直差几分钱（1830.17 ÷ 9 → 每期 203.35、末期 203.37）。
+    ///
+    /// 舍入用 `.down`（向下到分）再让末期吸收差额：末期只会比标准额**多**，
+    /// 不会出现「末期 203.33、前面 203.35」这种反直觉的账单。
+    ///
+    /// 边界：
+    /// - `count <= 0` 或 `total <= 0` → `nil`（没有可摊的）
+    /// - `count == 1` → 一期吃下全额
+    /// - 总额小于期数×0.01（如 0.05 元分 9 期）→ 每期为 0，末期吃全额；
+    ///   调用方应按「金额要大于 0」拦，不该走到这里
+    static func splitEvenly(total: Decimal, count: Int) -> Split? {
+        guard count > 0, total > 0 else { return nil }
+        if count == 1 { return Split(perPeriod: total, lastPeriod: total) }
+        var quotient = total / Decimal(count)
+        var perPeriod = Decimal()
+        NSDecimalRound(&perPeriod, &quotient, 2, .down)
+        let last = total - perPeriod * Decimal(count - 1)
+        return Split(perPeriod: perPeriod, lastPeriod: last)
+    }
+
     // MARK: - 逐期展开
 
     /// 展开未来每一期。
     ///
-    /// 输入：剩余期数、下一期还款日、每期金额、可选的首期与末期金额。
+    /// 输入：剩余期数、下一期还款日，以及**金额的两种给法**之一：
+    /// - `remainingDue`：账单上的「分期剩余应还」。给了它就以它为准，
+    ///   按 `splitEvenly` 摊到每期、余数落末期（M3-3 起的默认路径）。
+    /// - `perPeriodAmount`（+ 可选首期/末期覆盖）：账单只给每期金额时用。
+    ///
     /// 这里的「首期」指**剩余期里的第一期**——存量录入时用户只知道「下一期什么时候还、
     /// 还多少」，不知道也不关心历史第一期。
     ///
-    /// 输出：`count` 个 `Period`，日期按月递增，金额按「首期覆盖 → 标准额 → 末期覆盖」取值。
+    /// 输出：`count` 个 `Period`，日期按月递增。
     ///
     /// 边界：
     /// - `count <= 0` → 空数组（已还清）
     /// - `count == 1` → 一期，既是首期也是末期；**首期金额优先**，末期被忽略
+    /// - `remainingDue` 给了但 ≤ 0 → 退回按每期金额展开，不产出 0 元期
     /// - 还款日在月末（如 31 日）→ 用 `Calendar` 的月份加法，2 月自动落到 28/29，
     ///   不会溢出到 3 月（日历年加法的正确行为）
     static func futurePeriods(
@@ -39,14 +78,20 @@ enum InstallmentMath {
         perPeriodAmount: Decimal,
         firstPeriodAmount: Decimal? = nil,
         lastPeriodAmount: Decimal? = nil,
+        remainingDue: Decimal? = nil,
         calendar: Calendar = .current
     ) -> [Period] {
         guard count > 0 else { return [] }
+        // 账单给了剩余应还就以它为准——那个数才是银行要收的钱，
+        // 「每期 × 期数」只是它的近似。
+        let split = remainingDue.flatMap { splitEvenly(total: $0, count: count) }
         return (1...count).map { index in
             let dueDate = calendar.date(byAdding: .month, value: index - 1, to: nextDueDate) ?? nextDueDate
             let isLast = (index == count)
             let amount: Decimal
-            if index == 1, let first = firstPeriodAmount {
+            if let split {
+                amount = isLast ? split.lastPeriod : split.perPeriod
+            } else if index == 1, let first = firstPeriodAmount {
                 amount = first
             } else if isLast, let last = lastPeriodAmount {
                 amount = last
@@ -59,17 +104,21 @@ enum InstallmentMath {
 
     /// 剩余总额 = 未来各期之和。
     ///
-    /// 不能简单用「每期 × 期数」：首期/末期与标准额不同时，
-    /// 那样算出来的「剩余应还」会和账单对不上——这是用户最先发现不对劲的地方。
+    /// 优先级：
+    /// 1. `remainingDue`（账单上的「分期剩余应还」）——**有就原样返回**。
+    ///    用户拿这个数跟账单逐字核对，任何「算出来的近似值」都会变成疑点。
+    /// 2. 没给才用「每期 × 期数 + 首末期差额」推算。
     ///
-    /// 边界：`count <= 0` → 0。
+    /// 边界：`count <= 0` → 0；`remainingDue` ≤ 0 视为没给。
     static func remainingTotal(
         count: Int,
         perPeriodAmount: Decimal,
         firstPeriodAmount: Decimal? = nil,
-        lastPeriodAmount: Decimal? = nil
+        lastPeriodAmount: Decimal? = nil,
+        remainingDue: Decimal? = nil
     ) -> Decimal {
         guard count > 0 else { return 0 }
+        if let remainingDue, remainingDue > 0 { return remainingDue }
         var total = perPeriodAmount * Decimal(count)
         if let first = firstPeriodAmount { total += first - perPeriodAmount }
         if count > 1, let last = lastPeriodAmount { total += last - perPeriodAmount }

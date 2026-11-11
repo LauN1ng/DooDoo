@@ -1,7 +1,7 @@
 import SwiftData
 import SwiftUI
 
-/// 存量分期快速连录（M3-2，PRD 9.5.2 / 9.5.4）。
+/// 存量分期快速连录（M3-2，PRD 9.5.2 / 9.5.4；M3-3 改为「抄 3 个数」）。
 ///
 /// 为什么单独一个面板、而不塞进「记一笔」：
 /// - 存量分期**不是一笔账**，它不动余额，只是把「还剩几期、每期多少、什么时候还」
@@ -13,6 +13,10 @@ import SwiftUI
 /// 1. 顶部常显「还差 N 笔」，看一眼就知道离收工多远；
 /// 2. 存完**不关面板**，只清掉这笔独有的字段，账户与还款日留着（58 笔大多共用）；
 /// 3. 随时可以「先停，回头再录」，进度存在 `UserDefaults` 里，下次接着录。
+///
+/// M3-3 的表单收敛：手填从 8 个框降到 3 个（剩余应还 / 总共几期 / 含利息），
+/// 每期金额由「剩余应还 ÷ 期数」派生、余数自动落末期。删掉的三个框
+/// （剩余本金、首期金额、末期金额）都是**账单上不存在的数**，用户怎么填都填不对。
 struct InstallmentEntryView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
@@ -27,7 +31,7 @@ struct InstallmentEntryView: View {
     @State private var showingTargetEditor = false
 
     private enum Field: Hashable {
-        case name, remaining, total, perPeriod, first, last, principal, interest, rebate
+        case name, due, remaining, total, interest, rebate
     }
 
     private var accentStyle: AccentStyle { settingsList.first?.accent ?? .ink }
@@ -42,10 +46,8 @@ struct InstallmentEntryView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
                     accountStrip
-                    nameCard
-                    periodCard
-                    amountCard
-                    dueDateCard
+                    mainCard
+                    extraCard
                     advancedCard
                     previewBox
                 }
@@ -61,7 +63,8 @@ struct InstallmentEntryView: View {
         .overlay(alignment: .top) { receiptBanner }
         .task {
             vm.load(context: context)
-            focus = .perPeriod
+            // 第一个该填的是「剩余应还」——账单上最大的那个数。
+            focus = .due
         }
         .alert("目标几笔？", isPresented: $showingTargetEditor) {
             TextField("58", text: $targetText)
@@ -197,25 +200,37 @@ struct InstallmentEntryView: View {
             .accessibilityLabel(account.displayShortName)
     }
 
-    // MARK: - 名称
+    // MARK: - 主卡：剩余应还 / 剩余期数 / 每期金额
 
-    private var nameCard: some View {
+    /// 三个数挤一张卡：**账单上那三个数**（剩余应还、第 4/12 期里的期数）填进来，
+    /// 每期金额自动出来。卡片顺序就是核对顺序——从上往下读一遍，正好对上账单。
+    private var mainCard: some View {
         card {
-            TextField(vm.resolvedName, text: $vm.name)
-                .font(.system(size: 14))
-                .foregroundStyle(Palette.ink)
-                .focused($focus, equals: .name)
-            Divider().overlay(Palette.line)
-            Text("留空就叫「\(vm.resolvedName)」")
-                .font(.system(size: 10.5))
+            // 剩余应还 —— 账单上最大的那个字
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text("剩余应还")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Palette.sub)
+                Spacer(minLength: 8)
+                Text("¥")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(Palette.faint)
+                TextField("0.00", text: $vm.remainingDueText)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .font(.system(size: 30, weight: .bold))
+                    .monospacedDigit()
+                    .foregroundStyle(Palette.ink)
+                    .focused($focus, equals: .due)
+                    .frame(maxWidth: 190)
+            }
+            Text("账单上「分期剩余应还」那一栏")
+                .font(.system(size: 10))
                 .foregroundStyle(Palette.faint)
-        }
-    }
 
-    // MARK: - 期数
+            Divider().overlay(Palette.line)
 
-    private var periodCard: some View {
-        card {
+            // 剩余期数
             HStack(spacing: 6) {
                 Text("剩余期数")
                     .font(.system(size: 13))
@@ -224,11 +239,11 @@ struct InstallmentEntryView: View {
                 TextField("9", text: $vm.remainingText)
                     .keyboardType(.numberPad)
                     .multilineTextAlignment(.trailing)
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(.system(size: 20, weight: .semibold))
                     .monospacedDigit()
                     .foregroundStyle(Palette.ink)
                     .focused($focus, equals: .remaining)
-                    .frame(maxWidth: 80)
+                    .frame(maxWidth: 70)
                 Text("期")
                     .font(.system(size: 12))
                     .foregroundStyle(Palette.sub)
@@ -249,35 +264,34 @@ struct InstallmentEntryView: View {
 
             Divider().overlay(Palette.line)
 
-            HStack(spacing: 6) {
-                Text("总共几期")
-                    .font(.system(size: 12))
+            // 每期金额 —— 只读派生
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("每期金额")
+                    .font(.system(size: 13))
                     .foregroundStyle(Palette.sub)
-                Text("选填")
-                    .font(.system(size: 9.5, weight: .semibold))
-                    .foregroundStyle(Palette.faint)
-                Spacer(minLength: 6)
-                TextField("—", text: $vm.totalText)
-                    .keyboardType(.numberPad)
-                    .multilineTextAlignment(.trailing)
-                    .font(.system(size: 15, weight: .medium))
+                Spacer(minLength: 8)
+                Text(vm.split == nil ? "—" : "¥\(MoneyMath.money(vm.perPeriodAmount))")
+                    .font(.system(size: 18, weight: .semibold))
                     .monospacedDigit()
-                    .foregroundStyle(Palette.ink2)
-                    .focused($focus, equals: .total)
-                    .frame(maxWidth: 80)
+                    .foregroundStyle(vm.split == nil ? Palette.faint : Palette.ink)
             }
-
-            Text(vm.totalPeriods == nil
-                 ? "填了才能显示「第 6/12 期」；不填就只算未来期。"
-                 : periodBreakdown)
-                .font(.system(size: 10.5))
+            Text(perPeriodNote)
+                .font(.system(size: 10))
                 .foregroundStyle(Palette.faint)
         }
     }
 
-    private var periodBreakdown: String {
-        let p = vm.periods
-        return "第 \(p.paid + 1)/\(p.total) 期起 · 未来 \(p.remaining) 期"
+    /// 每期金额的来历。写在数字下面一行小字，是为了让用户能**自己验算**：
+    /// 他看到「1830.15 ÷ 9」能立刻对账单，看到「余数落末期」能解释那 2 分钱。
+    private var perPeriodNote: String {
+        guard vm.split != nil else {
+            return "填上面两个数，自动算出来"
+        }
+        var note = "= ¥\(MoneyMath.money(vm.remainingDue)) ÷ \(vm.periods.remaining) 期"
+        if let last = vm.lastPeriodAmount {
+            note += "，末期 ¥\(MoneyMath.money(last)) 收零头"
+        }
+        return note
     }
 
     private func presetChip(_ title: String, selected: Bool, onTap: @escaping () -> Void) -> some View {
@@ -296,40 +310,76 @@ struct InstallmentEntryView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - 每期金额
+    // MARK: - 次卡：名称 / 总共几期 / 含利息 / 还款日
 
-    private var amountCard: some View {
+    private var extraCard: some View {
         card {
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text("每期金额")
-                    .font(.system(size: 12))
+            // 名称（选填，58 笔要靠它区分）
+            TextField(vm.resolvedName, text: $vm.name)
+                .font(.system(size: 14))
+                .foregroundStyle(Palette.ink)
+                .focused($focus, equals: .name)
+            Text("留空就叫「\(vm.resolvedName)」")
+                .font(.system(size: 10))
+                .foregroundStyle(Palette.faint)
+
+            Divider().overlay(Palette.line)
+
+            // 总共几期
+            HStack(spacing: 6) {
+                Text("总共几期")
+                    .font(.system(size: 13))
                     .foregroundStyle(Palette.sub)
-                Spacer(minLength: 8)
-                Text("¥")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(Palette.faint)
-                TextField("0.00", text: $vm.perPeriodText)
-                    .keyboardType(.decimalPad)
+                Spacer(minLength: 6)
+                TextField("12", text: $vm.totalText)
+                    .keyboardType(.numberPad)
                     .multilineTextAlignment(.trailing)
-                    .font(.system(size: 32, weight: .bold))
+                    .font(.system(size: 15, weight: .medium))
                     .monospacedDigit()
                     .foregroundStyle(Palette.ink)
-                    .focused($focus, equals: .perPeriod)
-                    .frame(maxWidth: 190)
+                    .focused($focus, equals: .total)
+                    .frame(maxWidth: 80)
+                Text("期")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Palette.sub)
             }
-        }
-    }
+            Text(periodBreakdown)
+                .font(.system(size: 10))
+                .foregroundStyle(Palette.faint)
 
-    // MARK: - 还款日
+            Divider().overlay(Palette.line)
 
-    private var dueDateCard: some View {
-        card {
+            // 含利息 —— 年化的唯一输入
+            HStack(spacing: 6) {
+                Text("含利息")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Palette.sub)
+                Spacer(minLength: 6)
+                Text("¥")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Palette.faint)
+                TextField("176.99", text: $vm.interestText)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .font(.system(size: 15, weight: .medium))
+                    .monospacedDigit()
+                    .foregroundStyle(Palette.ink)
+                    .focused($focus, equals: .interest)
+                    .frame(maxWidth: 120)
+            }
+            Text("账单上「含利息」那一栏，不是每期利息×期数")
+                .font(.system(size: 10))
+                .foregroundStyle(Palette.faint)
+
+            Divider().overlay(Palette.line)
+
+            // 下一期还款日
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("下一期还款日")
                         .font(.system(size: 13))
                         .foregroundStyle(Palette.sub)
-                    Text("不是历史第一期；照账单填「下次什么时候还」")
+                    Text("账户的还款日自动带出，可以改")
                         .font(.system(size: 10))
                         .foregroundStyle(Palette.faint)
                 }
@@ -342,6 +392,14 @@ struct InstallmentEntryView: View {
         }
     }
 
+    private var periodBreakdown: String {
+        guard vm.totalPeriods != nil else {
+            return "填了才能显示「第 4/12 期」，也是算年化需要的分母"
+        }
+        let p = vm.periods
+        return "第 \(p.paid + 1)/\(p.total) 期起 · 未来 \(p.remaining) 期"
+    }
+
     // MARK: - 高级
 
     private var advancedCard: some View {
@@ -350,7 +408,7 @@ struct InstallmentEntryView: View {
                 withAnimation(.easeOut(duration: 0.18)) { vm.showingAdvanced.toggle() }
             } label: {
                 HStack {
-                    Text("首期/末期金额、剩余本金、总利息、减免")
+                    Text("已享减免")
                         .font(.system(size: 12.5))
                         .foregroundStyle(Palette.ink2)
                     Spacer(minLength: 8)
@@ -367,12 +425,8 @@ struct InstallmentEntryView: View {
 
             if vm.showingAdvanced {
                 Divider().overlay(Palette.line)
-                moneyRow("首期金额", placeholder: "与每期相同", text: $vm.firstText, field: .first)
-                moneyRow("末期金额", placeholder: "与每期相同", text: $vm.lastText, field: .last)
-                moneyRow("剩余本金", placeholder: "账单上的欠款", text: $vm.principalText, field: .principal)
-                moneyRow("总利息", placeholder: "如 110.56", text: $vm.interestText, field: .interest)
-                moneyRow("已享减免", placeholder: "如 0.57", text: $vm.rebateText, field: .rebate)
-                Text("减免单独存一栏，不从每期金额里扣——那是已经优惠掉的，不是还要还的钱。")
+                moneyRow("国家贴息等", placeholder: "如 12.22", text: $vm.rebateText, field: .rebate)
+                Text("只是记下来，不从每期金额里扣——那是已经优惠掉的，不是还要还的钱。")
                     .font(.system(size: 10))
                     .foregroundStyle(Palette.faint)
             }
@@ -407,15 +461,20 @@ struct InstallmentEntryView: View {
 
     // MARK: - 预览
 
+    /// 预览承担两件事：**核对**（总额是否等于账单）和**揭示**（真实年化）。
+    ///
+    /// 总额那一行不用「与账单一致」这种自我肯定的话——数字就是用户抄进去的。
+    /// 有价值的是左边「剩 9 期 × ¥203.35」：用户拿每期金额跟账单对一眼，
+    /// 就知道「除出来」的结果对不对。
     private var previewBox: some View {
         VStack(spacing: 5) {
             HStack(spacing: 6) {
-                Text("剩 \(vm.periods.remaining) 期 × ¥\(MoneyMath.money(vm.perPeriodAmount))")
+                Text(previewLeftText)
                     .font(.system(size: 11.5))
                     .foregroundStyle(Palette.sub)
                     .lineLimit(1)
                 Spacer(minLength: 8)
-                Text("共 ¥\(MoneyMath.money(vm.previewRemainingTotal))")
+                Text(vm.periods.remaining > 0 ? "共 ¥\(MoneyMath.money(vm.previewRemainingTotal))" : "—")
                     .font(.system(size: 13, weight: .semibold))
                     .monospacedDigit()
                     .foregroundStyle(Palette.ink)
@@ -423,7 +482,7 @@ struct InstallmentEntryView: View {
             }
 
             HStack(spacing: 6) {
-                Text("真实年化（估算）")
+                Text("真实年化（整笔）")
                     .font(.system(size: 11.5))
                     .foregroundStyle(Palette.sub)
                 Spacer(minLength: 8)
@@ -433,8 +492,8 @@ struct InstallmentEntryView: View {
                     .foregroundStyle(vm.previewAnnualRate == nil ? Palette.faint : Palette.owe)
             }
 
-            if vm.previewAnnualRate == nil {
-                Text("填「剩余本金」或「总利息」就能反算。这是所有平台都不显示、但最该看的数字。")
+            if let hint = vm.annualRateHint {
+                Text(hint)
                     .font(.system(size: 10))
                     .foregroundStyle(Palette.faint)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -446,6 +505,11 @@ struct InstallmentEntryView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(Palette.ink.opacity(0.045))
         )
+    }
+
+    private var previewLeftText: String {
+        guard vm.periods.remaining > 0 else { return "填完上面就能核对总额" }
+        return "剩 \(vm.periods.remaining) 期 × ¥\(MoneyMath.money(vm.perPeriodAmount))"
     }
 
     // MARK: - 回执
@@ -494,7 +558,7 @@ struct InstallmentEntryView: View {
                 Task {
                     try? await Task.sleep(for: .milliseconds(1100))
                     withAnimation(.easeOut(duration: 0.18)) { receipt = nil }
-                    focus = .perPeriod
+                    focus = .due
                 }
             } label: {
                 Text(vm.primaryTitle)

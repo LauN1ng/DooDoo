@@ -27,6 +27,10 @@ enum SeedService {
         try ensureBuiltInCategories(context: context)
         try LedgerService.recalculateAll(in: context)
         try normalizeLiabilitySigns(context: context)
+        // M3-3：老分期把「剩余应还」误存在「剩余本金」里，搬回来。
+        // 排最后是因为它只动分期，不影响余额；且 `recalculateAll` 之后再改
+        // 分期不会引起二次重算。
+        try InstallmentService.migrateLegacyRemainingPrincipal(calendar: calendar, in: context)
     }
 
     /// 数据修复（2026-11-09 真机反馈 #8，推荐方案 A）。

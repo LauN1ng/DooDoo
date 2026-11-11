@@ -2,15 +2,22 @@ import Foundation
 import Observation
 import SwiftData
 
-/// 存量分期快速连录的状态与校验（M3-2）。
+/// 存量分期快速连录的状态与校验（M3-2，M3-3 改为「抄 3 个数」）。
 ///
 /// **不碰 SwiftData 写入**——建计划交给 `InstallmentService`（AGENTS 7.4）。
 ///
 /// 这个 ViewModel 的存在理由只有一个：**58 笔录入要像流水线**。
 /// 所以它在每笔存完后故意**只清一半**：
-/// - 清掉：名称、期数、每期金额、选填的高级字段（每笔都不一样，留着只会填错）
+/// - 清掉：名称、剩余应还、期数、含利息、减免（每笔都不一样，留着只会填错）
 /// - 留着：账户、还款日（58 笔花呗分期基本共用同一张卡同一天，重选 58 次纯浪费）
 ///
+/// M3-3 的字段收敛（用户 11-11 反馈「录入有点累」+「全部都填了也算不准」）：
+/// 原来要填 8 个框，其中 3 个是账单上不存在的陷阱：
+/// - **剩余本金**：账单只有含息的「剩余应还」，用户填进去就撞上「现值 = 总还款额」→ 年化 0.0%
+/// - **首期/末期金额**：用户填的是历史第 1 期（203.43），而未来 9 期都是 203.35，差 0.08
+///
+/// 现在只填 4 个数：**剩余应还 / 剩余期数 / 总共几期 / 含利息**。
+/// 每期金额由「剩余应还 ÷ 期数」派生（余数自动落末期），还款日由账户带出。
 /// 派生值全部走 `InstallmentMath` / `InstallmentIntake` 的纯函数，这里不重复算钱。
 @MainActor
 @Observable
@@ -23,18 +30,19 @@ final class InstallmentEntryViewModel {
     /// 计划名，如「花呗分期 · AirPods」。留空时按「账户名 分期」兜底。
     var name: String = ""
 
-    /// 剩余期数（PRD 9.5.2 必填）。文本原样保存，解析走 `MoneyMath` 的整数路径。
-    var remainingText: String = ""
-    /// 总期数（选填）。填了才能显示「第 6/12 期」，见 `InstallmentIntake.periods`。
-    var totalText: String = ""
-    /// 每期金额（必填）。
-    var perPeriodText: String = ""
+    /// 账单上的「分期剩余应还」，如 1830.15。**金额的唯一权威来源**。
+    var remainingDueText: String = ""
 
-    /// 高级字段，默认收起：首期 / 末期 / 剩余本金 / 总利息 / 减免。
-    var firstText: String = ""
-    var lastText: String = ""
-    var principalText: String = ""
+    /// 剩余期数（PRD 9.5.2 必填）。文本原样保存，解析走整数路径。
+    var remainingText: String = ""
+    /// 总期数。填了才能显示「第 4/12 期」，也是年化整笔口径的分母。
+    var totalText: String = ""
+
+    /// 账单上的「含利息」，如 176.99。年化的唯一输入，不填就没有年化。
     var interestText: String = ""
+
+    /// 已享减免（国家贴息等）。只做记录，不参与任何计算——
+    /// 那是已经优惠掉的钱，不是还要还的钱。
     var rebateText: String = ""
     var showingAdvanced = false
 
@@ -70,6 +78,8 @@ final class InstallmentEntryViewModel {
         return MoneyMath.decimal(trimmed)
     }
 
+    var remainingDue: Decimal { MoneyMath.decimal(remainingDueText) }
+
     var remainingPeriods: Int { Self.integer(remainingText) }
 
     var totalPeriods: Int? {
@@ -82,36 +92,54 @@ final class InstallmentEntryViewModel {
         InstallmentIntake.periods(remaining: remainingPeriods, total: totalPeriods)
     }
 
-    var perPeriodAmount: Decimal { MoneyMath.decimal(perPeriodText) }
+    /// 均摊结果：`perPeriod` 是前 n−1 期，`lastPeriod` 吸收余数。
+    /// 没填剩余应还或期数时为 `nil`，界面显示占位。
+    var split: InstallmentMath.Split? {
+        InstallmentMath.splitEvenly(total: remainingDue, count: periods.remaining)
+    }
 
-    /// 剩余总额预览（未来各期之和）。
+    /// 每期金额 = 剩余应还 ÷ 剩余期数（向下到分）。
+    /// **只读**——账单上的每期金额本来就是这么除出来的，让用户手填只会填出矛盾。
+    var perPeriodAmount: Decimal { split?.perPeriod ?? 0 }
+
+    /// 末期金额。与每期相同则为 `nil`，界面上不用多写一句「末期 ¥203.35」。
+    var lastPeriodAmount: Decimal? {
+        guard let split, split.lastPeriod != split.perPeriod else { return nil }
+        return split.lastPeriod
+    }
+
+    /// 剩余总额。有剩余应还就是它本身，跟账单逐字一致。
     var previewRemainingTotal: Decimal {
         InstallmentMath.remainingTotal(
             count: periods.remaining,
             perPeriodAmount: perPeriodAmount,
-            firstPeriodAmount: Self.optionalDecimal(firstText),
-            lastPeriodAmount: Self.optionalDecimal(lastText)
+            remainingDue: remainingDue
         )
     }
 
-    /// 年化反算（估算，只展示）。期数口径与 `Installment.estimatedAnnualRate` 一致：
-    /// 有剩余本金配剩余期数，只有总利息配总期数。
+    /// 年化反算（估算，只展示）。**只走整笔口径**，与 `Installment.estimatedAnnualRate` 一致：
+    ///
+    ///     现值 = 每期 × 总期数 − 含利息
+    ///
+    /// 需要「总共几期」——没填就没有整笔分母，返回 `nil` 而不是拿剩余期数冒充
+    /// （那会把 14.13% 报成 18.40%，看着像利率随时间上涨）。
     var previewAnnualRate: Decimal? {
+        guard let interest = Self.optionalDecimal(interestText), interest > 0 else { return nil }
         let p = periods
-        if let principal = Self.optionalDecimal(principalText), principal > 0, p.remaining > 1 {
-            return InstallmentMath.impliedAnnualRate(
-                periods: p.remaining,
-                perPeriodAmount: perPeriodAmount,
-                presentValue: principal
-            )
-        }
-        if let interest = Self.optionalDecimal(interestText), interest > 0, p.total > 1 {
-            return InstallmentMath.impliedAnnualRate(
-                periods: p.total,
-                perPeriodAmount: perPeriodAmount,
-                totalInterest: interest
-            )
-        }
+        guard p.total > 1, perPeriodAmount > 0 else { return nil }
+        return InstallmentMath.impliedAnnualRate(
+            periods: p.total,
+            perPeriodAmount: perPeriodAmount,
+            totalInterest: interest
+        )
+    }
+
+    /// 年化缺失时的一句话说明，说清**缺哪一个数**而不是笼统一句「填更多」。
+    var annualRateHint: String? {
+        guard previewAnnualRate == nil else { return nil }
+        if remainingDue <= 0 { return "填「剩余应还」和「剩余期数」就能算出每期金额。" }
+        if totalPeriods == nil { return "再填「总共几期」，就能算这笔分期的真实年化。" }
+        if Self.optionalDecimal(interestText) == nil { return "再填「含利息」，就能算这笔分期的真实年化。" }
         return nil
     }
 
@@ -128,14 +156,18 @@ final class InstallmentEntryViewModel {
     }
 
     /// 存不下来时的提示。`nil` = 可以存。
+    ///
+    /// 「总共几期 < 剩余期数」直接拦而不是静默回退：那是填错了，
+    /// 回退会让「第 4/12 期」显示成一个假进度。
     var validationMessage: String? {
         if account == nil { return "先选一张卡" }
+        if remainingDue <= 0 { return "填一下账单上的「剩余应还」" }
         if remainingPeriods <= 0 { return "剩余期数要大于 0" }
-        if perPeriodAmount <= 0 { return "每期金额要大于 0" }
-        if let first = Self.optionalDecimal(firstText), first <= 0 { return "首期金额要大于 0" }
-        if let last = Self.optionalDecimal(lastText), last <= 0 { return "末期金额要大于 0" }
-        if let principal = Self.optionalDecimal(principalText), principal <= 0 { return "剩余本金要大于 0" }
-        if let interest = Self.optionalDecimal(interestText), interest < 0 { return "总利息不能是负数" }
+        if let total = totalPeriods, total < remainingPeriods {
+            return "总共 \(total) 期比剩余 \(remainingPeriods) 期还少，检查一下"
+        }
+        if perPeriodAmount <= 0 { return "算不出每期金额，检查剩余应还和期数" }
+        if let interest = Self.optionalDecimal(interestText), interest < 0 { return "含利息不能是负数" }
         if let rebate = Self.optionalDecimal(rebateText), rebate < 0 { return "减免不能是负数" }
         return nil
     }
@@ -218,9 +250,7 @@ final class InstallmentEntryViewModel {
                 totalPeriods: p.total,
                 paidPeriods: p.paid,
                 perPeriodAmount: perPeriodAmount,
-                firstPeriodAmount: Self.optionalDecimal(firstText),
-                lastPeriodAmount: Self.optionalDecimal(lastText),
-                remainingPrincipal: Self.optionalDecimal(principalText),
+                remainingDue: remainingDue,
                 totalInterest: Self.optionalDecimal(interestText),
                 totalRebate: Self.optionalDecimal(rebateText),
                 nextDueDate: dueDate,
@@ -238,12 +268,9 @@ final class InstallmentEntryViewModel {
     /// 连录的关键：只清这笔独有的东西，账户与还款日留给下一笔。
     private func resetKeepingContext() {
         name = ""
+        remainingDueText = ""
         remainingText = ""
         totalText = ""
-        perPeriodText = ""
-        firstText = ""
-        lastText = ""
-        principalText = ""
         interestText = ""
         rebateText = ""
         showingAdvanced = false

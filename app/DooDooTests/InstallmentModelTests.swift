@@ -63,29 +63,54 @@ struct InstallmentModelTests {
         #expect(plan.remainingTotal == sum)
     }
 
-    @Test("年化优先用剩余本金，没有才退回总利息")
-    func estimatedAnnualRatePrefersPrincipal() {
-        // 有剩余本金：配剩余期数
-        let withPrincipal = Installment(
-            key: "e招贷", name: "e招贷", totalPeriods: 24, paidPeriods: 7,
-            perPeriodAmount: dec("442.50"), remainingPrincipal: dec("6670.20"),
-            nextDueDate: day(2026, 12, 10)
+    @Test("有剩余应还就以它为准，不再用「每期 × 期数」凑")
+    func remainingDueWins() {
+        // 除不尽的情况：每期 203.35 × 9 = 1830.15，但账单写 1830.17（末期 203.37）
+        let plan = Installment(
+            key: "招行", name: "招行账单分期", totalPeriods: 12, paidPeriods: 3,
+            perPeriodAmount: dec("203.35"), remainingDue: dec("1830.17"),
+            nextDueDate: day(2026, 11, 25)
         )
-        let rate1 = withPrincipal.estimatedAnnualRate
-        #expect(rate1 != nil)
-        #expect(abs(NSDecimalNumber(decimal: rate1!).doubleValue - 16.4) <= 0.5)
+        #expect(plan.remainingTotal == dec("1830.17"))
+        let periods = plan.futurePeriods(calendar: calendar)
+        #expect(periods.count == 9)
+        #expect(periods.reduce(Decimal(0)) { $0 + $1.amount } == dec("1830.17"))
+        #expect(periods.last?.amount == dec("203.37"))
+    }
 
-        // 只有总利息：配总期数（PRD 9.5.3 花呗例子）
+    @Test("年化只走整笔口径：「剩余本金」不再参与，含利息才是输入")
+    func estimatedAnnualRateUsesWholeLoan() {
+        // 花呗 PRD 9.5.3 例子：12 期 × 120.03、含利息 110.56 → ≈15%
         let withInterest = Installment(
             key: "花呗", name: "花呗分期", totalPeriods: 12, paidPeriods: 0,
             perPeriodAmount: dec("120.03"), totalInterest: dec("110.56"),
             nextDueDate: day(2026, 12, 25)
         )
-        let rate2 = withInterest.estimatedAnnualRate
-        #expect(rate2 != nil)
-        #expect(abs(NSDecimalNumber(decimal: rate2!).doubleValue - 15.0) <= 0.3)
+        let rate = withInterest.estimatedAnnualRate
+        #expect(rate != nil)
+        #expect(abs(NSDecimalNumber(decimal: rate!).doubleValue - 15.0) <= 0.3)
 
-        // 两者都没有：不猜
+        // 招行真实账单（用户 11-11 回传）：12 期 × 203.35、含利息 176.99
+        // 平息法：名义 7.82%、真实 14.13%，正好翻倍
+        let cmb = Installment(
+            key: "招行", name: "招行账单分期", totalPeriods: 12, paidPeriods: 3,
+            perPeriodAmount: dec("203.35"), remainingDue: dec("1830.15"),
+            totalInterest: dec("176.99"), nextDueDate: day(2026, 11, 25)
+        )
+        let cmbRate = cmb.estimatedAnnualRate
+        #expect(cmbRate != nil)
+        #expect(abs(NSDecimalNumber(decimal: cmbRate!).doubleValue - 14.13) <= 0.05)
+
+        // 只填「剩余本金」不再能算出年化——那个字段账单上没有，
+        // 用户填进来的必然是含息的「剩余应还」，一填就撞成「零息 0.0%」
+        let principalOnly = Installment(
+            key: "e招贷", name: "e招贷", totalPeriods: 24, paidPeriods: 7,
+            perPeriodAmount: dec("442.50"), remainingPrincipal: dec("6670.20"),
+            nextDueDate: day(2026, 12, 10)
+        )
+        #expect(principalOnly.estimatedAnnualRate == nil)
+
+        // 什么都没有：不猜
         let bare = Installment(
             key: "抖音", name: "抖音月付", totalPeriods: 12, paidPeriods: 0,
             perPeriodAmount: dec("100"), nextDueDate: day(2026, 12, 15)

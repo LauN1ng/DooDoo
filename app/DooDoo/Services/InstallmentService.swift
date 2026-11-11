@@ -17,6 +17,8 @@ enum InstallmentService {
     /// 参数全部来自 `InstallmentIntake` 的换算结果，这里不重新解释业务口径。
     ///
     /// - `totalPeriods` / `paidPeriods`：由 `InstallmentIntake.periods(remaining:total:)` 得来
+    /// - `remainingDue`：账单上的「分期剩余应还」，**金额的权威来源**。给了它，
+    ///   期表按它摊平、余数落末期，`firstPeriodAmount` / `lastPeriodAmount` 不再需要
     /// - `iconName`：列表展示用，默认 `Receipt`（bundle 里的 Fluent3D PNG 名）
     ///
     /// 边界：`remaining <= 0` 时仍建计划但**不生成期表**（已还清的历史分期，
@@ -30,7 +32,7 @@ enum InstallmentService {
         perPeriodAmount: Decimal,
         firstPeriodAmount: Decimal? = nil,
         lastPeriodAmount: Decimal? = nil,
-        remainingPrincipal: Decimal? = nil,
+        remainingDue: Decimal? = nil,
         totalInterest: Decimal? = nil,
         totalRebate: Decimal? = nil,
         nextDueDate: Date,
@@ -47,7 +49,7 @@ enum InstallmentService {
             perPeriodAmount: perPeriodAmount,
             firstPeriodAmount: firstPeriodAmount,
             lastPeriodAmount: lastPeriodAmount,
-            remainingPrincipal: remainingPrincipal,
+            remainingDue: remainingDue,
             totalInterest: totalInterest,
             totalRebate: totalRebate,
             nextDueDate: calendar.startOfDay(for: nextDueDate),
@@ -57,6 +59,46 @@ enum InstallmentService {
         try generateFuturePeriods(for: plan, calendar: calendar, in: context)
         try context.save()
         return plan
+    }
+
+    /// 把 M3-2 时期误填进 `remainingPrincipal` 的「剩余应还」搬到 `remainingDue`。
+    ///
+    /// M3-2 的表单有「剩余本金」一栏，但账单上根本没有这个数——用户 11-11 把
+    /// 「分期剩余应还 1830.15」填了进去，而 `203.35 × 9` 恰好也是 `1830.15`，
+    /// 于是年化被判成「零息」输出 0.0%。
+    ///
+    /// M3-3 改了表单，那条老数据还挂着旧字段：
+    /// - 年化已经自愈（`estimatedAnnualRate` 不再读 `remainingPrincipal`）
+    /// - 但剩余总额仍按「每期 × 期数 + 首期差额」算，跟账单差几分钱
+    ///
+    /// 这里按计划幂等搬一次：只要 `remainingDue` 为空、`remainingPrincipal` 有值，
+    /// 就视为用户当时抄的就是剩余应还。
+    ///
+    /// 为什么这个假定安全：`remainingPrincipal` 只在存量录入界面出现过，而那一栏的
+    /// 占位文案是「账单上的欠款」——用户唯一的填法就是抄「剩余应还」。
+    /// 零息分期（本金恰好等于还款总额）搬过去也等价，不会产出错误数字。
+    ///
+    /// 同时清掉 `firstPeriodAmount`：旧表单里填的是**历史**第 1 期（如 203.43），
+    /// 它不该再覆盖未来第一期——未来每期现在由 `remainingDue` 摊平得出。
+    ///
+    /// 返回搬迁的计划数；`0` 表示没有需要搬的（可重复调用）。
+    @discardableResult
+    static func migrateLegacyRemainingPrincipal(
+        calendar: Calendar = .current,
+        in context: ModelContext
+    ) throws -> Int {
+        let plans = try context.fetch(FetchDescriptor<Installment>())
+        var migrated = 0
+        for plan in plans where plan.remainingDue == nil {
+            guard let principal = plan.remainingPrincipal, principal > 0 else { continue }
+            plan.remainingDue = principal
+            plan.remainingPrincipal = nil
+            plan.firstPeriodAmount = nil
+            migrated += 1
+            try generateFuturePeriods(for: plan, calendar: calendar, in: context)
+        }
+        if migrated > 0 { try context.save() }
+        return migrated
     }
 
     /// 按计划的「剩余期数 + 下一期还款日 + 每期金额」展开未来逐期，写进 `InstallmentPeriod`。

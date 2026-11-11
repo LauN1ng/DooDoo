@@ -187,4 +187,61 @@ struct InstallmentMathTests {
 
         #expect(InstallmentMath.remainingTotal(count: 0, perPeriodAmount: dec("120.03")) == 0)
     }
+
+    // MARK: - 总额均摊（M3-3）
+
+    @Test("均摊除得尽：每期都是标准额，末期不多不少")
+    func splitEvenlyExact() {
+        // 用户 11-11 的招行账单：1830.15 ÷ 9 = 203.35 正好
+        let split = InstallmentMath.splitEvenly(total: dec("1830.15"), count: 9)
+        #expect(split?.perPeriod == dec("203.35"))
+        #expect(split?.lastPeriod == dec("203.35"))
+    }
+
+    @Test("均摊除不尽：余数全落末期，前 n−1 期仍是标准额")
+    func splitEvenlyRemainder() {
+        // 1830.17 ÷ 9 = 203.352... → 每期 203.35，末期 203.37
+        let split = InstallmentMath.splitEvenly(total: dec("1830.17"), count: 9)
+        #expect(split?.perPeriod == dec("203.35"))
+        #expect(split?.lastPeriod == dec("203.37"))
+        // 加起来一分不差
+        #expect(split!.perPeriod * 8 + split!.lastPeriod == dec("1830.17"))
+    }
+
+    @Test("均摊的边界：一期全吃、零期或零额返回 nil")
+    func splitEvenlyBoundaries() {
+        let single = InstallmentMath.splitEvenly(total: dec("500"), count: 1)
+        #expect(single?.perPeriod == dec("500"))
+        #expect(single?.lastPeriod == dec("500"))
+
+        #expect(InstallmentMath.splitEvenly(total: dec("500"), count: 0) == nil)
+        #expect(InstallmentMath.splitEvenly(total: 0, count: 6) == nil)
+        #expect(InstallmentMath.splitEvenly(total: dec("-1"), count: 6) == nil)
+    }
+
+    @Test("给了剩余应还，逐期展开就用摊平结果而不是每期金额")
+    func futurePeriodsUsesRemainingDue() {
+        let next = calendar.date(from: DateComponents(year: 2026, month: 11, day: 25))!
+        let periods = InstallmentMath.futurePeriods(
+            count: 9,
+            nextDueDate: next,
+            perPeriodAmount: dec("203.35"),
+            remainingDue: dec("1830.17"),
+            calendar: calendar
+        )
+        #expect(periods.count == 9)
+        #expect(periods.dropLast().allSatisfy { $0.amount == dec("203.35") })
+        #expect(periods.last?.amount == dec("203.37"))
+        #expect(periods.reduce(Decimal(0)) { $0 + $1.amount } == dec("1830.17"))
+    }
+
+    @Test("剩余应还 ≤ 0 时不参与，退回按每期金额展开")
+    func futurePeriodsIgnoresNonPositiveDue() {
+        let next = calendar.date(from: DateComponents(year: 2026, month: 11, day: 25))!
+        let periods = InstallmentMath.futurePeriods(
+            count: 3, nextDueDate: next, perPeriodAmount: dec("100"),
+            remainingDue: 0, calendar: calendar
+        )
+        #expect(periods.allSatisfy { $0.amount == dec("100") })
+    }
 }
