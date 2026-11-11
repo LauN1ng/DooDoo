@@ -172,7 +172,7 @@ struct InstallmentServiceTests {
     @Test("剩余应还除不尽：余数全落末期，前八期仍是标准额")
     func remainingDuePutsRemainderOnLastPeriod() throws {
         let context = try makeContext()
-        // 1830.17 ÷ 9 = 203.352... → 每期 203.35，末期 203.37 收零头
+        // 1830.17 ÷ 9 = 203.352... → 其余各期 203.35，首期 203.37 收零头
         let plan = try InstallmentService.insert(
             name: "除不尽的账单",
             account: nil,
@@ -187,8 +187,8 @@ struct InstallmentServiceTests {
 
         let periods = try InstallmentService.periods(for: plan.key, in: context)
         #expect(periods.count == 9)
-        #expect(periods.dropLast().allSatisfy { $0.amount == dec("203.35") })
-        #expect(periods.last?.amount == dec("203.37"))
+        #expect(periods.dropFirst().allSatisfy { $0.amount == dec("203.35") })
+        #expect(periods.first?.amount == dec("203.37"))
         // 加起来一分不差
         #expect(periods.reduce(Decimal(0)) { $0 + $1.amount } == dec("1830.17"))
         #expect(plan.remainingTotal == dec("1830.17"))

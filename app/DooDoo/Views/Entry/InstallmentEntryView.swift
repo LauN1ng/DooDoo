@@ -15,7 +15,7 @@ import SwiftUI
 /// 3. 随时可以「先停，回头再录」，进度存在 `UserDefaults` 里，下次接着录。
 ///
 /// M3-3 的表单收敛：手填从 8 个框降到 3 个（剩余应还 / 总共几期 / 含利息），
-/// 每期金额由「剩余应还 ÷ 期数」派生、余数自动落末期。删掉的三个框
+/// 每期金额由「剩余应还 ÷ 期数」派生、余数自动落**首期**。删掉的三个框
 /// （剩余本金、首期金额、末期金额）都是**账单上不存在的数**，用户怎么填都填不对。
 struct InstallmentEntryView: View {
     @Environment(\.modelContext) private var context
@@ -200,7 +200,7 @@ struct InstallmentEntryView: View {
             .accessibilityLabel(account.displayShortName)
     }
 
-    // MARK: - 主卡：剩余应还 / 剩余期数 / 每期金额
+    // MARK: - 主卡：剩余应还 / 剩余期数 / 平均每期
 
     /// 三个数挤一张卡：**账单上那三个数**（剩余应还、第 4/12 期里的期数）填进来，
     /// 每期金额自动出来。卡片顺序就是核对顺序——从上往下读一遍，正好对上账单。
@@ -264,9 +264,9 @@ struct InstallmentEntryView: View {
 
             Divider().overlay(Palette.line)
 
-            // 每期金额 —— 只读派生
+            // 平均每期 —— 只读派生
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text("每期金额")
+                Text("平均每期")
                     .font(.system(size: 13))
                     .foregroundStyle(Palette.sub)
                 Spacer(minLength: 8)
@@ -281,15 +281,18 @@ struct InstallmentEntryView: View {
         }
     }
 
-    /// 每期金额的来历。写在数字下面一行小字，是为了让用户能**自己验算**：
-    /// 他看到「1830.15 ÷ 9」能立刻对账单，看到「余数落末期」能解释那 2 分钱。
+    /// 平均每期的来历。写在数字下面一行小字，是为了让用户能**自己验算**：
+    /// 他拿「10.22 ÷ 2」能立刻对账单，看到「首期多 1 分」能解释那点零头。
+    ///
+    /// 措辞上不说「每期」只说「平均每期」：平台给的是首期多、其余相同
+    /// （15.34 ÷ 3 → 5.12 / 5.11 / 5.11），各期并不相等。
     private var perPeriodNote: String {
         guard vm.split != nil else {
             return "填上面两个数，自动算出来"
         }
-        var note = "= ¥\(MoneyMath.money(vm.remainingDue)) ÷ \(vm.periods.remaining) 期"
-        if let last = vm.lastPeriodAmount {
-            note += "，末期 ¥\(MoneyMath.money(last)) 收零头"
+        var note = "= ¥\(MoneyMath.money(vm.remainingDue)) ÷ \(vm.periods.remaining) 期均摊"
+        if let first = vm.firstPeriodAmount {
+            note += "，首期 ¥\(MoneyMath.money(first)) 收零头"
         }
         return note
     }
@@ -461,11 +464,15 @@ struct InstallmentEntryView: View {
 
     // MARK: - 预览
 
-    /// 预览承担两件事：**核对**（总额是否等于账单）和**揭示**（真实年化）。
+    /// 预览承担三件事：**核对**（剩余总额是否等于账单）、**全貌**（整笔一共多少）、
+    /// **揭示**（真实年化）。
     ///
-    /// 总额那一行不用「与账单一致」这种自我肯定的话——数字就是用户抄进去的。
+    /// 剩余总额那一行不用「与账单一致」这种自我肯定的话——数字就是用户抄进去的。
     /// 有价值的是左边「剩 9 期 × ¥203.35」：用户拿每期金额跟账单对一眼，
     /// 就知道「除出来」的结果对不对。
+    ///
+    /// 整笔那一行是给「已经还了几期」的老分期用的：58 笔存量里大半都不是新分期，
+    /// 只给剩余额等于只回答了一半问题（用户 11-11：「能不能把全部金额算出来展示」）。
     private var previewBox: some View {
         VStack(spacing: 5) {
             HStack(spacing: 6) {
@@ -479,6 +486,24 @@ struct InstallmentEntryView: View {
                     .monospacedDigit()
                     .foregroundStyle(Palette.ink)
                     .lineLimit(1)
+            }
+
+            // 整笔总额。存量录入的一大半是「已经还了几期」的老分期，
+            // 用户真正想知道的是「这笔当初一共多少 / 我一共要还多少」——
+            // 只给剩余额等于只回答了一半。
+            if let grand = vm.previewGrandTotal, let total = vm.totalPeriods {
+                HStack(spacing: 6) {
+                    Text(grandTotalLabel(total: total))
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(Palette.sub)
+                        .lineLimit(1)
+                    Spacer(minLength: 8)
+                    Text("约 ¥\(MoneyMath.money(grand))")
+                        .font(.system(size: 13, weight: .semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(Palette.ink2)
+                        .lineLimit(1)
+                }
             }
 
             HStack(spacing: 6) {
@@ -507,9 +532,21 @@ struct InstallmentEntryView: View {
         )
     }
 
+    /// 左侧说明。除不尽时不能写「× 平均每期」——那会跟右边的总额差几分钱，
+    /// 用户一乘就发现对不上。改成点出首期多出来的那一点，两边就自洽了：
+    /// 5.12 + 5.11 × 2 = 15.34，正好等于右边。
     private var previewLeftText: String {
         guard vm.periods.remaining > 0 else { return "填完上面就能核对总额" }
+        if let first = vm.firstPeriodAmount {
+            return "剩 \(vm.periods.remaining) 期 · 首期 ¥\(MoneyMath.money(first))"
+        }
         return "剩 \(vm.periods.remaining) 期 × ¥\(MoneyMath.money(vm.perPeriodAmount))"
+    }
+
+    /// 「整笔 12 期 · 已还 1 期」。没还过就不写「已还 0 期」，那是废话。
+    private func grandTotalLabel(total: Int) -> String {
+        let paid = vm.periods.paid
+        return paid > 0 ? "整笔 \(total) 期 · 已还 \(paid) 期" : "整笔 \(total) 期"
     }
 
     // MARK: - 回执

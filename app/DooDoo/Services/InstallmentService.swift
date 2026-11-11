@@ -18,7 +18,7 @@ enum InstallmentService {
     ///
     /// - `totalPeriods` / `paidPeriods`：由 `InstallmentIntake.periods(remaining:total:)` 得来
     /// - `remainingDue`：账单上的「分期剩余应还」，**金额的权威来源**。给了它，
-    ///   期表按它摊平、余数落末期，`firstPeriodAmount` / `lastPeriodAmount` 不再需要
+    ///   期表按它摊平、余数落首期，`firstPeriodAmount` / `lastPeriodAmount` 不再需要
     /// - `iconName`：列表展示用，默认 `Receipt`（bundle 里的 Fluent3D PNG 名）
     ///
     /// 边界：`remaining <= 0` 时仍建计划但**不生成期表**（已还清的历史分期，

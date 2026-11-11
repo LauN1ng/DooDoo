@@ -17,7 +17,7 @@ import SwiftData
 /// - **首期/末期金额**：用户填的是历史第 1 期（203.43），而未来 9 期都是 203.35，差 0.08
 ///
 /// 现在只填 4 个数：**剩余应还 / 剩余期数 / 总共几期 / 含利息**。
-/// 每期金额由「剩余应还 ÷ 期数」派生（余数自动落末期），还款日由账户带出。
+/// 每期金额由「剩余应还 ÷ 期数」派生（余数自动落**首期**），还款日由账户带出。
 /// 派生值全部走 `InstallmentMath` / `InstallmentIntake` 的纯函数，这里不重复算钱。
 @MainActor
 @Observable
@@ -92,7 +92,7 @@ final class InstallmentEntryViewModel {
         InstallmentIntake.periods(remaining: remainingPeriods, total: totalPeriods)
     }
 
-    /// 均摊结果：`perPeriod` 是前 n−1 期，`lastPeriod` 吸收余数。
+    /// 均摊结果：`perPeriod` 是后 n−1 期，`firstPeriod` 吸收余数。
     /// 没填剩余应还或期数时为 `nil`，界面显示占位。
     var split: InstallmentMath.Split? {
         InstallmentMath.splitEvenly(total: remainingDue, count: periods.remaining)
@@ -102,10 +102,13 @@ final class InstallmentEntryViewModel {
     /// **只读**——账单上的每期金额本来就是这么除出来的，让用户手填只会填出矛盾。
     var perPeriodAmount: Decimal { split?.perPeriod ?? 0 }
 
-    /// 末期金额。与每期相同则为 `nil`，界面上不用多写一句「末期 ¥203.35」。
-    var lastPeriodAmount: Decimal? {
-        guard let split, split.lastPeriod != split.perPeriod else { return nil }
-        return split.lastPeriod
+    /// 首期金额（**未来第一期**）。与其余各期相同则为 `nil`，界面上不用多写一句。
+    ///
+    /// 零头落首期是照账单校准的：15.34 ÷ 3 → 5.12 / 5.11 / 5.11，首期多 1 分
+    /// （用户 11-11 给的两张白条账单，见 `InstallmentMath.splitEvenly`）。
+    var firstPeriodAmount: Decimal? {
+        guard let split, split.firstPeriod != split.perPeriod else { return nil }
+        return split.firstPeriod
     }
 
     /// 剩余总额。有剩余应还就是它本身，跟账单逐字一致。
@@ -115,6 +118,20 @@ final class InstallmentEntryViewModel {
             perPeriodAmount: perPeriodAmount,
             remainingDue: remainingDue
         )
+    }
+
+    /// 整笔总额（约）= 已还部分 + 剩余应还。
+    ///
+    /// 只在**显式填了**「总共几期」时给——没填就没有分母，拿剩余期数乘出来
+    /// 等于「假设这是一笔全新分期」，跟用户手上那张已经还了几期的账单差很远。
+    ///
+    /// 为什么是「已还 × 每期 + 剩余应还」而不是「每期 × 总期数」：后者会把
+    /// 剩余应还里那个首期零头摊掉（1830.17 ÷ 9 的首期是 203.37，乘回去只剩 203.35）。
+    /// 前者**一期都没还时等于剩余应还本身，跟账单逐字一致**；已还过的情况下，
+    /// 差的也只是历史那几期的几分钱零头，所以标「约」。
+    var previewGrandTotal: Decimal? {
+        guard let total = totalPeriods, total > 1, perPeriodAmount > 0 else { return nil }
+        return perPeriodAmount * Decimal(periods.paid) + previewRemainingTotal
     }
 
     /// 年化反算（估算，只展示）。**只走整笔口径**，与 `Installment.estimatedAnnualRate` 一致：

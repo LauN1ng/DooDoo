@@ -190,29 +190,55 @@ struct InstallmentMathTests {
 
     // MARK: - 总额均摊（M3-3）
 
-    @Test("均摊除得尽：每期都是标准额，末期不多不少")
+    @Test("均摊除得尽：各期都是标准额，首期不多不少")
     func splitEvenlyExact() {
-        // 用户 11-11 的招行账单：1830.15 ÷ 9 = 203.35 正好
+        // 招行账单：1830.15 ÷ 9 = 203.35 正好。这笔整除，测不出余数落哪一边，
+        // 真正钉住「余数落首期」的是下面的 `splitEvenlyMatchesRealBills`。
         let split = InstallmentMath.splitEvenly(total: dec("1830.15"), count: 9)
         #expect(split?.perPeriod == dec("203.35"))
-        #expect(split?.lastPeriod == dec("203.35"))
+        #expect(split?.firstPeriod == dec("203.35"))
     }
 
-    @Test("均摊除不尽：余数全落末期，前 n−1 期仍是标准额")
+    @Test("均摊除不尽：余数全落首期，其余各期是标准额")
     func splitEvenlyRemainder() {
-        // 1830.17 ÷ 9 = 203.352... → 每期 203.35，末期 203.37
+        // 1830.17 ÷ 9 = 203.352... → 其余 203.35，首期 203.37
         let split = InstallmentMath.splitEvenly(total: dec("1830.17"), count: 9)
         #expect(split?.perPeriod == dec("203.35"))
-        #expect(split?.lastPeriod == dec("203.37"))
+        #expect(split?.firstPeriod == dec("203.37"))
         // 加起来一分不差
-        #expect(split!.perPeriod * 8 + split!.lastPeriod == dec("1830.17"))
+        #expect(split!.perPeriod * 8 + split!.firstPeriod == dec("1830.17"))
+    }
+
+    @Test("余数落首期：三张真实白条账单逐期复现")
+    func splitEvenlyMatchesRealBills() {
+        // 用户 2026-11-11 提供的两张干净样本。此前 M3-3 只校准了招行那一笔
+        // （1830.15 ÷ 9 整除，余数落首期还是末期结果一样），所以把方向做反了。
+        //
+        // A：15.34 分 3 期 → 账单是 5.12 / 5.11 / 5.11，**首期多 1 分**。
+        // 按「余数落末期」会摊成 5.11 / 5.11 / 5.12，跟账单第一行就对不上。
+        let a = InstallmentMath.splitEvenly(total: dec("15.34"), count: 3)
+        #expect(a?.firstPeriod == dec("5.12"))
+        #expect(a?.perPeriod == dec("5.11"))
+        #expect(a!.firstPeriod + a!.perPeriod * 2 == dec("15.34"))
+
+        // B：163.02 分 6 期 → 27.17 × 6，整除，无余数可落
+        let b = InstallmentMath.splitEvenly(total: dec("163.02"), count: 6)
+        #expect(b?.firstPeriod == dec("27.17"))
+        #expect(b?.perPeriod == dec("27.17"))
+        #expect(b!.firstPeriod + b!.perPeriod * 5 == dec("163.02"))
+
+        // A 已还 1 期后的剩余部分：10.22 分 2 期 → 5.11 / 5.11。
+        // 首期那 1 分零头已经还掉了，剩余两期本来就相等。
+        let rest = InstallmentMath.splitEvenly(total: dec("10.22"), count: 2)
+        #expect(rest?.firstPeriod == dec("5.11"))
+        #expect(rest?.perPeriod == dec("5.11"))
     }
 
     @Test("均摊的边界：一期全吃、零期或零额返回 nil")
     func splitEvenlyBoundaries() {
         let single = InstallmentMath.splitEvenly(total: dec("500"), count: 1)
         #expect(single?.perPeriod == dec("500"))
-        #expect(single?.lastPeriod == dec("500"))
+        #expect(single?.firstPeriod == dec("500"))
 
         #expect(InstallmentMath.splitEvenly(total: dec("500"), count: 0) == nil)
         #expect(InstallmentMath.splitEvenly(total: 0, count: 6) == nil)
@@ -230,8 +256,8 @@ struct InstallmentMathTests {
             calendar: calendar
         )
         #expect(periods.count == 9)
-        #expect(periods.dropLast().allSatisfy { $0.amount == dec("203.35") })
-        #expect(periods.last?.amount == dec("203.37"))
+        #expect(periods.dropFirst().allSatisfy { $0.amount == dec("203.35") })
+        #expect(periods.first?.amount == dec("203.37"))
         #expect(periods.reduce(Decimal(0)) { $0 + $1.amount } == dec("1830.17"))
     }
 

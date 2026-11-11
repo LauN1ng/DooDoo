@@ -14,42 +14,59 @@ enum InstallmentMath {
         let dueDate: Date
         /// 单位：元。这一期应还。
         let amount: Decimal
-        /// 是否末期。余数/贴息通常落在这里。
+        /// 是否末期。**只用于展示/语义判断**——余数现在落首期，见 `splitEvenly`。
         let isLast: Bool
     }
 
     // MARK: - 总额均摊
 
-    /// 均摊结果。`perPeriod` 是前 n−1 期，`lastPeriod` 吸收余数。
+    /// 均摊结果。`perPeriod` 是后 n−1 期，`firstPeriod` 吸收余数。
     struct Split: Equatable, Sendable {
         /// 单位：元。标准每期金额（已到分）。
         let perPeriod: Decimal
-        /// 单位：元。末期金额 = 总额 − 标准额 × (n − 1)，余数全落在这里。
-        let lastPeriod: Decimal
+        /// 单位：元。首期金额 = 总额 − 标准额 × (n − 1)，余数全落在这里。
+        ///
+        /// 「首期」指**未来第一期**（下一次要还的那一期），不是整笔的历史第 1 期。
+        let firstPeriod: Decimal
     }
 
-    /// 把总额按期数均摊到分，**余数落末期**。
+    /// 把总额按期数均摊到分，**余数落首期**。
     ///
-    /// 这是存量录入的主路径：账单只给「剩余应还 1830.15」和「还剩 9 期」，
-    /// 每期多少是**除出来**的。不用「每期 × 期数」，是因为那样遇到末期有零头的账单
-    /// 会一直差几分钱（1830.17 ÷ 9 → 每期 203.35、末期 203.37）。
+    /// 这是存量录入的主路径：账单只给「分期剩余应还 10.22」和「还剩 2 期」，
+    /// 每期多少是**除出来**的。不用「每期 × 期数」，是因为那样遇到除不尽的账单
+    /// 会一直差几分钱。
     ///
-    /// 舍入用 `.down`（向下到分）再让末期吸收差额：末期只会比标准额**多**，
-    /// 不会出现「末期 203.33、前面 203.35」这种反直觉的账单。
+    /// **余数落首期是照账单校准出来的，不是拍脑袋**（用户 2026-11-11 提供两张干净样本）：
+    ///
+    /// | 账单 | 分期总额 | 期数 | 各期实际 | 首期 |
+    /// |---|---|---|---|---|
+    /// | 白条 A | 15.34 | 3 | 5.12 / 5.11 / 5.11 | **多 1 分** |
+    /// | 白条 B | 163.02 | 6 | 27.17 × 6 | 整除，无余数 |
+    ///
+    /// 15.34 ÷ 3 = 5.1133…，平台把多出来的 1 分进到**首期**。按「末期吸收」
+    /// 会摊成 5.11 / 5.11 / 5.12，跟账单第一行就对不上——这是 M3-3 的错，
+    /// 当时只看了招行那笔（1830.15 ÷ 9 正好整除，余数落哪都一样，测不出差别）。
+    ///
+    /// 有退款/抵扣的账单（如 496.65 分 6 期、末期被退款砍掉 60）不适用这条：
+    /// 那类账单的末期是个**人为改过的异常值**，只能靠 `InstallmentPeriod`
+    /// 的逐期手改（`isManualOverride`）还原，任何均摊公式都猜不出来。
+    ///
+    /// 舍入用 `.down`（向下到分）再让首期吸收差额：首期只会比标准额**多**，
+    /// 不会出现「首期 5.10、后面 5.12」这种反直觉的账单。
     ///
     /// 边界：
     /// - `count <= 0` 或 `total <= 0` → `nil`（没有可摊的）
     /// - `count == 1` → 一期吃下全额
-    /// - 总额小于期数×0.01（如 0.05 元分 9 期）→ 每期为 0，末期吃全额；
+    /// - 总额小于期数×0.01（如 0.05 元分 9 期）→ 每期为 0，首期吃全额；
     ///   调用方应按「金额要大于 0」拦，不该走到这里
     static func splitEvenly(total: Decimal, count: Int) -> Split? {
         guard count > 0, total > 0 else { return nil }
-        if count == 1 { return Split(perPeriod: total, lastPeriod: total) }
+        if count == 1 { return Split(perPeriod: total, firstPeriod: total) }
         var quotient = total / Decimal(count)
         var perPeriod = Decimal()
         NSDecimalRound(&perPeriod, &quotient, 2, .down)
-        let last = total - perPeriod * Decimal(count - 1)
-        return Split(perPeriod: perPeriod, lastPeriod: last)
+        let first = total - perPeriod * Decimal(count - 1)
+        return Split(perPeriod: perPeriod, firstPeriod: first)
     }
 
     // MARK: - 逐期展开
@@ -58,7 +75,7 @@ enum InstallmentMath {
     ///
     /// 输入：剩余期数、下一期还款日，以及**金额的两种给法**之一：
     /// - `remainingDue`：账单上的「分期剩余应还」。给了它就以它为准，
-    ///   按 `splitEvenly` 摊到每期、余数落末期（M3-3 起的默认路径）。
+    ///   按 `splitEvenly` 摊到每期、余数落首期（M3-3 起的默认路径）。
     /// - `perPeriodAmount`（+ 可选首期/末期覆盖）：账单只给每期金额时用。
     ///
     /// 这里的「首期」指**剩余期里的第一期**——存量录入时用户只知道「下一期什么时候还、
@@ -90,7 +107,8 @@ enum InstallmentMath {
             let isLast = (index == count)
             let amount: Decimal
             if let split {
-                amount = isLast ? split.lastPeriod : split.perPeriod
+                // 余数落**首期**（见 `splitEvenly` 的账单校准），不是末期。
+                amount = index == 1 ? split.firstPeriod : split.perPeriod
             } else if index == 1, let first = firstPeriodAmount {
                 amount = first
             } else if isLast, let last = lastPeriodAmount {

@@ -65,7 +65,7 @@ struct InstallmentModelTests {
 
     @Test("有剩余应还就以它为准，不再用「每期 × 期数」凑")
     func remainingDueWins() {
-        // 除不尽的情况：每期 203.35 × 9 = 1830.15，但账单写 1830.17（末期 203.37）
+        // 除不尽的情况：每期 203.35 × 9 = 1830.15，但账单写 1830.17（首期 203.37）
         let plan = Installment(
             key: "招行", name: "招行账单分期", totalPeriods: 12, paidPeriods: 3,
             perPeriodAmount: dec("203.35"), remainingDue: dec("1830.17"),
@@ -75,7 +75,7 @@ struct InstallmentModelTests {
         let periods = plan.futurePeriods(calendar: calendar)
         #expect(periods.count == 9)
         #expect(periods.reduce(Decimal(0)) { $0 + $1.amount } == dec("1830.17"))
-        #expect(periods.last?.amount == dec("203.37"))
+        #expect(periods.first?.amount == dec("203.37"))
     }
 
     @Test("年化只走整笔口径：「剩余本金」不再参与，含利息才是输入")
