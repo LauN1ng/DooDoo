@@ -21,6 +21,8 @@ enum InstallmentService {
     ///   期表按它摊平、余数落首期
     /// - `lastPeriodAmount`：账单最后一期的金额（选填）。给了它，期表改走
     ///   `splitEndingAt` 反推中间各期，末期用真值——末期抵了减免的账单只有这条路算得准
+    /// - `remainingInterest`：账单把利息单列时的**剩余期**利息（e招贷 851.57）。
+    ///   给了它，年化改走剩余口径（见 `Installment.estimatedAnnualRate`），不吃整笔公式
     /// - `iconName`：列表展示用，默认 `Receipt`（bundle 里的 Fluent3D PNG 名）
     ///
     /// 边界：`remaining <= 0` 时仍建计划但**不生成期表**（已还清的历史分期，
@@ -36,6 +38,7 @@ enum InstallmentService {
         lastPeriodAmount: Decimal? = nil,
         remainingDue: Decimal? = nil,
         totalInterest: Decimal? = nil,
+        remainingInterest: Decimal? = nil,
         totalRebate: Decimal? = nil,
         nextDueDate: Date,
         iconName: String = "Receipt",
@@ -53,6 +56,7 @@ enum InstallmentService {
             lastPeriodAmount: lastPeriodAmount,
             remainingDue: remainingDue,
             totalInterest: totalInterest,
+            remainingInterest: remainingInterest,
             totalRebate: totalRebate,
             nextDueDate: calendar.startOfDay(for: nextDueDate),
             iconName: iconName

@@ -53,6 +53,44 @@ struct InstallmentIntakeTests {
         #expect(InstallmentIntake.periods(remaining: -3, total: nil) == .init(total: 0, paid: 0))
     }
 
+    // MARK: - 账单拆「本金 + 利息」两行（M3-6）
+
+    /// 招行 e招贷 的账单页：剩余待入账 = 本金 6,670.93 + 利息 851.57。
+    /// 每期 442.50 × 17 期 = 7,522.50，两行之和必须逐分等于它——
+    /// 这是「合计」唯一的价值：用户拿它跟账单的月供乘回去核对。
+    @Test("e招贷：本金 + 利息 合成含息的剩余应还")
+    func includedTotalEMoney() {
+        let total = InstallmentIntake.includedTotal(
+            principal: Decimal(string: "6670.93"),
+            interest: Decimal(string: "851.57")
+        )
+        #expect(total == Decimal(string: "7522.50"))
+        // 反证：17 期 × 442.50 也等于它，所以合计能直接对账
+        #expect(total == Decimal(string: "442.50")! * 17)
+        // 抄少了利息就是少算 851.57 —— 这正是以前要去 App 外算的那一笔
+        #expect(total! - Decimal(string: "6670.93")! == Decimal(string: "851.57")!)
+    }
+
+    @Test("利息不填按零息处理（分期本来就可能没有利息）")
+    func includedTotalZeroInterest() {
+        #expect(InstallmentIntake.includedTotal(principal: Decimal(string: "163.02"), interest: nil)
+                == Decimal(string: "163.02"))
+        #expect(InstallmentIntake.includedTotal(principal: Decimal(string: "163.02"), interest: 0)
+                == Decimal(string: "163.02"))
+    }
+
+    @Test("本金缺失或为 0 时不产出合计（界面该拦，而不是填个 0）")
+    func includedTotalMissingPrincipal() {
+        #expect(InstallmentIntake.includedTotal(principal: nil, interest: Decimal(string: "851.57")) == nil)
+        #expect(InstallmentIntake.includedTotal(principal: 0, interest: Decimal(string: "851.57")) == nil)
+        #expect(InstallmentIntake.includedTotal(principal: Decimal(string: "-1"), interest: nil) == nil)
+    }
+
+    @Test("利息为负数直接拒绝，不静默取绝对值")
+    func includedTotalNegativeInterest() {
+        #expect(InstallmentIntake.includedTotal(principal: Decimal(string: "100"), interest: Decimal(string: "-5")) == nil)
+    }
+
     // MARK: - 批量进度
 
     @Test("还差几笔：58 笔录到第 3 笔时还差 55")

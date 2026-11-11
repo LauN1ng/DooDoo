@@ -77,6 +77,17 @@ final class Installment {
     /// 年化反算的唯一输入：现值 = 每期金额 × 总期数 − 总利息。
     var totalInterest: Decimal?
 
+    /// 单位：元。**剩余期**的利息（账单拆两栏时才有值，如 e招贷 的 851.57）。
+    ///
+    /// 为什么不塞进 `totalInterest`：那个字段的口径是**整笔**（现值 = 每期 × 总期数 − 它），
+    /// 拿剩余利息套整笔公式会把 16.43% 报成 8.2%——本金 6,670.93 却按 24 期去折，
+    /// 分子分母对不上。账单把「本金 / 利息」拆开时，三个数（剩余应还 − 剩余利息 = 剩余本金、
+    /// 剩余期数、每期金额）本身就构成一个自洽的年金，用**剩余口径**算才是对的，
+    /// 而且新贷（一期没还）时剩余 = 整笔，两个口径给出同一个答案。
+    ///
+    /// 可选、默认 `nil`——老库靠这条自动迁移，不会崩（见 `Account` 顶部的迁移说明）。
+    var remainingInterest: Decimal?
+
     /// 单位：元。已享减免合计（国家贴息等，如「已享利息减免 0.57」）。
     ///
     /// PRD 9.5.6 要求分期模型能拆出**本金 / 利息 / 减免**三层，不能只有一个「每期金额」——
@@ -104,6 +115,7 @@ final class Installment {
         remainingDue: Decimal? = nil,
         remainingPrincipal: Decimal? = nil,
         totalInterest: Decimal? = nil,
+        remainingInterest: Decimal? = nil,
         totalRebate: Decimal? = nil,
         nextDueDate: Date,
         iconName: String = "",
@@ -120,6 +132,7 @@ final class Installment {
         self.remainingDue = remainingDue
         self.remainingPrincipal = remainingPrincipal
         self.totalInterest = totalInterest
+        self.remainingInterest = remainingInterest
         self.totalRebate = totalRebate
         self.nextDueDate = nextDueDate
         self.iconName = iconName
@@ -194,10 +207,26 @@ extension Installment {
     /// 名义年利率 7.82% 而真实年化 14.13%，只有整笔口径能算出这个翻倍，
     /// 剩余口径会把它报成 18.4%，看着像利率随时间上涨。
     ///
+    /// **唯一例外是「剩余本金」真的可得的时候**：账单把「本金 / 利息」拆两行录入
+    /// （e招贷 那种），`剩余应还 − 剩余利息` 就是账单自己写的剩余本金，这时改走剩余口径
+    /// 反而精确——见 `remainingInterest` 与下面第一个分支。
+    ///
     /// 边界：`totalInterest` 没填 / ≤ 0 / `totalPeriods <= 1` → `nil`，
     /// 界面显示「—」并提示补「含利息」，不猜假利率。
     var estimatedAnnualRate: Decimal? {
-        guard let totalInterest, totalInterest > 0, totalPeriods > 1, perPeriodAmount > 0 else {
+        guard perPeriodAmount > 0 else { return nil }
+        // 账单把「本金 / 利息」拆开录入时（e招贷），利息是**剩余期**的，走剩余口径：
+        // 现值 = 剩余应还 − 剩余利息 = 剩余本金（6,670.93），配剩余期数 17，
+        // 反算得 16.43%。若硬套整笔公式（总期数 24 + 剩余利息），本金只有 6,670.93
+        // 却按 24 期折，会报成 8.2%——分子分母对不上。
+        if let remainingInterest, remainingInterest > 0, remainingPeriods > 1 {
+            return InstallmentMath.impliedAnnualRate(
+                periods: remainingPeriods,
+                perPeriodAmount: perPeriodAmount,
+                totalInterest: remainingInterest
+            )
+        }
+        guard let totalInterest, totalInterest > 0, totalPeriods > 1 else {
             return nil
         }
         return InstallmentMath.impliedAnnualRate(

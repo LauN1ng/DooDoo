@@ -38,6 +38,8 @@ struct InstallmentEntryView: View {
 
     private enum Field: Hashable {
         case name, due, remaining, total, interest, last, rebate
+        /// 账单拆两栏时的那两格（M3-6）
+        case principal, interestPart
     }
 
     private var accentStyle: AccentStyle { settingsList.first?.accent ?? .ink }
@@ -212,27 +214,12 @@ struct InstallmentEntryView: View {
     /// 每期金额自动出来。卡片顺序就是核对顺序——从上往下读一遍，正好对上账单。
     private var mainCard: some View {
         card {
-            // 剩余应还 —— 账单上最大的那个字
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text("剩余应还")
-                    .font(.system(size: 12))
-                    .foregroundStyle(Palette.sub)
-                Spacer(minLength: 8)
-                Text("¥")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(Palette.faint)
-                TextField("0.00", text: $vm.remainingDueText)
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.trailing)
-                    .font(.system(size: 30, weight: .bold))
-                    .monospacedDigit()
-                    .foregroundStyle(Palette.ink)
-                    .focused($focus, equals: .due)
-                    .frame(maxWidth: 190)
+            if vm.splitsInterest {
+                splitDueFields
+            } else {
+                dueField
             }
-            Text("账单上「分期剩余应还」那一栏")
-                .font(.system(size: 10))
-                .foregroundStyle(Palette.faint)
+            splitToggle
 
             Divider().overlay(Palette.line)
 
@@ -321,6 +308,108 @@ struct InstallmentEntryView: View {
         }
     }
 
+    // MARK: - 剩余应还：一个合计 / 本金+利息两格
+
+    /// 账单只给一个含息合计时走这条（花呗、白条、信用卡分期都是）。
+    private var dueField: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text("剩余应还")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Palette.sub)
+                Spacer(minLength: 8)
+                Text("¥")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(Palette.faint)
+                TextField("0.00", text: $vm.remainingDueText)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .font(.system(size: 30, weight: .bold))
+                    .monospacedDigit()
+                    .foregroundStyle(Palette.ink)
+                    .focused($focus, equals: .due)
+                    .frame(maxWidth: 190)
+            }
+            Text("账单上「分期剩余应还」那一栏")
+                .font(.system(size: 10))
+                .foregroundStyle(Palette.faint)
+        }
+    }
+
+    /// 账单把「剩余待入账」拆成「本金 / 利息」两行时走这条（招行 e招贷）。
+    ///
+    /// 用户照抄两行，合计由 App 加出来并**当成最大的字显示**——那个数才是
+    /// 能用「每期 442.50 × 17 期」验算的东西。下面那行小字说明年化的利息
+    /// 就取这里，省得用户在次卡里再抄一遍同一个数。
+    private var splitDueFields: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            amountLine("本金", placeholder: "6670.93", text: $vm.principalText, field: .principal)
+            amountLine("利息", placeholder: "851.57", text: $vm.interestPartText, field: .interestPart)
+
+            Divider().overlay(Palette.line)
+
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("合计")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Palette.sub)
+                Spacer(minLength: 8)
+                Text(vm.remainingDue > 0 ? "¥\(MoneyMath.money(vm.remainingDue))" : "—")
+                    .font(.system(size: 26, weight: .bold))
+                    .monospacedDigit()
+                    .foregroundStyle(vm.remainingDue > 0 ? Palette.ink : Palette.faint)
+            }
+            Text("本金 + 利息。年化用的「含利息」取这里，不用再填一次")
+                .font(.system(size: 10))
+                .foregroundStyle(Palette.faint)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func amountLine(
+        _ title: String,
+        placeholder: String,
+        text: Binding<String>,
+        field: Field
+    ) -> some View {
+        HStack(spacing: 6) {
+            Text(title)
+                .font(.system(size: 13))
+                .foregroundStyle(Palette.sub)
+            Spacer(minLength: 8)
+            Text("¥")
+                .font(.system(size: 13))
+                .foregroundStyle(Palette.faint)
+            TextField(placeholder, text: text)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .font(.system(size: 17, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(Palette.ink)
+                .focused($focus, equals: field)
+                .frame(maxWidth: 170)
+        }
+    }
+
+    /// 开关：账单是否把剩余应还拆成本金和利息两行。
+    ///
+    /// 默认关——大多数账单（花呗/白条）只有一个含息合计，多一个开关就多一次判断。
+    /// 打开后也不新增字段、不改模型：合计仍是「一个含息的剩余应还」，
+    /// 逐期本金/利息不入库（钱只看现金流，拆本息是账单内部的事）。
+    private var splitToggle: some View {
+        Toggle(isOn: $vm.splitsInterest) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text("账单把利息单列了")
+                    .font(.system(size: 12.5))
+                    .foregroundStyle(Palette.ink2)
+                Text(vm.splitsInterest ? "填「本金 + 利息」，合计自动算" : "只有一个合计，直接填上面")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Palette.faint)
+            }
+        }
+        .toggleStyle(.switch)
+        .tint(accent)
+    }
+
     /// 每期金额的来历。写在数字下面一行小字，是为了让用户能**自己验算**。
     ///
     /// 措辞的三条约束，都是被账单打出来的：
@@ -403,27 +492,33 @@ struct InstallmentEntryView: View {
 
             Divider().overlay(Palette.line)
 
-            // 含利息 —— 年化的唯一输入
-            HStack(spacing: 6) {
-                Text("含利息")
-                    .font(.system(size: 13))
-                    .foregroundStyle(Palette.sub)
-                Spacer(minLength: 6)
-                Text("¥")
-                    .font(.system(size: 12))
+            // 含利息 —— 年化的唯一输入。拆两栏时它已经在上面的「利息」格里，不重复问
+            if vm.splitsInterest {
+                Text("「含利息」取上面那格利息，年化会自动算")
+                    .font(.system(size: 10))
                     .foregroundStyle(Palette.faint)
-                TextField("176.99", text: $vm.interestText)
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.trailing)
-                    .font(.system(size: 15, weight: .medium))
-                    .monospacedDigit()
-                    .foregroundStyle(Palette.ink)
-                    .focused($focus, equals: .interest)
-                    .frame(maxWidth: 120)
+            } else {
+                HStack(spacing: 6) {
+                    Text("含利息")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Palette.sub)
+                    Spacer(minLength: 6)
+                    Text("¥")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Palette.faint)
+                    TextField("176.99", text: $vm.interestText)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .font(.system(size: 15, weight: .medium))
+                        .monospacedDigit()
+                        .foregroundStyle(Palette.ink)
+                        .focused($focus, equals: .interest)
+                        .frame(maxWidth: 120)
+                }
+                Text("账单上「含利息」那一栏，不是每期利息×期数")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Palette.faint)
             }
-            Text("账单上「含利息」那一栏，不是每期利息×期数")
-                .font(.system(size: 10))
-                .foregroundStyle(Palette.faint)
 
             Divider().overlay(Palette.line)
 
@@ -558,7 +653,7 @@ struct InstallmentEntryView: View {
             }
 
             HStack(spacing: 6) {
-                Text("真实年化（整笔）")
+                Text(vm.splitsInterest ? "真实年化（剩余）" : "真实年化（整笔）")
                     .font(.system(size: 11.5))
                     .foregroundStyle(Palette.sub)
                 Spacer(minLength: 8)

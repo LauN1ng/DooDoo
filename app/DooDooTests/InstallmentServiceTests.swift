@@ -235,7 +235,70 @@ struct InstallmentServiceTests {
         #expect(legacy.remainingDue == dec("1830.15"))
     }
 
+    // MARK: - 账单拆「本金 + 利息」两栏（M3-6）
+
+    /// 招行 e招贷：账单给「本金 6,670.93 / 利息 851.57」两行，App 只要含息合计。
+    /// 用户 2026-11-12 的原话是「本金和利息分开的，我得自己去 App 外算再输入」。
+    ///
+    /// 年化必须走**剩余口径**（剩余应还 − 剩余利息 = 剩余本金 6,670.93，配 17 期）；
+    /// 拿剩余利息套整笔公式（24 期）会报成 8.2%——本金按 6,670.93 却折 24 期，分子分母对不上。
+    @Test("拆两栏：本金 + 利息 合成合计，年化 16.43%，剩余利息不进整笔字段")
+    func splitInterestFields() throws {
+        let context = try makeContext()
+        context.insert(Account(name: "招行 e招贷", kind: .loan))
+        try context.save()
+
+        let vm = InstallmentEntryViewModel()
+        vm.load(context: context)
+        vm.splitsInterest = true
+        vm.principalText = "6670.93"
+        vm.interestPartText = "851.57"
+        vm.remainingText = "17"
+        vm.totalText = "24"
+
+        // 合计 = 17 × 442.50，用户拿账单上的月供乘回去就能核对
+        #expect(vm.remainingDue == dec("7522.50"))
+        #expect(vm.perPeriodAmount == dec("442.50"))
+        #expect(vm.previewRemainingTotal == dec("7522.50"))
+        #expect(vm.resolvedInterest == dec("851.57"))
+        #expect(vm.canSave)
+
+        let rate = try #require(vm.previewAnnualRate)
+        #expect(abs(NSDecimalNumber(decimal: rate).doubleValue - 16.43) <= 0.05)
+
+        #expect(vm.save(in: context))
+        let plan = try #require(try context.fetch(FetchDescriptor<Installment>()).first)
+        #expect(plan.remainingDue == dec("7522.50"))
+        #expect(plan.remainingInterest == dec("851.57"))
+        // 剩余利息不塞进整笔字段，否则落库后的年化会自己变成 8.2%
+        #expect(plan.totalInterest == nil)
+
+        // 存下来的计划自己也能算出同一个年化（模型层走剩余口径）
+        let saved = try #require(plan.estimatedAnnualRate)
+        #expect(abs(NSDecimalNumber(decimal: saved).doubleValue - 16.43) <= 0.05)
+    }
+
+    @Test("拆两栏：本金没填时拦下来，提示指向「本金」而不是笼统的剩余应还")
+    func splitInterestRequiresPrincipal() throws {
+        let context = try makeContext()
+        context.insert(Account(name: "招行 e招贷", kind: .loan))
+        try context.save()
+
+        let vm = InstallmentEntryViewModel()
+        vm.load(context: context)
+        vm.splitsInterest = true
+        vm.interestPartText = "851.57"
+        vm.remainingText = "17"
+        #expect(vm.validationMessage == "填一下账单上的「本金」")
+
+        vm.principalText = "6670.93"
+        vm.interestPartText = "-1"
+        #expect(vm.validationMessage == "利息不能是负数")
+        #expect(vm.save(in: context) == false)
+    }
+
     // MARK: - 连录
+
 
     @Test("快速连录：录完只清这笔独有字段，账户与还款日留到下一笔")
     func viewModelKeepsAccountForNextEntry() throws {

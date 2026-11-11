@@ -43,6 +43,29 @@ enum InstallmentIntake {
         return Periods(total: total, paid: total - remaining)
     }
 
+    // MARK: - 账单把「本金 + 利息」拆两行
+
+    /// 账单把剩余待还拆成「本金 / 利息」两行时，合成一个**含息的剩余应还**。
+    ///
+    /// 招行 e招贷 的账单页就是这么给的：`剩余待入账金额` 下面分
+    /// `本金 6,670.93` + `利息 851.57`，而真实每期扣款是
+    /// `442.50 × 17 = 7,522.50`——正好是两行之和。App 只需要一个数，
+    /// 以前这一加得用户在 App 外自己算，抄错一行就少算 851.57。
+    ///
+    /// **合的是现金流，不是本息拆分。** 合出来的 7,522.50 当作「我要还多少」记账，
+    /// 逐期本金/利息不入库（PRD 9.5 口径：欠款按含息总额记）。
+    ///
+    /// 边界：
+    /// - `principal` 为空或 ≤ 0 → `nil`（校验层该拦，不产出 0 元应还）
+    /// - `interest` 为空 → 视为 0（零息分期确实存在）
+    /// - `interest < 0` → `nil`（负数没有意义，不静默取绝对值）
+    static func includedTotal(principal: Decimal?, interest: Decimal?) -> Decimal? {
+        guard let principal, principal > 0 else { return nil }
+        let extra = interest ?? 0
+        guard extra >= 0 else { return nil }
+        return principal + extra
+    }
+
     // MARK: - 批量进度
 
     /// 还差几笔。已录超过目标时按 0（不要显示「还差 −3 笔」）。
