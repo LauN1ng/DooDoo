@@ -19,10 +19,18 @@ struct DayCardView: View {
         Calendar.current.dateComponents([.year, .month, .day, .weekday], from: day)
     }
 
+    /// 支出合计。仍按**全部流水**算（含手续费那条 `.expense`）：
+    /// 手续费只是不单独占一行，钱还是花掉了，计入口径不能变（PRD 9.8）。
     private var expenseTotal: Decimal {
         DayMath.expenseTotal(items.map {
             TxFigure(kind: $0.kind, amount: $0.amount, date: $0.date, fee: $0.fee)
         })
+    }
+
+    /// 显示行：转账与它的手续费合成一行（`Math/TxRollup.swift`）。
+    /// 头部数字与每行那枚「手续费 0.10」标签因此仍然对得上——#13 的可核对性没丢。
+    private var rows: [TxRollup<Transaction>] {
+        TxRollup.rows(items, kindOf: { $0.kind }, groupOf: { $0.groupID })
     }
 
     var body: some View {
@@ -125,10 +133,12 @@ struct DayCardView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
+            // 先算一次行合并，别在 ForEach 里反复走 O(n)。
+            let rows = self.rows
             ScrollView(.vertical, showsIndicators: false) {
                 LazyVStack(spacing: 0) {
-                    ForEach(items) { item in
-                        TxRowView(transaction: item)
+                    ForEach(rows.indices, id: \.self) { index in
+                        TxRowView(transaction: rows[index].primary, fees: rows[index].fees)
                     }
                 }
             }
