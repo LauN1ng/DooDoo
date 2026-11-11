@@ -282,17 +282,22 @@ struct InstallmentEntryView: View {
     }
 
     /// 平均每期的来历。写在数字下面一行小字，是为了让用户能**自己验算**：
-    /// 他拿「10.22 ÷ 2」能立刻对账单，看到「首期多 1 分」能解释那点零头。
+    /// 拿「10.22 ÷ 2」能立刻对账单。
     ///
-    /// 措辞上不说「每期」只说「平均每期」：平台给的是首期多、其余相同
-    /// （15.34 ÷ 3 → 5.12 / 5.11 / 5.11），各期并不相等。
+    /// 措辞的两条约束，都是被账单打出来的：
+    /// 1. 不说「每期」只说「平均每期」——平台给的是首期多、其余相同
+    ///    （15.34 ÷ 3 → 5.12 / 5.11 / 5.11），各期并不相等。
+    /// 2. 不说「末期收零头」也不说「首期收零头」这种像账本条文的词，只说
+    ///    「多出的 ¥x 并进首期」——**这是我们的摊法，不是账单的规则**。
+    ///    真实单期 = 本金均摊 + 该期利息，而利息不按期均分（496.65 分 6 期：
+    ///    3.38 / 3.36 × 4 / 0.83），所以多期账单的金额天生跟平均值不同。
     private var perPeriodNote: String {
-        guard vm.split != nil else {
+        guard let split = vm.split else {
             return "填上面两个数，自动算出来"
         }
         var note = "= ¥\(MoneyMath.money(vm.remainingDue)) ÷ \(vm.periods.remaining) 期均摊"
-        if let first = vm.firstPeriodAmount {
-            note += "，首期 ¥\(MoneyMath.money(first)) 收零头"
+        if split.firstPeriod != split.perPeriod {
+            note += "，多出的 ¥\(MoneyMath.money(split.firstPeriod - split.perPeriod)) 并进首期"
         }
         return note
     }
