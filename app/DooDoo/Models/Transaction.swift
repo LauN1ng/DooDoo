@@ -85,6 +85,17 @@ final class Transaction {
     /// 只有 `kind == .expense` 允许非 nil。
     var gradeRaw: String?
 
+    /// 这笔流水属于哪个分期计划（M3 新增）。指向 `Installment.key`，`nil` = 非分期。
+    ///
+    /// 用纯 `String` 而不是 `Installment` 关系，理由同下面的 `groupID`：
+    /// 给**已有**模型加字段时，老库迁移只认「可选」或「带默认值」，
+    /// 加一条可选关系同样过得了，但 String 更轻、也更容易在删除分期时留下审计痕迹
+    /// （分期删了、流水还在，只是 `installmentKey` 变成悬空引用，不影响余额统计）。
+    ///
+    /// 只有 `.repayment` 会带它——分期的本金早在消费那天就扣过了，
+    /// 每期还的是同一个账户的欠款，不是新的消费。
+    var installmentKey: String?
+
     var category: Category?
 
     /// 这一笔自己的 Fluent3D 图标（bundle 资源名，如 `"HotBeverage"`）。
@@ -121,6 +132,7 @@ final class Transaction {
         category: Category? = nil,
         iconName: String? = nil,
         grade: SpendGrade? = nil,
+        installmentKey: String? = nil,
         groupID: String? = nil,
         createdAt: Date = .now,
         deletedAt: Date? = nil
@@ -136,6 +148,7 @@ final class Transaction {
         self.category = category
         self.iconName = iconName
         self.gradeRaw = grade?.rawValue
+        self.installmentKey = installmentKey
         self.groupID = groupID
         self.createdAt = createdAt
         self.deletedAt = deletedAt

@@ -59,5 +59,5 @@ struct FlowView: View {
 
 #Preview {
     FlowView()
-        .modelContainer(for: [Account.self, Category.self, Transaction.self, AppSettings.self], inMemory: true)
+        .modelContainer(for: [Account.self, Category.self, Transaction.self, Installment.self, InstallmentPeriod.self, AppSettings.self], inMemory: true)
 }

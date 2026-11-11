@@ -1,13 +1,16 @@
 # Math · 纯函数
 
-> 状态：**M2b 已有 6 个文件**（`TransferMath` 于 M2b 加入），全工程 55 条单测覆盖。`DayMath`（分组/7 天窗口/合计，合计只看 `.expense`——手续费已是独立流水）、`MoneyMath`（格式化）、`NetWorth`（我有/我欠/净资产）、`AccountDelta`（环比，分母用上期值）、`NetWorthSeries`（5 区间回推走势）、`TransferMath`（手续费与还款后余额）。
+> 状态：**M3 开工，7 个文件**（`InstallmentMath` 于 M3 加入）。`DayMath`（分组/7 天窗口/合计，合计只看 `.expense`——手续费已是独立流水）、`MoneyMath`（格式化）、`NetWorth`（我有/我欠/净资产）、`AccountDelta`（环比，分母用上期值）、`NetWorthSeries`（5 区间回推走势）、`TransferMath`（手续费与还款后余额）、`InstallmentMath`（逐期展开与年化反算）。
 
 | 文件 | 里程碑 | 输入 → 输出 |
 |---|---|---|
 | `MoneyMath.swift` | M2 | 金额加减、分账、舍入（`NSDecimalRound`，显式指定规则） |
 | `TransferMath.swift` | M2b | 转出/到账 → 手续费（`max(0, 转出−到账)`）、双金额校验、还款后欠款与余额 |
-| `DebtPlanMath.swift` | M3 | 期数序列、首末期差额、余数落位（默认末期，可切首期） |
-| `AnnualRateSolver.swift` | M3 | 每期金额 + 期数 + 本金 → **反算年化（估算值，只展示）** |
+| `InstallmentMath.swift` | M3 | 剩余期数 + 下一期还款日 + 每期金额 → 逐期日期与金额序列；剩余总额；每期金额 + 期数 + 本金或总利息 → **反算年化（估算值，只展示）** |
+
+> 原计划拆成 `DebtPlanMath` + `AnnualRateSolver` 两个文件，实际合并成一个 `InstallmentMath`：
+> 展开和反算吃的是同一组输入（期数、每期金额、首末期金额、本金），拆开只会让两个文件互相 import，
+> 而 AGENTS 7.3 要的是「钱相关逻辑不夹在视图里」，不是「一个概念必须一个文件」。
 
 ## 硬规则
 

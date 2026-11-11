@@ -19,7 +19,7 @@ struct TransferReceiptTests {
     private func makeContext() throws -> ModelContext {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(
-            for: Account.self, Category.self, Transaction.self, AppSettings.self,
+            for: Account.self, Category.self, Transaction.self, Installment.self, InstallmentPeriod.self, AppSettings.self,
             configurations: config
         )
         return ModelContext(container)

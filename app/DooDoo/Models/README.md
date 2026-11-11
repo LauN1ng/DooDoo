@@ -1,6 +1,6 @@
 # Models · SwiftData 模型
 
-> 状态：**M2b**——四个模型 `AppSettings` / `Account` / `Category` / `Transaction`，外加两个非模型的类型文件：`BrandPalette`（卡面配色）、`SpendGrade`（评分四档枚举）。分期与账单等 M3 再加。
+> 状态：**M3**——六个模型 `AppSettings` / `Account` / `Category` / `Transaction` / `Installment` / `InstallmentPeriod`，外加两个非模型的类型文件：`BrandPalette`（卡面配色）、`SpendGrade`（评分四档枚举）。`BillStatement`（循环账单）M3 后半段再加。
 
 ## 三条踩过的坑
 
@@ -13,9 +13,10 @@
 |---|---|---|
 | `AppSettings` | M0 ✅ | 收支配色、逾期横幅开关 |
 | `Account` | M2 | 账户容器：名字 / 类型 / 额度 / 账单周期 / 还款日 / 当前余额 |
-| `Transaction` | M1 | 流水，软删除（`deletedAt`），金额一律 `Decimal`。M2b 加 `toAccount` / `receivedAmount` / `fee` / `groupID`——`groupID` 让转账与它自动生成的手续费流水绑定，删除时级联 |
-| `DebtPlan` | M3 | 分期计划：剩余期数 + 每期金额 + 首期还款日；利率是反算只读 |
-| `Installment` / `BillStatement` | M3 | 期数与账单期，用于「本月要还」口径 |
+| `Transaction` | M1 | 流水，软删除（`deletedAt`），金额一律 `Decimal`。M2b 加 `toAccount` / `receivedAmount` / `fee` / `groupID`——`groupID` 让转账与它自动生成的手续费流水绑定，删除时级联。M3 加 `installmentKey`，指向分期计划，只有 `.repayment` 会带 |
+| `Installment` | M3 ✅ | 分期计划。三个必填：剩余期数、每期金额、下一期还款日；**没有年化输入栏**，那是反算出来的展示值。本金 / 利息 / 减免拆三层（PRD 9.5.6），`totalRebate` 单独存 |
+| `InstallmentPeriod` | M3 ✅ | 未来每一期。历史期**不落库**，只存 `Installment.paidPeriods` 汇总（PRD 9.5.4）；逐期落库是为了支持手工改（`isManualOverride`，重新生成时跳过）与已还标记（`paidAt`，逾期判断靠它） |
+| `BillStatement` | M3 待建 | 循环账单：每月手录本期应还 |
 | `Category` | M1 | 一级 8 类支出 + 2 类收入，各带二级子类（共 51 个内置，每个一级/二级各配一枚 Fluent3D 图标）；`key`/`parentKey` 存层级，统计按一级 |
 
 ## 硬规则（`AGENTS.md` 7.1）

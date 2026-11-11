@@ -72,5 +72,5 @@ struct RootView: View {
 
 #Preview {
     RootView()
-        .modelContainer(for: [Account.self, Category.self, Transaction.self, AppSettings.self], inMemory: true)
+        .modelContainer(for: [Account.self, Category.self, Transaction.self, Installment.self, InstallmentPeriod.self, AppSettings.self], inMemory: true)
 }
