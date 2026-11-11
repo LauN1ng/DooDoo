@@ -11,26 +11,29 @@ import Foundation
 /// 只是把两条渲染成一行（金额列显示转出总额，手续费收成标题下的一枚小标签）。
 ///
 /// 为什么放在 `Math/` 而不是视图里：合并规则要能被单测钉住。
-/// 「手续费没被藏起来」「孤儿手续费没被吞掉」这两件事一旦错了，
+/// 「手续费被重复渲染」「孤儿手续费被吞掉」一旦发生，
 /// 用户拿列表核对余额时就会永远差一点钱（真机反馈 #13 的老症状）。
-struct TxRollup<Item> {
-    /// 主行。通常是一笔转账；没有手续费时也可能是任意一笔流水。
-    let primary: Item
+///
+/// 为什么外层是**不带泛型**的 `enum`、行类型是嵌套的 `Row<Item>`：
+/// 泛型类型上的静态方法必须在调用点显式写出泛型参数（`TxRollup<Item>.rows(...)`），
+/// 而 `extension` 里不带参数的 `TxRollup` 又会解析成 `Self`（即 `TxRollup<Item>`）。
+/// 两处坑都踩过一遍——CI run `42972534278` 与 `42973243155` 各炸一次。
+/// 让命名空间本身不带泛型、只有「行」带，这两个坑就不存在了。
+enum TxRollup {
+    /// 一行显示数据：主行 + 挂在它上面的手续费。
+    struct Row<Item> {
+        /// 主行。通常是一笔转账；没有手续费时也可能是任意一笔流水。
+        let primary: Item
 
-    /// 挂在这一行上的手续费流水（同 `groupID` 的 `.expense`）。无手续费时为空。
-    let fees: [Item]
+        /// 挂在这一行上的手续费流水（同 `groupID` 的 `.expense`）。无手续费时为空。
+        let fees: [Item]
 
-    init(primary: Item, fees: [Item] = []) {
-        self.primary = primary
-        self.fees = fees
+        init(primary: Item, fees: [Item] = []) {
+            self.primary = primary
+            self.fees = fees
+        }
     }
-}
 
-// 注意：extension 里写 `TxRollup(...)` 指的不是 `TxRollup<T>`，而是 `Self`
-// ——也就是带上同名泛型参数的 `TxRollup<Item>`。两者在这个方法里毫不相干，
-// 漏写 `<T>` 就会「cannot convert value of type 'TxRollup<Item>' to 'TxRollup<T>'」。
-// 下面四处构造全部显式写 `TxRollup<T>`，不要「顺手简化」掉。
-extension TxRollup {
     /// 把一批流水压成显示行，顺序跟随 `items` 里**主行**的位置（调用方已按时间倒序）。
     ///
     /// 规则：
@@ -44,14 +47,14 @@ extension TxRollup {
         _ items: [T],
         kindOf: (T) -> TransactionKind,
         groupOf: (T) -> String?
-    ) -> [TxRollup<T>] {
+    ) -> [Row<T>] {
         // 先认清哪些 groupID 里真有转账：只有这些组里的 `.expense` 才算「手续费」。
         var transferGroups: Set<String> = []
         for item in items where kindOf(item) == .transfer {
             if let group = groupOf(item) { transferGroups.insert(group) }
         }
         guard !transferGroups.isEmpty else {
-            return items.map { TxRollup<T>(primary: $0) }
+            return items.map { Row<T>(primary: $0) }
         }
 
         // 再按 groupID 收手续费，最后走一遍正文——这样主行顺序不会被打乱。
@@ -61,7 +64,7 @@ extension TxRollup {
             feesByGroup[group, default: []].append(item)
         }
 
-        var rows: [TxRollup<T>] = []
+        var rows: [Row<T>] = []
         rows.reserveCapacity(items.count)
         for item in items {
             let group = groupOf(item)
@@ -69,11 +72,11 @@ extension TxRollup {
             case .expense:
                 // 已挂到同组转账那一行，不再单独出行。
                 if let group, transferGroups.contains(group) { continue }
-                rows.append(TxRollup<T>(primary: item))
+                rows.append(Row<T>(primary: item))
             case .transfer:
-                rows.append(TxRollup<T>(primary: item, fees: group.flatMap { feesByGroup[$0] } ?? []))
+                rows.append(Row<T>(primary: item, fees: group.flatMap { feesByGroup[$0] } ?? []))
             case .income, .repayment, .adjustment:
-                rows.append(TxRollup<T>(primary: item))
+                rows.append(Row<T>(primary: item))
             }
         }
         return rows

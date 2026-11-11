@@ -29,7 +29,7 @@ struct DayCardView: View {
 
     /// 显示行：转账与它的手续费合成一行（`Math/TxRollup.swift`）。
     /// 头部数字与每行那枚「手续费 0.10」标签因此仍然对得上——#13 的可核对性没丢。
-    private var rows: [TxRollup<Transaction>] {
+    private var rows: [TxRollup.Row<Transaction>] {
         TxRollup.rows(items, kindOf: { $0.kind }, groupOf: { $0.groupID })
     }
 

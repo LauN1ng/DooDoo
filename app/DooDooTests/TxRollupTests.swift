@@ -14,7 +14,7 @@ struct TxRollupTests {
         let group: String?
     }
 
-    private func rows(_ items: [Fake]) -> [TxRollup<Fake>] {
+    private func rows(_ items: [Fake]) -> [TxRollup.Row<Fake>] {
         TxRollup.rows(items, kindOf: { $0.kind }, groupOf: { $0.group })
     }
 
