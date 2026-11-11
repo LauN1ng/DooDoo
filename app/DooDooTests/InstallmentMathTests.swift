@@ -61,6 +61,17 @@ struct InstallmentMathTests {
         #expect(approx(rate, 16.4, tolerance: 0.5))
     }
 
+    @Test("年化返回值是百分数，不是小数率")
+    func impliedRateUnitIsPercent() {
+        let rate = InstallmentMath.impliedAnnualRate(
+            periods: 24, perPeriodAmount: dec("442.52"), presentValue: dec("9000"))
+        #expect(rate != nil)
+        let double = NSDecimalNumber(decimal: rate!).doubleValue
+        // 16.43 而不是 0.1643。返回小数率会让展示层漏 ×100，显示成「0.2%」。
+        #expect(double > 1)
+        #expect(approx(rate, 16.43, tolerance: 0.5))
+    }
+
     @Test("免息分期年化就是 0，不是「算不出来」")
     func impliedRateZeroInterest() {
         // 中移金科 6,699 / 24 期 / 免息

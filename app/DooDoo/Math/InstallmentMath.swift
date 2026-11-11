@@ -84,7 +84,9 @@ enum InstallmentMath {
     ///
     ///     PV = A × (1 − (1 + r)^−n) / r
     ///
-    /// 再 × 12 得年化。
+    /// **返回值单位是百分数**：`16.43` 表示 16.43%，不是 0.1643。
+    /// 之所以不返回小数率：这个值唯一的用途就是拼进「年化 16.4%」这句话，
+    /// 返回小数会让每个调用点都得记得 ×100，漏一次就显示成「0.2%」。
     ///
     /// 优先用这个而不是从总利息倒推：账单上给了「剩余本金」就直接用，
     /// 比「每期 × 期数 − 总利息」准——后者在只剩部分期数时会把整笔的利息错摊到剩余期上。
@@ -99,7 +101,7 @@ enum InstallmentMath {
     /// - `periods <= 1` 或 `perPeriodAmount <= 0` → `nil`：一期就还完，年化没有意义
     /// - `presentValue <= 0` → `nil`，数据异常
     /// - `presentValue >= A × n` → **0**（现值不小于总还款额，即零息或负息）
-    /// - 根不在 (0, 1] 内 → `nil`
+    /// - 根不在 (0, 1] 内（月利率 > 100%，年化 > 1200%）→ `nil`
     static func impliedAnnualRate(
         periods: Int,
         perPeriodAmount: Decimal,
@@ -127,7 +129,8 @@ enum InstallmentMath {
             if f(mid) > 0 { low = mid } else { high = mid }
         }
 
-        var annual = Decimal(((low + high) / 2) * 12)
+        // 月利率 × 12 = 年化小数率，再 × 100 转百分数（见上方「返回值单位」）
+        var annual = Decimal(((low + high) / 2) * 12 * 100)
         var rounded = Decimal()
         // 保留 4 位小数：展示到小数点后 1 位（如 16.4%）时不会再被二次舍入带偏。
         NSDecimalRound(&rounded, &annual, 4, .plain)
@@ -138,6 +141,8 @@ enum InstallmentMath {
     ///
     /// 按 PRD 9.5.3 原文：「以「本金 = 每期金额 × 期数 − 总利息」为现值」。
     /// 账单上没给剩余本金、只给了「含利息 110.56」这类数字时走这条。
+    ///
+    /// 返回单位同 `presentValue` 版本：**百分数**，`15.01` 表示 15.01%。
     ///
     /// 边界：
     /// - `totalInterest <= 0` → **0**（免息分期，年化就是 0）
