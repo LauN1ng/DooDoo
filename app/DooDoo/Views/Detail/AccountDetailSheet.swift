@@ -14,9 +14,11 @@ struct AccountDetailSheet: View {
     let account: Account
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var context
     @Query private var allBills: [BillStatement]
     @Query private var allInstallments: [Installment]
     @Query private var allPeriods: [InstallmentPeriod]
+    @Query private var allAccounts: [Account]
 
     @State private var route: DetailRoute?
     @State private var editingAccount: Account?
@@ -24,6 +26,9 @@ struct AccountDetailSheet: View {
     @State private var txScope: TxScope = .month
     /// 走势图的区间，默认 1 年（规格第四节）。
     @State private var trendRange: NetWorthRange = .year
+    /// 本月还款：选扣款卡。
+    @State private var showingRepayPicker = false
+    @State private var repayError: String?
 
     var body: some View {
         NavigationStack {
@@ -72,6 +77,22 @@ struct AccountDetailSheet: View {
             }
             .sheet(item: $editingAccount) { account in
                 AccountEditor(account: account, defaultKind: account.kind)
+            }
+            .confirmationDialog("从哪里扣款？", isPresented: $showingRepayPicker, titleVisibility: .visible) {
+                ForEach(payerAccounts) { payer in
+                    Button(payer.name) { payCurrentMonth(from: payer) }
+                }
+                Button("取消", role: .cancel) {}
+            } message: {
+                Text("还 \(MoneyMath.money(repayAmount))：本月 \(repayablePeriods.count) 笔分期一起结清。")
+            }
+            .alert("记还款失败", isPresented: Binding(
+                get: { repayError != nil },
+                set: { if !$0 { repayError = nil } }
+            )) {
+                Button("知道了", role: .cancel) { repayError = nil }
+            } message: {
+                Text(repayError ?? "")
             }
         }
     }
@@ -296,6 +317,18 @@ struct AccountDetailSheet: View {
                     .font(.system(size: 14.5, weight: .semibold))
                     .monospacedDigit()
                     .foregroundStyle(Palette.ink)
+
+                // 还款是**卡片级**动作：一次还清本月到期的所有分期。
+                // 真实账单就是 11/25 还 368.70，不是一笔笔还。
+                if repayAmount > 0 {
+                    Button("还款") { showingRepayPicker = true }
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Palette.card)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Capsule().fill(Palette.ink))
+                        .buttonStyle(.plain)
+                }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 11)
@@ -310,6 +343,81 @@ struct AccountDetailSheet: View {
         guard let date = m.monthDueDate else { return "本月要还" }
         let parts = Calendar.current.dateComponents([.month, .day], from: date)
         return "本月要还 · \(parts.month ?? 0)/\(parts.day ?? 0) 到期"
+    }
+
+    // MARK: - 本月还款（卡片级）
+
+    /// 本月到期、还没还的期。还款就是把这批**一次**还掉。
+    private var repayablePeriods: [InstallmentPeriod] {
+        var result: [InstallmentPeriod] = []
+        for plan in installments {
+            for period in periods(of: plan) where period.paidAt == nil {
+                if DueMath.isDueInThisMonth(period.dueDate, today: .now) {
+                    result.append(period)
+                }
+            }
+        }
+        return result
+    }
+
+    /// 本月还没还的那期账单（有的话它才是还款对象，金额含分期）。
+    private var unpaidCurrentBill: BillStatement? {
+        bills.first { DueMath.isDueInThisMonth($0.dueDate, today: .now) && !$0.isPaid }
+    }
+
+    /// 这次还款要付多少钱：**账单优先**（账单里已经含了本月分期），没账单就用分期合计。
+    private var repayAmount: Decimal {
+        if let unpaidCurrentBill { return unpaidCurrentBill.dueAmount }
+        return repayablePeriods.reduce(Decimal.zero) { $0 + $1.amount }
+    }
+
+    /// 扣款来源只能是储蓄 / 现金——用信用卡还信用卡不是还款。
+    private var payerAccounts: [Account] {
+        allAccounts.filter { $0.kind == .savings || $0.kind == .cash }
+    }
+
+    /// 一次还清本月：写**一条**还款流水（不是每期一条），把本月到期的分期全标已还，
+    /// 有账单就把账单也结掉，最后重算各计划的剩余应还。
+    private func payCurrentMonth(from payer: Account) {
+        let targets = repayablePeriods
+        let bill = unpaidCurrentBill
+        let total = bill?.dueAmount ?? targets.reduce(Decimal.zero) { $0 + $1.amount }
+        guard total > 0 else { return }
+
+        do {
+            let tx = try LedgerService.insert(
+                amount: total,
+                kind: .repayment,
+                date: .now,
+                note: bill.map { "\($0.period) 期账单还款" } ?? "本月分期还款 \(targets.count) 笔",
+                account: payer,
+                toAccount: account,
+                in: context
+            )
+            // 账期标记：「本月已还」的判断与将来撤销都靠它。
+            tx.billPeriod = BillEntrySheet.periodText(for: .now)
+
+            if let bill {
+                bill.status = .paid
+                bill.paidAt = .now
+            }
+            for period in targets {
+                period.paidAt = .now
+            }
+
+            // 受影响的计划重算剩余应还，详情页顶部的「剩余」才跟得上。
+            let keys = Set(targets.map(\.installmentKey))
+            for plan in installments where keys.contains(plan.key) {
+                let unpaid = allPeriods
+                    .filter { $0.installmentKey == plan.key && $0.paidAt == nil }
+                    .reduce(Decimal.zero) { $0 + $1.amount }
+                plan.remainingDue = unpaid
+            }
+
+            try context.save()
+        } catch {
+            repayError = error.localizedDescription
+        }
     }
 
     // MARK: - 欠款走势（规格第四节）
@@ -541,7 +649,7 @@ struct AccountDetailSheet: View {
                     .trim(from: 0, to: progress(plan))
                     .stroke(Palette.ink, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
                     .rotationEffect(.degrees(-90))
-                Text("\(plan.paidPeriods)/\(plan.totalPeriods)")
+                Text("\(paidCount(plan))/\(plan.totalPeriods)")
                     .font(.system(size: 8.5, weight: .semibold))
                     .foregroundStyle(Palette.ink2)
             }
@@ -574,9 +682,19 @@ struct AccountDetailSheet: View {
         .contentShape(Rectangle())
     }
 
+    /// 已还期数 = 录入时填的**历史**期数 + 期表里标了已还的期数。
+    ///
+    /// 只读 `paidPeriods` 会永远停在录入那一刻（用户 2026-11-12 回传「进度条恒为 2/12」）——
+    /// 那个字段是照账单填的历史汇总，还款动作只写 `InstallmentPeriod.paidAt`，两边没人同步。
+    /// 不动 `paidPeriods`：`remainingPeriods` 还依赖它算「还剩几期」的账单口径。
+    private func paidCount(_ plan: Installment) -> Int {
+        let fromPeriods = periods(of: plan).filter { $0.paidAt != nil }.count
+        return min(plan.totalPeriods, plan.paidPeriods + fromPeriods)
+    }
+
     private func progress(_ plan: Installment) -> CGFloat {
         guard plan.totalPeriods > 0 else { return 0 }
-        let ratio = Double(plan.paidPeriods) / Double(plan.totalPeriods)
+        let ratio = Double(paidCount(plan)) / Double(plan.totalPeriods)
         return CGFloat(min(max(ratio, 0), 1))
     }
 
