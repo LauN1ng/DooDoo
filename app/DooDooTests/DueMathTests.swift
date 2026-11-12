@@ -161,7 +161,7 @@ struct DueMathTests {
     @Test("8 月逾期那笔不并进本月金额，但必须报出来")
     func overdueEntryDoesNotEnterAmount() {
         let entries = installmentEntries + [
-            DueEntry(amount: dec("512.80"), dueDate: date(2026, 8, 21)),
+            DueEntry(amount: dec("512.80"), dueDate: date(2026, 8, 22)),
         ]
 
         let due = DueMath.accountDue(installments: entries, today: today, calendar: calendar)
@@ -192,7 +192,7 @@ struct DueMathTests {
 
     @Test("本月没有应还、只有往期逾期时仍然产出，红字才有地方挂")
     func overdueOnlyStillProducesResult() throws {
-        let entries = [DueEntry(amount: dec("512.80"), dueDate: date(2026, 8, 21))]
+        let entries = [DueEntry(amount: dec("512.80"), dueDate: date(2026, 8, 22))]
 
         let due = DueMath.accountDue(installments: entries, today: today, calendar: calendar)
         let group = try #require(DueMath.group([due].compactMap { $0 }))
@@ -235,7 +235,7 @@ struct DueMathTests {
             calendar: calendar
         )
         let cardB = DueMath.accountDue(
-            installments: [DueEntry(amount: dec("200"), dueDate: date(2026, 8, 21))],
+            installments: [DueEntry(amount: dec("200"), dueDate: date(2026, 8, 22))],
             today: today,
             calendar: calendar
         )
@@ -264,7 +264,7 @@ struct DueMathTests {
     @Test("有逾期时不再说「最近」，逾期单独成段好标红")
     func lineTextReplacesNearestWithOverdue() throws {
         let entries = installmentEntries + [
-            DueEntry(amount: dec("512.80"), dueDate: date(2026, 8, 21)),
+            DueEntry(amount: dec("512.80"), dueDate: date(2026, 8, 22)),
         ]
         let due = DueMath.accountDue(installments: entries, today: today, calendar: calendar)
         let group = try #require(DueMath.group([due].compactMap { $0 }))
