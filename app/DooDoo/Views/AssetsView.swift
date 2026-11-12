@@ -84,6 +84,10 @@ struct AssetsView: View {
                     accounts: accounts(in: group),
                     isLiability: group.isLiability,
                     overdueDays: overdueDays,
+                    // 浮层每行的「欠款」与组头合计、顶部「我欠」同一口径（`CardDebt`）。
+                    // 之前这里显示 `currentBalance`，信用卡没记流水时永远是 0.00，
+                    // 与组头的派生合计对不上——同一个屏两个数。
+                    oweByAccount: oweByAccount,
                     onClose: { withAnimation(.easeOut(duration: 0.2)) { openGroup = nil } },
                     onSelect: { account in
                         // 负债卡点进详情页；储蓄/现金仍走编辑（规格第十一节 3：详情页只覆盖信用账户）。

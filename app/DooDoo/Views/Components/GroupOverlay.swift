@@ -11,6 +11,10 @@ struct GroupOverlay: View {
     /// 账户 → 逾期天数。有值的那个把「较上月」换成「逾期 N 天」——
     /// 「较上月」现在是写死的 `—`（环比还没做），拿它换真数据比多塞一列干净。
     var overdueDays: [PersistentIdentifier: Int] = [:]
+    /// 账户 → 欠多少（正数）。与资产页组头合计、顶部「我欠」同一个口径（`CardDebt`）。
+    /// **不能直接显示 `currentBalance`**：那是流水派生的，信用卡没记消费流水时永远是 0，
+    /// 而账单一期期都在那儿——同一个屏上两个数会互相打脸。
+    var oweByAccount: [PersistentIdentifier: Decimal] = [:]
     let onClose: () -> Void
     let onSelect: (Account) -> Void
 
@@ -74,6 +78,17 @@ struct GroupOverlay: View {
         .accessibilityLabel("关闭")
     }
 
+    /// 浮层里显示的「欠款」。负债卡走 `CardDebt` 派生值，取负号与 `currentBalance`
+    /// 的正负约定保持一致（欠款显示为 −x,xxx.xx）。
+    ///
+    /// 派生值为 0 时退回余额——那种情况说明这张卡既没账单也没分期，
+    /// 余额是多少就该显示多少（可能为正，多还了钱）。
+    private func displayedBalance(of account: Account) -> Decimal {
+        guard isLiability else { return account.currentBalance }
+        let owed = oweByAccount[account.persistentModelID] ?? 0
+        return owed > 0 ? -owed : account.currentBalance
+    }
+
     private func row(_ account: Account) -> some View {
         let overdue = overdueDays[account.persistentModelID]
 
@@ -86,7 +101,7 @@ struct GroupOverlay: View {
                 HStack(spacing: 8) {
                     field(
                         title: isLiability ? "欠款" : "余额",
-                        value: MoneyMath.money(account.currentBalance),
+                        value: MoneyMath.money(displayedBalance(of: account)),
                         tone: isLiability ? Palette.expense : Palette.ink
                     )
                     if let overdue {
