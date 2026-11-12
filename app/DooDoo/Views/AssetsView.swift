@@ -55,6 +55,7 @@ struct AssetsView: View {
     /// 分期计划与期表：信用组「本月要还」的唯一数据源（账单未建，见 PROGRESS 下一步 1）。
     @Query private var installments: [Installment]
     @Query private var periods: [InstallmentPeriod]
+    @Query private var settings: [AppSettings]
 
     @State private var openGroup: AssetGroup?
     @State private var range: NetWorthRange = .year
@@ -94,6 +95,7 @@ struct AssetsView: View {
         .onChange(of: periods.count) { refresh() }
         .onChange(of: periods.map(\.amount)) { refresh() }
         .onChange(of: installments.count) { refresh() }
+        .onChange(of: settings.map(\.overdueAlertEnabled)) { refresh() }
         .sheet(item: $editingAccount) { account in
             AccountEditor(account: account, defaultKind: account.kind)
         }
@@ -238,6 +240,14 @@ struct AssetsView: View {
 
         dueLine = DueMath.group(dues).map { DueMath.line($0) }
         overdueDays = days
+
+        // 「逾期标红」关掉时，红字与浮层天数一起收掉。
+        // 只关一半的话开关形同虚设（浮层还在标红），用户会认为开关坏了。
+        // 金额不受影响——开关管的是「提醒」，不是「口径」。
+        if settings.first?.overdueAlertEnabled == false {
+            dueLine = dueLine.map { DueLine(text: $0.text, overdueText: nil) }
+            overdueDays = [:]
+        }
     }
 }
 
