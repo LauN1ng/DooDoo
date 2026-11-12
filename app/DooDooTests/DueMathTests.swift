@@ -158,19 +158,50 @@ struct DueMathTests {
         #expect(due?.amount == dec("231.22"))
     }
 
-    @Test("8 月该还而没还的那笔不会因为到了 11 月就消失")
-    func overdueEntryStaysInWindow() {
+    @Test("8 月逾期那笔不并进本月金额，但必须报出来")
+    func overdueEntryDoesNotEnterAmount() {
         let entries = installmentEntries + [
             DueEntry(amount: dec("512.80"), dueDate: date(2026, 8, 21)),
         ]
 
         let due = DueMath.accountDue(installments: entries, today: today, calendar: calendar)
 
-        #expect(due?.amount == dec("1206.47"))
+        // 金额仍是本月到期的三期：逾期那笔属于 8 月账期（详情页规格 8.3）。
+        #expect(due?.amount == dec("693.67"))
+        #expect(due?.itemCount == 3)
+        #expect(due?.nearestDueDate == date(2026, 11, 14))
+        // 但不做横幅之后，红字是它唯一的可见位置——笔数与天数必须出来。
         #expect(due?.overdueCount == 1)
         #expect(due?.overdueDays == 82)
         #expect(due?.isOverdue == true)
-        #expect(due?.nearestDueDate == date(2026, 8, 21))
+    }
+
+    @Test("本月内已过还款日的那笔既算金额、也算逾期")
+    func overdueWithinThisMonthCountsInBoth() {
+        let entries = [
+            DueEntry(amount: dec("100"), dueDate: date(2026, 11, 5)),
+            DueEntry(amount: dec("200"), dueDate: date(2026, 11, 25)),
+        ]
+
+        let due = DueMath.accountDue(installments: entries, today: today, calendar: calendar)
+
+        #expect(due?.amount == dec("300.00"))
+        #expect(due?.overdueCount == 1)
+        #expect(due?.overdueDays == 7)
+    }
+
+    @Test("本月没有应还、只有往期逾期时仍然产出，红字才有地方挂")
+    func overdueOnlyStillProducesResult() throws {
+        let entries = [DueEntry(amount: dec("512.80"), dueDate: date(2026, 8, 21))]
+
+        let due = DueMath.accountDue(installments: entries, today: today, calendar: calendar)
+        let group = try #require(DueMath.group([due].compactMap { $0 }))
+        let line = DueMath.line(group, calendar: calendar)
+
+        #expect(due?.amount == 0)
+        #expect(due?.overdueCount == 1)
+        #expect(line.text == "本月没有应还")
+        #expect(line.overdueText == " · 逾期 1 笔 82 天")
     }
 
     @Test("还款日当天不算逾期，第二天才算")
@@ -196,7 +227,7 @@ struct DueMathTests {
         #expect(due?.overdueDays == 4)
     }
 
-    @Test("整组逾期天数取最久的那笔")
+    @Test("整组逾期天数取最久的那笔；往期逾期的金额不进合计")
     func groupOverdueDaysTakesMax() {
         let cardA = DueMath.accountDue(
             installments: [DueEntry(amount: dec("100"), dueDate: date(2026, 11, 1))],
@@ -213,7 +244,9 @@ struct DueMathTests {
 
         #expect(group?.overdueCount == 2)
         #expect(group?.overdueDays == 82)
-        #expect(group?.total == dec("300.00"))
+        // 卡B 的 200 属于 8 月账期，只进逾期笔数、不进金额。
+        #expect(group?.total == dec("100.00"))
+        #expect(group?.itemCount == 1)
     }
 
     // MARK: - 文案
@@ -237,7 +270,7 @@ struct DueMathTests {
         let group = try #require(DueMath.group([due].compactMap { $0 }))
         let line = DueMath.line(group, calendar: calendar)
 
-        #expect(line.text == "本月要还 1,206.47 · 4 笔")
+        #expect(line.text == "本月要还 693.67 · 3 笔")
         #expect(line.overdueText == " · 逾期 1 笔 82 天")
         #expect(line.text.contains("最近") == false)
     }

@@ -115,19 +115,26 @@ struct DueLine: Equatable, Sendable {
 /// 这个错误在账户详情页已经犯过一次（第八节），这里是同一口径在资产页的落地。
 /// 代码里把「相加」这条路**根本堵死**：`accountDue` 返回的是单值，不是两个数的容器。
 ///
-/// ## 窗口：本月及以前，不含未来月
+/// ## 逾期：不计入金额，但必须报出来
 ///
-/// 一条待还属于「本月要还」当且仅当 `dueDate < 下月 1 号`（且未还）。
-/// 这么定是因为逾期必须算进来——8 月该还而没还的钱，不会因为到了 11 月就消失；
-/// 如果按「本月 1 号 ≤ dueDate < 下月 1 号」卡死，逾期那笔会从界面上蒸发。
+/// 逾期那笔属于**上一个**账期（8 月该还的钱是 8 月的账单），把它并进本月金额会
+/// 和详情页规格 8.3 打架：两处都叫「本月要还」却是两个数（1,115.03 vs 1,627.83）。
+/// 所以金额窗口只取本月：`本月 1 号 ≤ dueDate < 下月 1 号`。
+///
+/// 但逾期**不能就这么消失**——2026-11-12 定了不做横幅，资产页上没有第二个地方
+/// 能看见它。于是逾期与金额**分开统计**：`overdueCount` / `overdueDays` 跨窗口全量算，
+/// 由明细行末尾那段红字报出，不参与 `amount`。本月内已过还款日的那一笔会同时
+/// 进 `amount` 和 `overdueCount`——它确实既属于本月账单、又已经过期，两者不矛盾。
 enum DueMath {
     // MARK: - 单卡
 
     /// 一张卡本月要还多少。
     ///
     /// - 有账单（`bill != nil` 且金额 > 0）：**只**返回账单金额，`installments` 一根手指都不碰。
-    /// - 没账单：返回本月及以前未还的分期期数之和。
-    /// - 两者皆空、或金额为 0：返回 `nil`，界面不占位（不显示「本月要还 0.00」）。
+    ///   账单就是本期账单，逾期与否只影响标红，不影响它算不算本月。
+    /// - 没账单：返回本月到期且未还的分期之和（不含往期逾期）。
+    /// - 本月无应还但**有逾期**：仍返回一个 `amount == 0` 的结果，让红字有地方挂。
+    /// - 什么都没有：`nil`，界面不占位。
     ///
     /// 边界：账单金额为 0 视为「没有账单」，退回分期——0 元的账单是无效输入，
     /// 让它挡住真实的分期金额会少显示一笔要还的钱。
@@ -149,28 +156,29 @@ enum DueMath {
             )
         }
 
-        let candidates = installments.filter { entry in
-            !entry.isPaid && isDueInWindow(entry.dueDate, today: today, calendar: calendar)
+        let unpaid = installments.filter { !$0.isPaid }
+        let dueThisMonth = unpaid.filter { isDueInThisMonth($0.dueDate, today: today, calendar: calendar) }
+        let overdueEntries = unpaid.filter {
+            isOverdue(dueDate: $0.dueDate, isPaid: false, today: today, calendar: calendar)
         }
-        guard !candidates.isEmpty else { return nil }
 
-        let total = candidates.reduce(Decimal.zero) { $0 + $1.amount }
-        guard total > 0 else { return nil }
+        // 本月没有应还、但有往期逾期时不能返回 nil：那笔钱仍然要还，而且不做横幅之后
+        // 明细行是它唯一的可见位置。
+        guard !dueThisMonth.isEmpty || !overdueEntries.isEmpty else { return nil }
+
+        let amount = dueThisMonth.reduce(Decimal.zero) { $0 + $1.amount }
 
         // 变量名不要跟静态方法 `overdueDays(dueDate:today:calendar:)` 撞车——
         // `let overdueDays = overdueDays(...)` 会解析到「自身初始化表达式里的自身」而报错。
-        let overdueEntries = candidates.filter {
-            isOverdue(dueDate: $0.dueDate, isPaid: $0.isPaid, today: today, calendar: calendar)
-        }
         let maxOverdueDays = overdueEntries
             .map { overdueDays(dueDate: $0.dueDate, today: today, calendar: calendar) }
             .max() ?? 0
 
         return AccountDue(
-            amount: total,
+            amount: amount,
             source: .installment,
-            itemCount: candidates.count,
-            nearestDueDate: candidates.map(\.dueDate).min(),
+            itemCount: dueThisMonth.count,
+            nearestDueDate: dueThisMonth.map(\.dueDate).min(),
             overdueCount: overdueEntries.count,
             overdueDays: maxOverdueDays
         )
@@ -180,18 +188,21 @@ enum DueMath {
 
     /// 整组合计。**输入就是每张卡唯一的那个 `AccountDue`**，所以这里只有一种加法。
     ///
-    /// 边界：空数组、或合计为 0 → `nil`（整组没人在本月要还，明细行不占位）。
+    /// 边界：空数组 → `nil`。合计为 0 **但有人逾期**时仍要返回——那种情况下
+    /// 明细行显示「本月没有应还」+ 红字逾期，比整行消失有用。
     static func group(_ dues: [AccountDue]) -> DueGroup? {
         guard !dues.isEmpty else { return nil }
+
         let total = dues.reduce(Decimal.zero) { $0 + $1.amount }
-        guard total > 0 else { return nil }
+        let overdueCount = dues.reduce(0) { $0 + $1.overdueCount }
+        guard total > 0 || overdueCount > 0 else { return nil }
 
         return DueGroup(
             total: total,
             accountCount: dues.count,
             itemCount: dues.reduce(0) { $0 + $1.itemCount },
             nearestDueDate: dues.compactMap(\.nearestDueDate).min(),
-            overdueCount: dues.reduce(0) { $0 + $1.overdueCount },
+            overdueCount: overdueCount,
             overdueDays: dues.map(\.overdueDays).max() ?? 0
         )
     }
@@ -203,11 +214,15 @@ enum DueMath {
     /// `text` 里**不含**逾期那段，逾期单独放在 `overdueText` 里由视图拼红字。
     /// 有逾期时 `text` 也不再说「最近」——最近那笔就是逾期那笔，
     /// 「最近 08/21」这种说法等于把问题藏进一个中性词里。
+    ///
+    /// 边界：本月没有应还、只有往期逾期 → `本月没有应还` + 红字，金额不写 0.00。
     static func line(_ due: DueGroup, calendar: Calendar = .current) -> DueLine {
-        var text = "本月要还 \(MoneyMath.money(due.total)) · \(due.itemCount) 笔"
+        var text = due.total > 0
+            ? "本月要还 \(MoneyMath.money(due.total)) · \(due.itemCount) 笔"
+            : "本月没有应还"
 
         guard due.isOverdue else {
-            if let nearest = due.nearestDueDate {
+            if let nearest = due.nearestDueDate, due.total > 0 {
                 text += " · 最近 \(monthDay(nearest, calendar: calendar))"
             }
             return DueLine(text: text, overdueText: nil)
@@ -221,17 +236,20 @@ enum DueMath {
 
     // MARK: - 日期规则
 
-    /// 是否落在「本月要还」的窗口：`dueDate < 下月 1 号 00:00`。
+    /// 是否属于**本月账期**：`本月 1 号 ≤ dueDate < 下月 1 号`。
     ///
-    /// 含逾期（早于本月），不含未来月。日历换算失败时退回「不晚于今天」，
-    /// 宁可漏掉月末那两天，也不要把未来一整年都算成「本月要还」。
-    static func isDueInWindow(_ dueDate: Date, today: Date, calendar: Calendar = .current) -> Bool {
+    /// 不含往期逾期——那笔属于上一个账期，并进本月会让这里和详情页规格 8.3 的数字打架。
+    /// 逾期另由 `isOverdue` 统计，只影响标红。
+    ///
+    /// 日历换算失败时退回「就是今天」，宁可少算，也不要把一整年都算成本月。
+    static func isDueInThisMonth(_ dueDate: Date, today: Date, calendar: Calendar = .current) -> Bool {
         guard let monthStart = calendar.dateInterval(of: .month, for: today)?.start,
               let nextMonthStart = calendar.date(byAdding: .month, value: 1, to: monthStart)
         else {
-            return calendar.startOfDay(for: dueDate) <= calendar.startOfDay(for: today)
+            return calendar.isDate(dueDate, inSameDayAs: today)
         }
-        return calendar.startOfDay(for: dueDate) < nextMonthStart
+        let day = calendar.startOfDay(for: dueDate)
+        return day >= monthStart && day < nextMonthStart
     }
 
     /// 逾期：过了还款日还没还。按**自然日**比较，还款日当天不算逾期（PRD 9.7）。
