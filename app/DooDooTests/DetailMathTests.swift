@@ -107,6 +107,37 @@ struct DetailMathTests {
         #expect(m.billDue == nil)
     }
 
+    @Test("没有账单时，本期消费用本月支出流水（真机回传「对不上」的那条）")
+    func noBillUsesMonthSpend() {
+        let m = DetailMath.metrics(
+            owe: dec("3400.25"),
+            bills: [],
+            periods: currentPeriods,
+            monthSpend: dec("56.00"),
+            today: today,
+            calendar: calendar
+        )
+
+        #expect(m.consumed == dec("56.00"))
+        #expect(m.billDue == nil)
+        // 本月要还仍退回分期，不受本期消费影响
+        #expect(m.monthDue == dec("449.67"))
+    }
+
+    @Test("没有账单也没有流水时，本期消费是 nil 而不是 0")
+    func noBillNoSpendIsNil() {
+        let m = DetailMath.metrics(
+            owe: 0,
+            bills: [],
+            periods: [],
+            monthSpend: 0,
+            today: today,
+            calendar: calendar
+        )
+
+        #expect(m.consumed == nil)
+    }
+
     @Test("账单比本月分期还小时，本期消费取 0，不显示负数")
     func negativeConsumedClampedToZero() {
         let smallBill = DebtBill(dueAmount: dec("300.00"), dueDate: date(2026, 11, 22), isPaid: false)

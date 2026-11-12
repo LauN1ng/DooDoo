@@ -18,10 +18,13 @@ struct DetailMetrics: Equatable, Sendable {
     /// 本月要还那笔的还款日。
     let monthDueDate: Date?
 
-    /// 单位：元。本期消费 = 本期账单 − 本月到期分期（规格 8.1 恒等式）。
+    /// 单位：元。本期消费。
     ///
-    /// 没有账单时为 `nil`，界面显示「—」而不是编一个 0——
-    /// 「本期消费 0.00」会被读成「这期没花钱」，是一种误导。
+    /// - **有本期账单**：账单 − 本月到期分期（规格 8.1 恒等式）。
+    /// - **没账单**：本月这张卡记下的支出流水合计（用户 2026-11-12 真机回传
+    ///   「本期消费对不上」——花呗有 56.00 流水，这一列却显示「—」）。
+    /// - 两者都没有：`nil`，界面显示「—」而不是编一个 0——
+    ///   「本期消费 0.00」会被读成「这期没花钱」，是一种误导。
     let consumed: Decimal?
 
     /// 逾期天数，取最久的那笔。0 = 没逾期。
@@ -37,10 +40,13 @@ enum DetailMath {
     ///   - owe: 该卡欠款（正数），由 `CardDebt` 在调用方算好。
     ///   - bills: 该卡全部账单（含已还的历史期）。
     ///   - periods: 该卡全部未结清分期的期。
+    /// - Parameters:
+    ///   - monthSpend: 本月这张卡的支出流水合计（没有账单时，「本期消费」用它）。
     static func metrics(
         owe: Decimal,
         bills: [DebtBill],
         periods: [DebtPeriod],
+        monthSpend: Decimal = 0,
         today: Date,
         calendar: Calendar = .current
     ) -> DetailMetrics {
@@ -68,11 +74,16 @@ enum DetailMath {
             ? nil
             : (currentBill?.dueDate ?? unpaidThisMonth.map(\.dueDate).min())
 
-        // 本期消费 = 账单 − 本月到期分期。账单比分期还小时视为数据异常，取 0，
-        // 绝不显示负数消费。
-        let consumed: Decimal? = currentBill.map { bill in
-            let rest = bill.dueAmount - monthInstallment
-            return rest > 0 ? rest : 0
+        // 本期消费：有账单走「账单 − 本月分期」（8.1）；没账单就用本月实际支出流水。
+        // 账单比分期还小时视为数据异常，取 0，绝不显示负数消费。
+        let consumed: Decimal?
+        if let currentBill {
+            let rest = currentBill.dueAmount - monthInstallment
+            consumed = rest > 0 ? rest : 0
+        } else if monthSpend > 0 {
+            consumed = monthSpend
+        } else {
+            consumed = nil
         }
 
         let overdueDays = bills

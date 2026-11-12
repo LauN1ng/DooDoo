@@ -22,6 +22,8 @@ struct AccountDetailSheet: View {
     @State private var editingAccount: Account?
     /// 流水区块的分段：本月 / 全部（规格第七节）。
     @State private var txScope: TxScope = .month
+    /// 走势图的区间，默认 1 年（规格第四节）。
+    @State private var trendRange: NetWorthRange = .year
 
     var body: some View {
         NavigationStack {
@@ -30,6 +32,7 @@ struct AccountDetailSheet: View {
                 VStack(alignment: .leading, spacing: 20) {
                     header(m)
                     metricsBlock(m)
+                    trendSection
                     pastBillsSection
                     installmentsSection
                     transactionsSection
@@ -113,6 +116,7 @@ struct AccountDetailSheet: View {
             owe: owe,
             bills: billSnapshots,
             periods: periodSnapshots,
+            monthSpend: monthSpend,
             today: .now
         )
     }
@@ -121,6 +125,19 @@ struct AccountDetailSheet: View {
         bills.map { bill in
             DebtBill(dueAmount: bill.dueAmount, dueDate: bill.dueDate, isPaid: bill.isPaid)
         }
+    }
+
+    /// 本月这张卡的支出流水合计。没有账单时「本期消费」用它——
+    /// 用户 2026-11-12 真机回传：花呗有 56.00 流水，这一列却显示「—」。
+    private var monthSpend: Decimal {
+        let calendar = Calendar.current
+        return account.transactions
+            .filter { tx in
+                tx.deletedAt == nil
+                    && tx.kind == .expense
+                    && calendar.isDate(tx.date, equalTo: Date.now, toGranularity: .month)
+            }
+            .reduce(Decimal.zero) { $0 + $1.amount }
     }
 
     private var cardPeriods: [DebtPeriod] {
@@ -293,6 +310,72 @@ struct AccountDetailSheet: View {
         guard let date = m.monthDueDate else { return "本月要还" }
         let parts = Calendar.current.dateComponents([.month, .day], from: date)
         return "本月要还 · \(parts.month ?? 0)/\(parts.day ?? 0) 到期"
+    }
+
+    // MARK: - 欠款走势（规格第四节）
+
+    /// 曲线用**流水**口径（规格原文：派生值，来自流水）。
+    /// 所以它的末点通常小于顶部那个欠款——差额是未记账单与分期，图注里已经写明。
+    private var trendPoints: [DebtTrendPoint] {
+        let entries: [LedgerPoint] = account.transactions
+            .filter { $0.deletedAt == nil }
+            .map { tx in
+                LedgerPoint(date: tx.date, delta: LedgerService.effect(of: tx))
+            }
+        let ledger = AccountLedger(
+            kind: account.kind,
+            initial: account.initialBalance,
+            entries: entries
+        )
+        return DebtTrend.points(ledger: ledger, at: NetWorthSeries.dates(for: trendRange))
+    }
+
+    private var trendSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Text("欠款走势")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Palette.ink)
+
+                Spacer(minLength: 8)
+
+                trendRangePicker
+            }
+
+            if trendPoints.isEmpty {
+                emptyRow("流水还不够画出一条线")
+            } else {
+                DebtTrendChart(points: trendPoints)
+            }
+
+            Text("按流水折算的月末欠款。分期与账单不在曲线上——顶部欠款 = 曲线末点 + 未记账单与分期。")
+                .font(.system(size: 10))
+                .foregroundStyle(Palette.faint)
+                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(2)
+        }
+    }
+
+    private var trendRangePicker: some View {
+        HStack(spacing: 2) {
+            ForEach(NetWorthRange.allCases) { range in
+                Button {
+                    trendRange = range
+                } label: {
+                    Text(range.title)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(trendRange == range ? Palette.ink : Palette.sub)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule().fill(trendRange == range ? Palette.pillOn : Color.clear)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(2)
+        .background(Capsule().fill(Palette.tabBed))
     }
 
     // MARK: - 往期账单
@@ -570,7 +653,7 @@ struct AccountDetailSheet: View {
                 )
             }
 
-            Text(txScope == .month ? "还款记录在「全部」里" : "按时间倒序")
+            Text("按时间倒序 · 还款不计入消费统计")
                 .font(.system(size: 9.5))
                 .foregroundStyle(Palette.faint)
         }
