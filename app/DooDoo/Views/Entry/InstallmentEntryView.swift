@@ -59,7 +59,13 @@ struct InstallmentEntryView: View {
             header
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
-                    accountStrip
+                    // 从某张卡的详情进来时账户已经定了，不再给横滑去改——
+                    // 用户 2026-11-12：「分期录入做到卡里面了，就不需要再选账户」。
+                    if let preferredAccount {
+                        lockedAccountRow(preferredAccount)
+                    } else {
+                        accountStrip
+                    }
                     mainCard
                     extraCard
                     advancedCard
@@ -173,6 +179,26 @@ struct InstallmentEntryView: View {
     }
 
     // MARK: - 账户
+
+    /// 锁定账户时替代横滑的那一条：让用户知道录到哪，但不给点。
+    private func lockedAccountRow(_ account: Account) -> some View {
+        HStack(spacing: 11) {
+            CardFace(account: account, size: .entryCompact)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("录到")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Palette.sub)
+                Text(account.name)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Palette.ink)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 2)
+    }
 
     private var accountStrip: some View {
         VStack(alignment: .leading, spacing: 6) {
