@@ -144,11 +144,7 @@ struct AssetsView: View {
                                 title: group.title,
                                 totalLabel: group.totalLabel,
                                 accounts: list,
-                                // 负债组用 `CardDebt` 派生的欠额（与顶部「我欠」同源、同口径），
-                                // 储蓄组仍用余额。参数约定「已带正负」，所以负债取负号。
-                                total: group.isLiability
-                                    ? -(list.reduce(Decimal.zero) { $0 + (oweByAccount[$1.persistentModelID] ?? 0) })
-                                    : list.reduce(Decimal.zero) { $0 + $1.currentBalance },
+                                total: groupTotal(group, accounts: list),
                                 isLiability: group.isLiability,
                                 // 只有信用组有「本月要还」；储蓄/借款没有还款日这个概念。
                                 detail: group == .credit ? dueLine : nil,
@@ -193,6 +189,18 @@ struct AssetsView: View {
         accounts.filter { group.matches($0.kind) }
     }
 
+    /// 组头那个合计。负债组用 `CardDebt` 派生的欠额（与顶部「我欠」同源、同口径），
+    /// 储蓄组仍用余额。`AccountGroupView.total` 约定「已带正负」，所以负债取负号。
+    private func groupTotal(_ group: AssetGroup, accounts list: [Account]) -> Decimal {
+        guard group.isLiability else {
+            return list.reduce(Decimal.zero) { $0 + $1.currentBalance }
+        }
+        let owed = list.reduce(Decimal.zero) { sum, account in
+            sum + (oweByAccount[account.persistentModelID] ?? 0)
+        }
+        return -owed
+    }
+
     private func open(_ group: AssetGroup) {
         withAnimation(.easeOut(duration: 0.22)) { openGroup = group }
     }
@@ -210,18 +218,12 @@ struct AssetsView: View {
         // 两边取 max，**绝不相加**（相加会把同一笔债算两遍）。口径在 `CardDebt`。
         var oweMap: [PersistentIdentifier: Decimal] = [:]
         for account in accounts where account.kind.isLiability {
-            let owing = CardDebt.owe(
-                CardDebtInput(
-                    balance: account.currentBalance,
-                    bills: (billsByAccount[account.persistentModelID] ?? []).map {
-                        DebtBill(dueAmount: $0.dueAmount, dueDate: $0.dueDate, isPaid: $0.isPaid)
-                    },
-                    periods: (periodsByAccount[account.persistentModelID] ?? [])
-                        .filter { $0.paidAt == nil }
-                        .map { DebtPeriod(amount: $0.amount, dueDate: $0.dueDate, isPaid: false) }
-                )
+            let input = debtInput(
+                for: account,
+                bills: billsByAccount[account.persistentModelID] ?? [],
+                periods: periodsByAccount[account.persistentModelID] ?? []
             )
-            oweMap[account.persistentModelID] = owing
+            oweMap[account.persistentModelID] = CardDebt.owe(input)
         }
         oweByAccount = oweMap
         owe = oweMap.values.reduce(Decimal.zero, +)
@@ -238,6 +240,28 @@ struct AssetsView: View {
         series = NetWorthSeries.points(ledgers, at: NetWorthSeries.dates(for: range))
 
         refreshDue(periodsByAccount: periodsByAccount, billsByAccount: billsByAccount)
+    }
+
+    /// 单卡的欠款输入。拆成独立函数是为了让类型推断有落脚点——
+    /// 写在 `refresh()` 的闭包里编译器会报 "unable to type-check in reasonable time"。
+    private func debtInput(
+        for account: Account,
+        bills: [BillStatement],
+        periods: [InstallmentPeriod]
+    ) -> CardDebtInput {
+        let billSnapshots: [DebtBill] = bills.map { bill in
+            DebtBill(dueAmount: bill.dueAmount, dueDate: bill.dueDate, isPaid: bill.isPaid)
+        }
+        let periodSnapshots: [DebtPeriod] = periods
+            .filter { $0.paidAt == nil }
+            .map { period in
+                DebtPeriod(amount: period.amount, dueDate: period.dueDate, isPaid: false)
+            }
+        return CardDebtInput(
+            balance: account.currentBalance,
+            bills: billSnapshots,
+            periods: periodSnapshots
+        )
     }
 
     /// 期表只记 `installmentKey`，先把它折回账户，再按账户分组。

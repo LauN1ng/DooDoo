@@ -1,6 +1,6 @@
 # Math · 纯函数
 
-> 状态：**10 个文件**（`InstallmentMath` / `InstallmentIntake` 于 M3 加入，`TxRollup` 于 11-11、`DueMath` 于 11-12 加入）。`DayMath`（分组/7 天窗口/合计，合计只看 `.expense`——手续费已是独立流水）、`MoneyMath`（格式化）、`NetWorth`（我有/我欠/净资产）、`AccountDelta`（环比，分母用上期值）、`NetWorthSeries`（5 区间回推走势）、`TransferMath`（手续费与还款后余额）、`InstallmentMath`（总额均摊、逐期展开与年化反算，年化只有整笔口径）、`InstallmentIntake`（存量录入的期数换算、批量进度、按账单日推还款日）、`TxRollup`（转账 + 手续费合并成一行）、`DueMath`（本月要还：每卡只出一个 `dueAmount`，账单优先、绝不相加）。
+> 状态：**12 个文件**（`InstallmentMath` / `InstallmentIntake` 于 M3 加入，`TxRollup` 于 11-11，`DueMath` 于 11-12，`CardDebt` / `DetailMath` 于 M3-8）。`DayMath`（分组/7 天窗口/合计，合计只看 `.expense`——手续费已是独立流水）、`MoneyMath`（格式化）、`NetWorth`（我有/我欠/净资产）、`AccountDelta`（环比，分母用上期值）、`NetWorthSeries`（5 区间回推走势）、`TransferMath`（手续费与还款后余额）、`InstallmentMath`（总额均摊、逐期展开与年化反算，年化只有整笔口径）、`InstallmentIntake`（存量录入的期数换算、批量进度、按账单日推还款日）、`TxRollup`（转账 + 手续费合并成一行）、`DueMath`（本月要还：每卡只出一个 `dueAmount`，账单优先、绝不相加）、`CardDebt`（我欠：每卡取 max(余额欠额, 账单 + 未被账单覆盖的分期)，**取 max 不相加**）、`DetailMath`（卡详情三列：本期消费 = 账单 − 本月分期；本月要还直接取账单）。
 
 | 文件 | 里程碑 | 输入 → 输出 |
 |---|---|---|
@@ -10,6 +10,8 @@
 | `InstallmentIntake.swift` | M3-2 | 存量录入：剩余期数（+ 可选总期数）→ `totalPeriods`/`paidPeriods`；目标/已录 → 还差几笔；账户还款日 → 下一个还款日（31 号落 2 月取当月最后一天） |
 | `TxRollup.swift` | 11-11 | 一批流水 → 显示行：同 `groupID` 的转账与手续费合并成一行；孤儿手续费原样保留（不吞真实扣款） |
 | `DueMath.swift` | 11-12 | 待还条目 + （可选）本期账单 → **每张卡一个** `AccountDue`（账单优先，无账单才取分期，**绝不相加**）；多卡 → `DueGroup`（Σ 各卡）；→ 资产页 2.4 那行文案。窗口 = `dueDate < 下月 1 号`（含逾期），逾期按自然日 |
+| `CardDebt.swift` | M3-8 | 余额 + 账单 + 未还分期期 → 单卡欠款 = `max(余额欠额, 未还账单 + 账单覆盖日之后的分期)`。取 max 防「流水与分期同时记了同一笔债」重复；分期只算覆盖日之后，防本期分期被账单与分期各算一遍 |
+| `DetailMath.swift` | M3-8 | 卡详情的三列：本期消费 = 本期账单 − 本月到期分期（规格 8.4 的 665.36）；本月要还**直接读账单**（8.2 禁止由消费与分期反推）；往期账单列表排除本期与未来期 |
 
 > 原计划拆成 `DebtPlanMath` + `AnnualRateSolver` 两个文件，实际合并成一个 `InstallmentMath`：
 > 展开和反算吃的是同一组输入（期数、每期金额、首末期金额、本金），拆开只会让两个文件互相 import，
