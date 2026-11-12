@@ -101,16 +101,10 @@ struct AssetsView: View {
             try? SeedService.prepare(context: context)
             refresh()
         }
-        .onChange(of: range) { refresh() }
-        .onChange(of: accounts.count) { refresh() }
-        .onChange(of: accounts.map(\.currentBalance)) { refresh() }
-        .onChange(of: periods.count) { refresh() }
-        .onChange(of: periods.map(\.amount)) { refresh() }
-        .onChange(of: installments.count) { refresh() }
-        .onChange(of: bills.count) { refresh() }
-        .onChange(of: bills.map(\.dueAmount)) { refresh() }
-        .onChange(of: bills.map(\.statusRaw)) { refresh() }
-        .onChange(of: settings.map(\.overdueAlertEnabled)) { refresh() }
+        // 只挂一个 onChange：原来 10 条链式 onChange 加上 3 个 sheet 会把
+        // body 的类型检查压垮（CI run 57~59 一直报 102 行 unable to type-check）。
+        // 指纹覆盖账本、分期、账单、区间与开关，任何一项变了就重算。
+        .onChange(of: dataFingerprint) { refresh() }
         .sheet(item: $editingAccount) { account in
             AccountEditor(account: account, defaultKind: account.kind)
         }
@@ -203,6 +197,26 @@ struct AssetsView: View {
 
     private func open(_ group: AssetGroup) {
         withAnimation(.easeOut(duration: 0.22)) { openGroup = group }
+    }
+
+    /// 一次刷新所需数据的指纹。任何一项变化都意味着要重算。
+    ///
+    /// 用字符串而不是 `onChange` 逐条监听：链式 onChange 一多，`body` 的
+    /// 类型检查就会超时（CI run 57~59 一直挂在 `.task` 里的 `refresh()` 那一行）。
+    private var dataFingerprint: String {
+        let accountPart: [String] = accounts.map { account in
+            "\(account.persistentModelID):\(account.currentBalance)"
+        }
+        let periodPart: [String] = periods.map { period in
+            "\(period.index):\(period.amount):\(period.paidAt != nil)"
+        }
+        let billPart: [String] = bills.map { bill in
+            "\(bill.period):\(bill.dueAmount):\(bill.statusRaw)"
+        }
+        let planPart: [String] = installments.map { $0.key }
+        let tail: [String] = ["\(range)", "\(settings.first?.overdueAlertEnabled ?? true)"]
+        let all: [String] = accountPart + periodPart + billPart + planPart + tail
+        return all.joined(separator: ",")
     }
 
     /// 只在数据结构变化时算一次，结果留在 `@State`。
