@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>账户详情页 v1.0 · 候选三版</title>
+<style>
+  :root{
+    --ink:#1D1C1A; --ink2:#6B6862; --ink3:#9A968D; --ink4:#B0ACA3;
+    --bg:#F7F5F1; --card:#fff; --line:#EAE7E0;
+    --red:#C0392B; --green:#2E9E6B; --blue:#4C8DF6;
+  }
+  *{box-sizing:border-box;-webkit-font-smoothing:antialiased}
+  html,body{margin:0;height:100%;width:100%;overflow:hidden}
+  body{
+    background:#EFECE7;
+    font-family:-apple-system,"SF Pro Text","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    color:var(--ink);display:flex;flex-direction:column;align-items:center;
+  }
+  .bar{
+    width:100%;height:56px;flex:0 0 56px;display:flex;align-items:center;gap:14px;
+    padding:0 20px;border-bottom:1px solid #E2DFD9;background:#F4F1EC;z-index:10;
+  }
+  .brand{font-size:13px;font-weight:650;white-space:nowrap}
+  .chips{display:flex;gap:6px}
+  .chip{
+    border:1px solid #DEDAD2;background:#FBFAF7;color:#4A4741;
+    font:inherit;font-size:12px;padding:6px 12px;border-radius:999px;cursor:pointer;white-space:nowrap;
+  }
+  .chip.on{background:#1D1C1A;color:#fff;border-color:#1D1C1A}
+  .hint{margin-left:auto;font-size:11.5px;color:#8A867D;white-space:nowrap}
+
+  .stage{flex:1;min-width:0;position:relative;width:100%;overflow:hidden}
+  .device{position:absolute;left:50%;top:20px;margin-left:-195px;width:390px;height:844px}
+  .screen{
+    position:absolute;inset:0;overflow:hidden;border-radius:44px;background:var(--bg);
+    box-shadow:0 0 0 1px #DAD6CE,0 30px 70px rgba(0,0,0,.16);
+  }
+
+  .statusbar{height:52px;display:flex;align-items:flex-end;justify-content:space-between;
+    padding:0 26px 8px;font-size:13px;font-weight:600}
+  .batt{width:22px;height:11px;border-radius:3px;border:1px solid rgba(29,28,26,.35);position:relative}
+  .batt::after{content:"";position:absolute;left:1.5px;top:1.5px;bottom:1.5px;width:70%;background:var(--ink);border-radius:1.5px}
+
+  .dtbar{height:52px;flex:0 0 52px;display:flex;align-items:center;padding:0 6px 0 2px;gap:8px;
+    position:relative;z-index:3;background:var(--bg)}
+  .dtback{width:38px;height:38px;flex:0 0 38px;border:0;background:transparent;color:var(--ink);
+    font:inherit;font-size:19px;line-height:1;cursor:pointer;border-radius:50%;
+    display:flex;align-items:center;justify-content:center}
+  .dtbar .tt{font-size:13.5px;font-weight:650;letter-spacing:-.01em}
+  .dtbar .sub{font-size:10.5px;color:var(--ink3);margin-left:auto;margin-right:8px}
+  .dtmore{margin-left:auto;width:38px;height:38px;border:0;background:transparent;color:var(--ink3);
+    font:inherit;font-size:15px;cursor:pointer;border-radius:50%}
+
+  .pagewrap{position:absolute;left:0;right:0;top:52px;bottom:0;display:flex;flex-direction:column}
+  .dtscroll{position:relative;flex:1;min-height:0;overflow-y:auto;padding:0 16px 40px}
+  .dtscroll::-webkit-scrollbar{display:none}
+
+  .dtcard{width:224px;height:141px;border-radius:20px;margin:4px auto 0;position:relative;overflow:hidden;
+    display:flex;flex-direction:column;padding:16px 17px 0;
+    background:linear-gradient(135deg,#D4342B,#8C1410);
+    box-shadow:0 12px 28px -10px rgba(29,28,26,.50),inset 0 0 0 .5px rgba(255,255,255,.18)}
+  .dtcard .cn{font-size:15px;font-weight:650;color:#fff;letter-spacing:-.01em}
+  .dtcard .ct{font-size:10.5px;color:rgba(255,255,255,.76);margin-top:3px}
+  .dtcard .cb{margin-top:auto;display:flex;align-items:center;padding-bottom:15px}
+  .dtcard .cnum{font-size:11px;color:rgba(255,255,255,.86);letter-spacing:.1em;font-variant-numeric:tabular-nums}
+  .dtcard .cnet{margin-left:auto;font-size:8.5px;font-weight:700;letter-spacing:.1em;color:rgba(255,255,255,.70)}
+  .dtcard .cprog{position:absolute;left:17px;right:17px;bottom:7px;height:3px;border-radius:2px;background:rgba(255,255,255,.30)}
+  .dtcard .cprog i{display:block;height:100%;border-radius:2px;background:rgba(255,255,255,.95)}
+
+  .dtname{text-align:center;font-size:19px;font-weight:650;letter-spacing:-.025em;margin-top:18px}
+  .dtmeta{text-align:center;font-size:11px;color:var(--ink3);margin-top:6px}
+  .dtmeta.alarm{color:#A32D2D;font-weight:500}
+
+  .dtmets{display:flex;gap:10px;margin-top:18px}
+  .dtm{flex:1;min-width:0;text-align:center}
+  .dtm .k{font-size:10.5px;color:var(--ink3);letter-spacing:.05em}
+  .dtm .v{font-size:21px;font-weight:650;letter-spacing:-.03em;margin-top:5px;
+    font-variant-numeric:tabular-nums;white-space:nowrap}
+  .dtm .v.red{color:var(--red)}
+  .dtm .s{font-size:9.5px;color:var(--ink4);margin-top:4px;white-space:nowrap}
+  .dtmets.d3 .dtm .v{font-size:17px}
+
+  .duefoot{display:flex;align-items:center;justify-content:space-between;
+    background:#fff;border-radius:14px;padding:11px 14px;margin-top:10px;
+    box-shadow:0 1px 2px rgba(29,28,26,.03),0 6px 18px rgba(29,28,26,.045)}
+  .duefoot .a{font-size:11px;color:var(--ink3)}
+  .duefoot .b{font-size:14.5px;font-weight:650;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .duefoot .b em{font-style:normal;font-size:9.5px;color:var(--ink4);font-weight:500;margin-left:5px}
+
+  .capwrap{margin-top:15px;padding:0 3px}
+  .captrack{height:5px;border-radius:3px;background:#E9E4DA;overflow:hidden}
+  .captrack i{display:block;height:100%;border-radius:3px;background:var(--ink)}
+  .capline{display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+    margin-top:8px;font-size:10px;color:var(--ink3)}
+  .capline b{font-weight:650;color:var(--ink2);font-variant-numeric:tabular-nums;font-size:11px}
+
+  .splitrow{display:flex;align-items:center;gap:8px;padding:12px 0;border-bottom:1px solid #F5F2EC}
+  .splitrow:last-child{border-bottom:0}
+  .splitrow .sk{font-size:12px;letter-spacing:-.01em}
+  .splitrow .sk i{font-style:normal;font-size:9.5px;color:var(--ink4);margin-left:5px}
+  .splitrow .sv{margin-left:auto;font-size:13px;font-weight:650;font-variant-numeric:tabular-nums}
+  .splitrow .pgo{margin-left:2px}
+  .splitrow.total{border-top:1px solid #EFEBE3;border-bottom:0;margin-top:-1px;padding-top:13px}
+  .splitrow.total .sk{font-weight:650;color:var(--ink)}
+  .splitrow.total .sv{font-size:15px}
+
+  .dtchart{margin-top:16px}
+  .dtcap{font-size:10px;color:var(--ink4);line-height:1.6;margin-top:7px;padding:0 2px}
+  .ranges{display:flex;gap:4px;padding:0 0 2px}
+  .rg{flex:1;border:0;background:transparent;font:inherit;font-size:10.5px;color:var(--ink3);
+    padding:5px 0;border-radius:999px;cursor:pointer}
+  .rg.on{background:#F3F0EA;color:var(--ink);font-weight:600}
+  .dtfresh{text-align:center;font-size:10.5px;color:var(--ink3);margin:16px 0 2px}
+  .dtfresh b{color:var(--ink2);font-weight:600}
+
+  .dtsec{margin-top:20px}
+  .dtsech{display:flex;align-items:center;gap:7px;padding:0 2px 9px}
+  .dtsech .h{font-size:13px;font-weight:650;letter-spacing:-.01em}
+  .dtsech .c{font-size:10.5px;color:var(--ink3)}
+  .dtsech .go{margin-left:auto;border:0;background:transparent;color:var(--ink4);
+    font:inherit;font-size:13px;cursor:pointer;padding:2px 4px}
+  .dtbox{background:#fff;border-radius:16px;padding:4px 14px;
+    box-shadow:0 1px 2px rgba(29,28,26,.03),0 6px 18px rgba(29,28,26,.045)}
+
+  .limtop{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding-top:9px}
+  .limtop .a{font-size:13px;font-weight:650;font-variant-numeric:tabular-nums}
+  .limtop .b{font-size:10.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+  .limtrack{height:5px;border-radius:3px;background:#F1EDE6;margin:11px 0 9px;overflow:hidden}
+  .limtrack i{display:block;height:100%;border-radius:3px;background:var(--ink)}
+  .limhist{font-size:10px;color:var(--ink4);line-height:1.55;padding-bottom:11px}
+
+  .brow{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #F5F2EC;cursor:pointer}
+  .brow:last-child{border-bottom:0}
+  .bp{font-size:12.5px;font-weight:600;letter-spacing:-.01em}
+  .bs{font-size:9.5px;color:var(--ink3);margin-top:3px;font-variant-numeric:tabular-nums}
+  .ba{font-size:13px;font-weight:650;font-variant-numeric:tabular-nums;margin-left:auto;white-space:nowrap}
+  .bt{font-size:9.5px;padding:3px 7px;border-radius:99px;background:#F3F0EA;color:#5C594F;white-space:nowrap}
+  .bt.paid{color:#B0ACA3}
+  .bt.od{background:#FDECEC;color:#A32D2D;font-weight:600}
+
+  .inst{display:flex;align-items:center;gap:11px;padding:12px 2px;border-bottom:1px solid #F2EFE8;cursor:pointer}
+  .inst:last-child{border-bottom:0}
+  .ipi{width:46px;height:27px;flex:0 0 46px;border-radius:8px;background:#F3F0EA;
+    display:flex;align-items:center;justify-content:center;gap:1px;
+    font-size:10px;font-weight:650;color:var(--ink2);font-variant-numeric:tabular-nums}
+  .ipi span{font-weight:400;color:var(--ink4)}
+  .iname{flex:1;min-width:0;font-size:12.5px;letter-spacing:-.01em}
+  .isub{font-size:9.5px;color:var(--ink3);margin-top:3px;font-variant-numeric:tabular-nums}
+  .iamt{text-align:right;font-size:13px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .iamt .isub{text-align:right}
+
+  .seg2{display:inline-flex;margin-left:auto;background:#F1EEE7;border-radius:99px;padding:2px}
+  .seg2 button{border:0;background:transparent;font:inherit;font-size:10.5px;color:var(--ink3);
+    padding:4px 10px;border-radius:99px;cursor:pointer;line-height:1.3}
+  .seg2 button.on{background:#fff;color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(29,28,26,.13)}
+  .txsum{font-size:10px;color:var(--ink3);padding:0 2px 9px;font-variant-numeric:tabular-nums}
+  .txbox{padding:2px 14px 0}
+  .txr{display:flex;align-items:center;gap:9px;padding:11px 0;border-bottom:1px solid #F5F2EC}
+  .txr:last-child{border-bottom:0}
+  .txr .td{flex:0 0 38px;font-size:10px;color:var(--ink4);font-variant-numeric:tabular-nums}
+  .txr .tn{flex:1;min-width:0;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .txr .tc{font-size:9.5px;color:var(--ink4);margin-left:6px}
+  .txr .ta{font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .txr .ta.rep{color:var(--ink3);font-weight:500}
+  .txmon{font-size:10px;color:var(--ink4);padding:9px 0 3px;letter-spacing:.04em}
+  .txfoot{font-size:10px;color:var(--ink3);padding:11px 0 12px;line-height:1.6;border-top:1px solid #F2EFE8}
+  .txall{display:flex;align-items:center;justify-content:center;width:100%;padding:12px 0 13px;
+    border:0;background:transparent;font:inherit;font-size:11.5px;color:var(--ink3);cursor:pointer}
+
+  .dtbtn{display:block;width:100%;margin:22px 0 4px;padding:13px;border-radius:14px;
+    border:1px solid #E3DFD7;background:#fff;color:var(--ink);font:inherit;font-size:13px;
+    font-weight:600;cursor:pointer}
+
+  /* 分期详情页 */
+  .sumcard{background:#fff;border-radius:18px;padding:16px 15px 14px;margin-top:6px;
+    box-shadow:0 1px 2px rgba(29,28,26,.03),0 6px 18px rgba(29,28,26,.045)}
+  .sumcard .k{font-size:10.5px;color:var(--ink3);letter-spacing:.05em}
+  .sumcard .v{font-size:30px;font-weight:650;letter-spacing:-.035em;margin-top:6px;font-variant-numeric:tabular-nums}
+  .sumcard .m{font-size:10.5px;color:var(--ink3);margin-top:5px}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:15px;
+    padding-top:13px;border-top:1px solid #F2EFE8}
+  .g4{min-width:0}
+  .g4 .gk{font-size:9.5px;color:var(--ink4)}
+  .g4 .gv{font-size:12px;font-weight:650;margin-top:4px;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+  .prow{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid #F5F2EC;cursor:pointer}
+  .prow:last-child{border-bottom:0}
+  .prow.done{cursor:pointer;opacity:.62}
+  .pno{flex:0 0 62px;font-size:11px;color:var(--ink3);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .pno b{font-size:12.5px;color:var(--ink);font-weight:650}
+  .pd{flex:1;font-size:12px;font-variant-numeric:tabular-nums}
+  .pv{font-size:13px;font-weight:650;font-variant-numeric:tabular-nums}
+  .pgo{color:var(--ink4);font-size:12px;padding-left:2px}
+  .edit-flag{font-size:9px;color:#A32D2D;margin-left:5px;font-weight:500}
+
+  /* 底部弹层 */
+  .sheet-mask{position:absolute;inset:0;background:rgba(29,28,26,.28);z-index:60;
+    display:flex;align-items:flex-end;animation:fade .2s both}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .sheet{width:100%;background:#fff;border-radius:22px 22px 0 0;padding:16px 18px 30px;
+    animation:up .26s cubic-bezier(.32,.72,0,1) both}
+  @keyframes up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  .sh{h{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}}
+  .sh{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
+  .sh .t{font-size:15px;font-weight:650}
+  .sh .s{font-size:10.5px;color:var(--ink3)}
+  .shnote{font-size:10.5px;color:var(--ink3);line-height:1.6;margin:10px 0 16px}
+  .shinput{display:flex;align-items:center;gap:8px;background:#F7F5F1;border-radius:14px;
+    padding:12px 14px;margin-bottom:14px}
+  .shinput .cur{font-size:17px;color:var(--ink3)}
+  .shinput input{border:0;background:transparent;font:inherit;font-size:26px;font-weight:650;
+    letter-spacing:-.03em;width:100%;outline:none;font-variant-numeric:tabular-nums}
+  .shacts{display:flex;gap:10px}
+  .shacts button{flex:1;padding:13px;border-radius:14px;border:1px solid #E3DFD7;background:#fff;
+    font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
+  .shacts .primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .shprev{font-size:10.5px;color:var(--ink3);margin:-6px 2px 14px;line-height:1.6}
+  .shprev b{color:var(--ink);font-variant-numeric:tabular-nums}
+
+  @keyframes push{from{transform:translateX(100%)}to{transform:translateX(0)}}
+  .push{animation:push .32s cubic-bezier(.32,.72,0,1) both}
+</style>
+</head>
+<body>
+<div class="bar">
+  <div class="brand">账户详情页 v1.0 · 候选</div>
+  <div class="chips" id="vchips">
+    <button class="chip" data-v="D">D 本期 / 分期 并列</button>
+    <button class="chip" data-v="E">E 本月要还 + 拆解</button>
+    <button class="chip" data-v="F">F 额度并入指标</button>
+    <button class="chip" data-v="G">G 三列 + 额度条 + 合计</button>
+  </div>
+  <div class="chips" id="pchips">
+    <button class="chip" data-p="detail">详情</button>
+    <button class="chip" data-p="inst">分期详情</button>
+    <button class="chip" data-p="bills">账单列表</button>
+  </div>
+  <div class="hint" id="hint"></div>
+</div>
+<div class="stage"><div class="device"><div class="screen" id="screen"></div></div></div>
+
+<script>
+/* ===== 数据 =====
+   今天 2026-11-12。招行 8857：账单日 2 号 / 还款日 22 号。
+   分期与本期同一还款日 —— 分期到期额直接进当期账单，22 号一笔还清。
+   欠款 3,120.00，额度 4,600.00（8 月由 9,000 下调），可用 1,480.00，已用 68%
+   本期账单 1,115.03（11/22 到期）= 本期消费 665.36 + 本月到期分期 449.67
+   本月要还 = 1,115.03（不是 1,564.70 —— 分期已在账单里，不能再加一次）
+   逾期 512.80 = 2026-08 期，8/22 到期，82 天，按 PRD 9.12 不计入本月
+   （原稿逾期金额与本期消费同为 665.36，同数不同义，已换开）
+*/
+var ACC = {
+  n:'招商银行', tail:'8857', m:'信用卡',
+  debt:'3,120.00', limit:'4,600.00', limit0:'9,000.00', avail:'1,480.00', usedPct:68,
+  odAmt:'512.80', odDays:82, odPeriod:'2026-08 期',
+  billDue:'1,115.03', billDate:'11/22', billDays:10,
+  consDue:'665.36', instDue:'449.67', instCnt:3, instDate:'11/22',
+  monthDue:'1,115.03',
+  fresh:'昨天 22:58'
+};
+
+var BILLS = [
+  { p:'2026-11', amt:'1,115.03', due:'11/22 到期 · 剩 10 天', st:'待还', cls:'' },
+  { p:'2026-10', amt:'1,034.20', due:'10/22 已还', st:'已还', cls:'paid' },
+  { p:'2026-09', amt:'892.14',  due:'09/22 已还', st:'已还', cls:'paid' },
+  { p:'2026-08', amt:'512.80',  due:'08/22 到期 · 逾期 82 天', st:'逾期', cls:'od' }
+];
+
+var INST = [
+  { name:'手机分期', paid:13, tot:24, per:'128.00', left:'1,408.00', lft:11, next:'11/22' },
+  { name:'家电分期', paid:7,  tot:12, per:'216.67', left:'1,083.35', lft:5,  next:'11/22' },
+  { name:'眼镜分期', paid:3,  tot:6,  per:'105.00', left:'315.00',   lft:3,  next:'11/22' }
+];
+
+var TX = [
+  { d:'11/06', n:'瑞幸咖啡', c:'餐饮', a:'15.90' },
+  { d:'11/05', n:'美团外卖', c:'餐饮', a:'38.50' },
+  { d:'11/03', n:'手机分期', c:'分期', a:'128.00' },
+  { d:'11/03', n:'家电分期', c:'分期', a:'216.67' },
+  { d:'11/03', n:'眼镜分期', c:'分期', a:'105.00' },
+  { d:'10/28', n:'建行5044', c:'还款', a:'892.14', rep:true },
+  { d:'10/19', n:'京东', c:'购物', a:'156.80' },
+  { d:'10/14', n:'滴滴出行', c:'交通', a:'23.40' },
+  { d:'10/08', n:'盒马鲜生', c:'日用', a:'86.55' },
+  { d:'10/03', n:'手机分期', c:'分期', a:'128.00' },
+  { d:'09/28', n:'建行5044', c:'还款', a:'1,034.20', rep:true },
+  { d:'09/21', n:'淘宝', c:'购物', a:'238.00' }
+];
+
+/* 逐期表：第 14 期起待还，每月 22 日（与账单同一还款日）；前面 13 期已还，折叠 */
+function buildPeriods(){
+  var out = [], y = 2026, m = 11;
+  for (var i = 14; i <= 24; i++){
+    out.push({ no:i, d:(m < 10 ? '0' : '') + m + '/22', amt:'128.00' });
+    m++; if (m > 12){ m = 1; y++; }
+  }
+  return out;
+}
+var PERIODS = buildPeriods();
+
+var state = { v:'G', page:'detail', over:false, overNo:14, overVal:'128.00', txmode:'cur', more:10, fold:false, anim:false };
+
+/* 12 个月月末欠款余额。8 月账单漏还之后不再下降（红点是逾期起点） */
+function chartSVG(){
+  var series = [4120,3980,3860,3740,3610,3490,3350,3210,3120,3120,3120,3120];
+  var W = 358, H = 118, padX = 7, top = 15, bot = 15;
+  var maxV = Math.max.apply(null, series), minV = Math.min.apply(null, series);
+  var span = (maxV - minV) || 1;
+  var hi = maxV + span * 0.20, lo = minV - span * 0.12;
+  var y = function(v){ return top + (hi - v) / (hi - lo) * (H - top - bot); };
+  var n = series.length;
+  var pts = series.map(function(v, i){ return [padX + i / (n - 1) * (W - padX * 2), y(v)]; });
+  var cl = function(v){ return Math.max(top - 4, Math.min(H - bot + 4, v)); };
+  var d = 'M' + pts[0][0].toFixed(1) + ' ' + pts[0][1].toFixed(1);
+  for (var i = 0; i < pts.length - 1; i++){
+    var p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || pts[i + 1];
+    d += ' C' + (p1[0] + (p2[0] - p0[0]) * 0.28).toFixed(1) + ' ' + cl(p1[1] + (p2[1] - p0[1]) * 0.28).toFixed(1)
+       + ' ' + (p2[0] - (p3[0] - p1[0]) * 0.28).toFixed(1) + ' ' + cl(p2[1] - (p3[1] - p1[1]) * 0.28).toFixed(1)
+       + ' ' + p2[0].toFixed(1) + ' ' + p2[1].toFixed(1);
+  }
+  var area = d + ' L ' + pts[n - 1][0].toFixed(1) + ' ' + (H - bot + 3)
+           + ' L ' + pts[0][0].toFixed(1) + ' ' + (H - bot + 3) + ' Z';
+  var m = pts[8], last = pts[n - 1];
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="' + H + '" preserveAspectRatio="none">'
+    + '<defs><linearGradient id="gf" x1="0" y1="0" x2="0" y2="1">'
+    + '<stop offset="0" stop-color="#1D1C1A" stop-opacity=".085"/>'
+    + '<stop offset="1" stop-color="#1D1C1A" stop-opacity="0"/></linearGradient></defs>'
+    + '<path d="' + area + '" fill="url(#gf)"/>'
+    + '<path d="' + d + '" fill="none" stroke="#1D1C1A" stroke-width="1.8" stroke-linecap="round" vector-effect="non-scaling-stroke"/>'
+    + '<circle cx="' + m[0].toFixed(1) + '" cy="' + m[1].toFixed(1) + '" r="3.6" fill="#C0392B"/>'
+    + '<circle cx="' + last[0].toFixed(1) + '" cy="' + last[1].toFixed(1) + '" r="3.4" fill="#fff" stroke="#1D1C1A" stroke-width="1.8" vector-effect="non-scaling-stroke"/>'
+    + '</svg>';
+}
+
+/* 指标区：D = 本期/分期并列三列 + 合计条；E = 本月要还两列 + 下方拆解卡 */
+function metricsHTML(){
+  if (state.v === 'G'){
+    return '<div class="dtmets d3">'
+      + '<div class="dtm"><div class="k">欠款</div><div class="v red">' + ACC.debt + '</div>'
+      +   '<div class="s">额度 ' + ACC.limit + '</div></div>'
+      + '<div class="dtm"><div class="k">本期消费</div><div class="v">' + ACC.consDue + '</div>'
+      +   '<div class="s">不含分期</div></div>'
+      + '<div class="dtm"><div class="k">本月分期</div><div class="v">' + ACC.instDue + '</div>'
+      +   '<div class="s">' + ACC.instCnt + ' 笔 · 同一天还</div></div>'
+      + '</div>'
+      + '<div class="capwrap">'
+      +   '<div class="captrack"><i style="width:' + ACC.usedPct + '%"></i></div>'
+      +   '<div class="capline"><span>已用 ' + ACC.usedPct + '%</span>'
+      +     '<span>可用 <b>' + ACC.avail + '</b></span></div>'
+      + '</div>'
+      + '<div class="duefoot"><span class="a">本月要还 · ' + ACC.billDate + ' 一笔还清</span>'
+      +   '<span class="b">' + ACC.monthDue + '</span></div>';
+  }
+  if (state.v === 'F'){
+    return '<div class="dtmets">'
+      + '<div class="dtm"><div class="k">欠款</div><div class="v red">' + ACC.debt + '</div>'
+      +   '<div class="s">额度 ' + ACC.limit + '</div></div>'
+      + '<div class="dtm"><div class="k">本月要还</div><div class="v">' + ACC.monthDue + '</div>'
+      +   '<div class="s">' + ACC.billDate + ' 到期 · 剩 ' + ACC.billDays + ' 天</div></div>'
+      + '</div>'
+      + '<div class="capwrap">'
+      +   '<div class="captrack"><i style="width:' + ACC.usedPct + '%"></i></div>'
+      +   '<div class="capline"><span>已用 ' + ACC.usedPct + '% · 额度 ' + ACC.limit + '</span>'
+      +     '<span>可用 <b>' + ACC.avail + '</b></span></div>'
+      + '</div>';
+  }
+  if (state.v === 'E'){
+    return '<div class="dtmets">'
+      + '<div class="dtm"><div class="k">欠款</div><div class="v red">' + ACC.debt + '</div>'
+      +   '<div class="s">额度 ' + ACC.limit + '</div></div>'
+      + '<div class="dtm"><div class="k">本月要还</div><div class="v">' + ACC.monthDue + '</div>'
+      +   '<div class="s">' + ACC.billDate + ' 到期 · 剩 ' + ACC.billDays + ' 天</div></div>'
+      + '</div>';
+  }
+  return '<div class="dtmets d3">'
+    + '<div class="dtm"><div class="k">欠款</div><div class="v red">' + ACC.debt + '</div>'
+    +   '<div class="s">额度 ' + ACC.limit + '</div></div>'
+    + '<div class="dtm"><div class="k">本期消费</div><div class="v">' + ACC.consDue + '</div>'
+    +   '<div class="s">不含分期</div></div>'
+    + '<div class="dtm"><div class="k">本月分期</div><div class="v">' + ACC.instDue + '</div>'
+    +   '<div class="s">' + ACC.instCnt + ' 笔 · 同一天还</div></div>'
+    + '</div>'
+    + '<div class="duefoot"><span class="a">本月要还 · ' + ACC.billDate + ' 一笔还清</span>'
+    +   '<span class="b">' + ACC.monthDue + '</span></div>';
+}
+
+/* 详情页的账单区块只列往期：当期（BILLS[0]）已由顶部「本月要还」+ 三列回答，不再重复 */
+function billRows(){
+  return BILLS.slice(1).map(function(b){
+    return '<div class="brow" data-page="bills">'
+      + '<div><div class="bp">' + b.p + ' 期</div><div class="bs">' + b.due + '</div></div>'
+      + '<span class="ba">' + b.amt + '</span>'
+      + '<span class="bt ' + b.cls + '">' + b.st + '</span>'
+      + '</div>';
+  }).join('');
+}
+
+/* E 版的拆解卡：本期账单 = 消费 + 分期，合计即本月要还 */
+function splitHTML(){
+  return '<div class="dtbox">'
+    + '<div class="splitrow"><span class="sk">本期消费<i>不含分期</i></span>'
+    +   '<span class="sv">' + ACC.consDue + '</span></div>'
+    + '<div class="splitrow" data-page="inst"><span class="sk">本月分期<i>' + ACC.instCnt + ' 笔 · ' + ACC.instDate + ' 到期</i></span>'
+    +   '<span class="sv">' + ACC.instDue + '</span><span class="pgo">›</span></div>'
+    + '<div class="splitrow total"><span class="sk">本月要还<i>一笔还清</i></span>'
+    +   '<span class="sv">' + ACC.monthDue + '</span></div>'
+    + '</div>';
+}
+
+function instRows(){
+  return INST.map(function(x){
+    return '<div class="inst" data-inst="' + x.name + '">'
+      + '<div class="ipi"><b>' + x.paid + '</b><span>/' + x.tot + '</span></div>'
+      + '<div class="iname">' + x.name + '<div class="isub">每期 ' + x.per + ' · 剩 ' + x.lft + ' 期</div></div>'
+      + '<div class="iamt">' + x.left + '<div class="isub">' + x.next + ' 到期</div></div>'
+      + '</div>';
+  }).join('');
+}
+
+function txRows(){
+  var cur = TX.filter(function(t){ return t.d.indexOf('11/') === 0; });
+  var list = state.txmode === 'cur' ? cur : TX.slice(0, state.more);
+  var lastMon = '', h = '';
+  list.forEach(function(t){
+    var mon = t.d.split('/')[0];
+    if (state.txmode === 'all' && mon !== lastMon){
+      h += '<div class="txmon">' + parseInt(mon, 10) + ' 月</div>';
+      lastMon = mon;
+    }
+    h += '<div class="txr"><span class="td">' + t.d + '</span>'
+      + '<span class="tn">' + t.n + '<span class="tc">' + t.c + '</span></span>'
+      + '<span class="ta' + (t.rep ? ' rep' : '') + '">' + (t.rep ? '+' : '−') + t.a + '</span></div>';
+  });
+  return h;
+}
+
+function txFoot(){
+  if (state.txmode === 'cur'){
+    return '<div class="txfoot">11 月流水里分期 449.67，日常消费 54.40<br>还款记录在「全部」里</div>';
+  }
+  if (TX.length > state.more){
+    return '<button class="txall" data-more="1">显示更多</button>';
+  }
+  return '<div class="txfoot">已到最早一笔</div>';
+}
+
+function detailHTML(){
+  var curCount = TX.filter(function(t){ return t.d.indexOf('11/') === 0; }).length;
+  /* E/F 用「本月还款」拆解卡；其余版本当期已由顶部回答，区块列往期 */
+  var isSplit = (state.v === 'E' || state.v === 'F');
+  var odCnt = BILLS.filter(function(b){ return b.cls === 'od'; }).length;
+  var secTitle = isSplit ? '本月还款' : '往期账单';
+  var secSub = isSplit ? (ACC.billDate + ' 到期')
+                       : (BILLS.length - 1 + ' 期 · 含逾期 ' + odCnt + ' 期');
+  return '<div class="dtscroll">'
+    + '<div class="dtcard"><div class="cn">' + ACC.n + '</div><div class="ct">' + ACC.m + '</div>'
+    +   '<div class="cb"><span class="cnum">•••• ' + ACC.tail + '</span><span class="cnet">UNIONPAY</span></div>'
+    +   '<div class="cprog"><i style="width:' + ACC.usedPct + '%"></i></div></div>'
+    + '<div class="dtname">' + ACC.n + ' ' + ACC.tail + '</div>'
+    + '<div class="dtmeta alarm">逾期 ' + ACC.odDays + ' 天 · ' + ACC.odPeriod + ' ' + ACC.odAmt + ' 未还</div>'
+    + metricsHTML()
+    + '<div class="dtchart">' + chartSVG() + '</div>'
+    + '<div class="dtcap">' + (state.v === 'F' || state.v === 'G'
+        ? '每月还款后的欠款余额。红点是 8 月账单漏还，那笔一直挂着，其余照常还；同月额度由 '
+          + ACC.limit0 + ' 下调至 ' + ACC.limit + '。'
+        : '每月还款后的欠款余额。红点是 8 月账单漏还，那笔一直挂着，其余照常还。') + '</div>'
+    + '<div class="ranges" style="margin-top:10px">'
+    +   '<button class="rg">1周</button><button class="rg">1月</button><button class="rg">3月</button>'
+    +   '<button class="rg">今年</button><button class="rg on">1年</button></div>'
+    + '<div class="dtfresh">最后对账 <b>' + ACC.fresh + '</b></div>'
+
+    + (state.v === 'F' || state.v === 'G' ? '' :
+        '<div class="dtsec">'
+      +   '<div class="dtsech"><span class="h">额度</span><span class="c">已用 ' + ACC.usedPct + '%</span></div>'
+      +   '<div class="dtbox" style="padding:0 14px">'
+      +     '<div class="limtop"><span class="a">' + ACC.debt + ' / ' + ACC.limit + '</span>'
+      +       '<span class="b">可用 ' + ACC.avail + '</span></div>'
+      +     '<div class="limtrack"><i style="width:' + ACC.usedPct + '%"></i></div>'
+      +     '<div class="limhist">2026-08 由 ' + ACC.limit0 + ' 下调至 ' + ACC.limit + '</div>'
+      +   '</div></div>')
+
+    + '<div class="dtsec">'
+    +   '<div class="dtsech"><span class="h">' + secTitle + '</span>'
+    +     '<span class="c">' + secSub + '</span>'
+    +     '<button class="go" data-page="bills">›</button></div>'
+    +   (isSplit ? splitHTML() : '<div class="dtbox">' + billRows() + '</div>')
+    + '</div>'
+
+    + '<div class="dtsec">'
+    +   '<div class="dtsech"><span class="h">分期</span><span class="c">3 笔 · 剩余 2,806.35</span>'
+    +     '<button class="go" data-page="inst">›</button></div>'
+    +   '<div class="dtbox" style="padding:2px 14px">' + instRows() + '</div>'
+    + '</div>'
+
+    + '<div class="dtsec">'
+    +   '<div class="dtsech"><span class="h">流水</span>'
+    +     '<span class="seg2"><button data-tx="cur" class="' + (state.txmode === 'cur' ? 'on' : '') + '">本月</button>'
+    +     '<button data-tx="all" class="' + (state.txmode === 'all' ? 'on' : '') + '">全部</button></span></div>'
+    +   '<div class="txsum">' + (state.txmode === 'cur' ? curCount + ' 笔 · 合计 504.07' : '共 ' + TX.length + ' 笔') + '</div>'
+    +   '<div class="dtbox txbox">' + txRows() + txFoot() + '</div>'
+    + '</div>'
+
+    + '<button class="dtbtn">编辑账户</button>'
+    + '</div>';
+}
+
+function instHTML(){
+  var sel = INST[0];
+  return '<div class="dtscroll">'
+    + '<div class="sumcard">'
+    +   '<div class="k">剩余应还</div>'
+    +   '<div class="v">' + sel.left + '</div>'
+    +   '<div class="m">' + ACC.n + ' ' + ACC.tail + ' · 每月 22 日（与账单同日）· 含息总额 3,072.00</div>'
+    +   '<div class="grid4">'
+    +     '<div class="g4"><div class="gk">已还</div><div class="gv">' + sel.paid + ' 期</div></div>'
+    +     '<div class="g4"><div class="gk">剩余</div><div class="gv">' + sel.lft + ' 期</div></div>'
+    +     '<div class="g4"><div class="gk">每期</div><div class="gv">' + sel.per + '</div></div>'
+    +     '<div class="g4"><div class="gk">已还金额</div><div class="gv">1,664.00</div></div>'
+    +   '</div>'
+    + '</div>'
+    + '<div class="dtsec">'
+    +   '<div class="dtsech"><span class="h">待还</span><span class="c">' + PERIODS.length + ' 期 · 每月 22 日</span></div>'
+    +   '<div class="dtbox">'
+    +     PERIODS.map(function(p){
+          return '<div class="prow" data-period="' + p.no + '">'
+            + '<div class="pno">第 <b>' + p.no + '</b> 期</div>'
+            + '<div class="pd">' + p.d + '</div>'
+            + '<div class="pv">' + p.amt + '</div>'
+            + '<span class="pgo">›</span>'
+            + '</div>';
+        }).join('')
+    +   '</div>'
+    + '</div>'
+    + '<div class="dtsec" style="margin-top:14px">'
+    +   '<div class="dtbox">'
+    +     '<div class="prow done" data-fold="1">'
+    +       '<div class="pno">已还</div>'
+    +       '<div class="pd">前 13 期 · 共 1,664.00</div>'
+    +       '<span class="pgo">' + (state.fold ? '⌄' : '›') + '</span>'
+    +     '</div>'
+    +     (state.fold ? '<div class="txfoot" style="border-top:0;padding:12px 2px 10px">'
+    +       '第 1 期 2025-10-28 · 128.00<br>第 2 期 2025-11-28 · 128.00<br>… 逐期已还，不可改</div>' : '')
+    +   '</div>'
+    + '</div>'
+    + '<div class="txfoot" style="border-top:0;padding-top:16px">改某一期只影响那一期，剩余期数与后续金额不变。'
+    + '整笔总额按「已还 × 每期 + 剩余应还」重算。</div>'
+    + '</div>';
+}
+
+function billsHTML(){
+  return '<div class="dtscroll">'
+    + '<div class="dtsec" style="margin-top:8px">'
+    +   '<div class="dtsech"><span class="h">全部账单</span><span class="c">' + ACC.n + ' ' + ACC.tail + '</span></div>'
+    +   '<div class="dtbox">'
+    +     BILLS.map(function(b){
+          return '<div class="brow">'
+            + '<div><div class="bp">' + b.p + ' 期</div><div class="bs">' + b.due + '</div></div>'
+            + '<span class="ba">' + b.amt + '</span>'
+            + '<span class="bt ' + b.cls + '">' + b.st + '</span>'
+            + '</div>';
+        }).join('')
+    +   '</div>'
+    + '</div>'
+    + '<button class="dtbtn">＋ 录入本期应还</button>'
+    + '<div class="txfoot" style="border-top:0">每月账单日自动生成一条，金额可手录。'
+    + '逾期未还的会一直挂在顶部，不计入「本月要还」。</div>'
+    + '</div>';
+}
+
+function sheetHTML(){
+  var n = parseFloat(state.overVal.replace(/[^\d.]/g, '')) || 0;
+  var restAfter = 1408 - 128 + n;
+  return '<div class="sheet-mask" data-close="1"><div class="sheet" data-stop="1">'
+    + '<div class="sh"><span class="t">第 ' + state.overNo + ' 期</span><span class="s">11/22 到期</span></div>'
+    + '<div class="shnote">只改这一期。后面的期数、每期金额都不变。</div>'
+    + '<div class="shinput"><span class="cur">¥</span><input id="amt" value="' + state.overVal + '"></div>'
+    + '<div class="shprev">改完后剩余应还 <b>' + restAfter.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '</b></div>'
+    + '<div class="shacts"><button data-close="1">取消</button><button class="primary" data-save="1">保存</button></div>'
+    + '</div></div>';
+}
+
+function pageHTML(){
+  var bar = '';
+  if (state.page === 'detail'){
+    bar = '<div class="dtbar"><button class="dtback">‹</button><span class="tt">' + ACC.n + ' ' + ACC.tail + '</span>'
+        + '<button class="dtmore">⋯</button></div>';
+  } else if (state.page === 'inst'){
+    bar = '<div class="dtbar"><button class="dtback" data-page="detail">‹</button>'
+        + '<span class="tt">手机分期</span><span class="sub">13/24 · 剩 11 期</span></div>';
+  } else {
+    bar = '<div class="dtbar"><button class="dtback" data-page="detail">‹</button>'
+        + '<span class="tt">账单</span><span class="sub">' + BILLS.length + ' 期</span></div>';
+  }
+  var body = state.page === 'detail' ? detailHTML()
+           : state.page === 'inst' ? instHTML()
+           : billsHTML();
+  if (state.anim) body = body.replace('<div class="dtscroll', '<div class="dtscroll push');
+  return bar + body + (state.over ? sheetHTML() : '');
+}
+
+var screenEl = document.getElementById('screen');
+var hintEl = document.getElementById('hint');
+
+function render(){
+  var keep = 0;
+  var old = screenEl.querySelector('.dtscroll');
+  if (old) keep = old.scrollTop;
+  var html = pageHTML();
+  state.anim = false;
+  screenEl.innerHTML = '<div class="statusbar"><span>9:41</span><span class="batt"></span></div>'
+    + '<div class="pagewrap">' + html + '</div>';
+  var nw = screenEl.querySelector('.dtscroll');
+  if (nw) nw.scrollTop = keep;
+  syncChips();
+  var map = {
+    detail:'详情页 · ' + (state.v === 'G' ? '三列 + 额度条 + 合计（推荐）'
+      : state.v === 'F' ? '额度并入指标' : state.v === 'E' ? '本月要还 + 拆解' : '本期 / 分期并列'),
+    inst:'分期详情 · 逐期改金额',
+    bills:'账单列表 · 每月一条'
+  };
+  hintEl.textContent = state.over ? '弹层 · 改第 ' + state.overNo + ' 期金额' : map[state.page];
+}
+
+function syncChips(){
+  document.querySelectorAll('#vchips .chip').forEach(function(b){
+    b.classList.toggle('on', b.dataset.v === state.v);
+  });
+  document.querySelectorAll('#pchips .chip').forEach(function(b){
+    b.classList.toggle('on', b.dataset.p === state.page);
+  });
+}
+
+screenEl.addEventListener('click', function(e){
+  var t = e.target;
+  var stop = t.closest('[data-stop]');
+  if (t.dataset.close || (t.closest('[data-close]') && !stop)){ state.over = false; render(); return; }
+  if (t.dataset.save){ state.over = false; render(); return; }
+  var pg = t.closest('[data-page]');
+  if (pg){
+    if (pg.dataset.page !== state.page) state.anim = true;
+    state.page = pg.dataset.page; state.over = false; render(); return;
+  }
+  var pr = t.closest('[data-period]');
+  if (pr){ state.overNo = +pr.dataset.period; state.overVal = '128.00'; state.over = true; render(); return; }
+  if (t.closest('[data-fold]')){ state.fold = !state.fold; render(); return; }
+  var it = t.closest('[data-inst]');
+  if (it){ state.page = 'inst'; state.anim = true; render(); return; }
+  if (t.dataset.tx){ state.txmode = t.dataset.tx; render(); return; }
+  if (t.dataset.more){ state.more = TX.length; render(); return; }
+  if (t.classList.contains('dtback') && state.page !== 'detail'){ state.page = 'detail'; render(); return; }
+});
+
+document.getElementById('vchips').addEventListener('click', function(e){
+  var b = e.target.closest('.chip'); if (!b) return;
+  state.v = b.dataset.v; render();
+});
+document.getElementById('pchips').addEventListener('click', function(e){
+  var b = e.target.closest('.chip'); if (!b) return;
+  state.page = b.dataset.p; state.over = false; render();
+});
+
+render();
+</script>
+</body>
+</html>

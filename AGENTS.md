@@ -148,12 +148,16 @@ account/
 | `docs/design/spec/首页规格冻结-v1.0.md` | 首页规格 v1.0 | 2026-11-08 | — | 1.x 只改第七节未锁定项 |
 | `design/current/entry-types-v1.0.html` | 记一笔 v1.0 快照 | 2026-11-08 | `10b2293b803e4f1d` | **只读**；要改就出 v1.1 |
 | `docs/design/spec/记一笔规格冻结-v1.0.md` | 记一笔规格 v1.0 | 2026-11-08 | — | 1.x 只改第九节未锁定项 |
+| `design/current/account-detail-v1.0.html` | 账户详情页 v1.0 快照 | 2026-11-12 | `51c80b929e885723` | **只读**；要改就出 v1.1 |
+| `docs/design/spec/账户详情页规格冻结-v1.0.md` | 账户详情页规格 v1.0 | 2026-11-12 | — | 1.x 只改第十一节未锁定项 |
 
 > 快照的 SHA256 是冻结契约的一部分。**移动可以，改内容不行**。改文件后哈希变了即视为毁约。
 >
 > **2026-11-10 起本表所有文件已纳入版本控制**（`.gitignore` 放行 `docs/` 与 `design/**/*.html`），冻结契约终于可由 git 历史核验——此前它们全被忽略，哈希只在本地有效。`design/**/*.png`、`assets/`、`research/` 原始截图仍不入库。
 >
-> ⚠️ 这四份快照在 `.gitattributes` 里单独标了 `-text -eol`，**不许删、不许改成 `eol=lf`**。因为 `home-v1.0.html` 与 `entry-types-v1.0.html` 的登记哈希是按 **CRLF** 算的：一旦被行尾规范化成 LF，哈希变成 `e89f84af…` / `ec83710a…`，与本表对不上，契约当场失效。本机 `core.autocrlf=true`，这个坑一定会踩到。已实测四个文件索引内哈希均与本表一致。
+> ⚠️ 上面四份**老**快照（account-stack v1.1 / v1.0、home-v1.0、entry-types-v1.0）在 `.gitattributes` 里单独标了 `-text -eol`，**不许删、不许改成 `eol=lf`**。因为 `home-v1.0.html` 与 `entry-types-v1.0.html` 的登记哈希是按 **CRLF** 算的：一旦被行尾规范化成 LF，哈希变成 `e89f84af…` / `ec83710a…`，与本表对不上，契约当场失效。本机 `core.autocrlf=true`，这个坑一定会踩到。已实测四个文件索引内哈希均与本表一致。
+>
+> **`account-detail-v1.0.html` 相反**：它是 2026-11-12 在 LF 环境下新建的，登记哈希 `51c80b929e885723` 按 **LF** 计算，落在全局 `*.html text eol=lf` 规则内即可，**不要**给它加 `-text -eol`；加了反而会按原样检出，与 LF 哈希的登记方式不一致。新增快照一律先确定行尾、再算哈希、再登记，顺序不能反。
 
 ### 6.2 变更分档
 

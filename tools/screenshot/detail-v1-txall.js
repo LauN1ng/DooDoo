@@ -1,0 +1,13 @@
+const out = 'D:/Work/WorkBuddy_File/account/design/current/';
+await page.setViewportSize({ width: 900, height: 1000 });
+await page.goto('file:///D:/Work/WorkBuddy_File/account/design/current/account-detail.html', { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(600);
+await page.addStyleTag({ content: '*,*::before,*::after{animation:none !important;transition:none !important}' });
+await page.locator('#vchips .chip[data-v="B"]').click();
+await page.waitForTimeout(250);
+await page.locator('[data-tx="all"]').click();
+await page.waitForTimeout(250);
+await page.evaluate(() => { document.querySelector('#screen .dtscroll').scrollTop = 1250; });
+await page.waitForTimeout(200);
+await page.locator('#screen').screenshot({ path: out + '_dt-v1-txall.png' });
+return { ok: true };
