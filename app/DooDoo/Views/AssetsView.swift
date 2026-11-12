@@ -70,7 +70,7 @@ struct AssetsView: View {
     @State private var series: [NetWorthPoint] = []
     /// 账户 → 该卡欠多少（正数）。「我欠」与信用/借款组「欠款合计」共用这一份（见 `CardDebt`）。
     @State private var oweByAccount: [PersistentIdentifier: Decimal] = [:]
-    /// 信用组明细行（`本月要还 …`），聚合在 `refreshDue` 里算一次。
+    /// 信用组明细行（`本月要还 …`），由 `AssetSummaryService` 聚合。
     @State private var dueLine: DueLine?
     /// 账户 → 逾期天数，浮层里把那行的「较上月」换成「逾期 N 天」。
     @State private var overdueDays: [PersistentIdentifier: Int] = [:]
@@ -206,139 +206,41 @@ struct AssetsView: View {
     }
 
     /// 只在数据结构变化时算一次，结果留在 `@State`。
+    ///
+    /// 聚合本身全在 `AssetSummaryService` 里——写在这里编译器会报
+    /// `unable to type-check in reasonable time`（CI run 57/58 实测）。
     private func refresh() {
         let snapshots = accounts.map { AccountSnapshot(kind: $0.kind, balance: $0.currentBalance) }
         mine = NetWorth.mine(snapshots)
 
-        let periodsByAccount = groupPeriodsByAccount()
-        let billsByAccount = groupBillsByAccount()
-
-        // 「我欠」改为显示层派生（2026-11-12 定案）：流水记全了的人取余额，
-        // 只录了账单/分期、消费流水没记的人取「账单未还 + 账单没覆盖到的分期」，
-        // 两边取 max，**绝不相加**（相加会把同一笔债算两遍）。口径在 `CardDebt`。
-        var oweMap: [PersistentIdentifier: Decimal] = [:]
-        for account in accounts where account.kind.isLiability {
-            let input = debtInput(
-                for: account,
-                bills: billsByAccount[account.persistentModelID] ?? [],
-                periods: periodsByAccount[account.persistentModelID] ?? []
-            )
-            oweMap[account.persistentModelID] = CardDebt.owe(input)
-        }
-        oweByAccount = oweMap
-        owe = oweMap.values.reduce(Decimal.zero, +)
-
-        let ledgers = accounts.map { account in
-            AccountLedger(
-                kind: account.kind,
-                initial: account.initialBalance,
-                entries: account.transactions
-                    .filter { $0.deletedAt == nil }
-                    .map { LedgerPoint(date: $0.date, delta: LedgerService.effect(of: $0)) }
-            )
-        }
-        series = NetWorthSeries.points(ledgers, at: NetWorthSeries.dates(for: range))
-
-        refreshDue(periodsByAccount: periodsByAccount, billsByAccount: billsByAccount)
-    }
-
-    /// 单卡的欠款输入。拆成独立函数是为了让类型推断有落脚点——
-    /// 写在 `refresh()` 的闭包里编译器会报 "unable to type-check in reasonable time"。
-    private func debtInput(
-        for account: Account,
-        bills: [BillStatement],
-        periods: [InstallmentPeriod]
-    ) -> CardDebtInput {
-        let billSnapshots: [DebtBill] = bills.map { bill in
-            DebtBill(dueAmount: bill.dueAmount, dueDate: bill.dueDate, isPaid: bill.isPaid)
-        }
-        let periodSnapshots: [DebtPeriod] = periods
-            .filter { $0.paidAt == nil }
-            .map { period in
-                DebtPeriod(amount: period.amount, dueDate: period.dueDate, isPaid: false)
-            }
-        return CardDebtInput(
-            balance: account.currentBalance,
-            bills: billSnapshots,
-            periods: periodSnapshots
+        let summary = AssetSummaryService.make(
+            accounts: accounts,
+            installments: installments,
+            periods: periods,
+            bills: bills,
+            alertsEnabled: settings.first?.overdueAlertEnabled ?? true
         )
+        oweByAccount = summary.oweByAccount
+        owe = summary.owe
+        dueLine = summary.dueLine
+        overdueDays = summary.overdueDays
+
+        let ledgers: [AccountLedger] = accounts.map { ledger(for: $0) }
+        series = NetWorthSeries.points(ledgers, at: NetWorthSeries.dates(for: range))
     }
 
-    /// 期表只记 `installmentKey`，先把它折回账户，再按账户分组。
-    private func groupPeriodsByAccount() -> [PersistentIdentifier: [InstallmentPeriod]] {
-        var accountOfPlan: [String: Account] = [:]
-        for installment in installments {
-            if let account = installment.account { accountOfPlan[installment.key] = account }
-        }
-        var map: [PersistentIdentifier: [InstallmentPeriod]] = [:]
-        for period in periods {
-            guard let account = accountOfPlan[period.installmentKey] else { continue }
-            map[account.persistentModelID, default: []].append(period)
-        }
-        return map
-    }
-
-    private func groupBillsByAccount() -> [PersistentIdentifier: [BillStatement]] {
-        var map: [PersistentIdentifier: [BillStatement]] = [:]
-        for bill in bills {
-            guard let account = bill.account else { continue }
-            map[account.persistentModelID, default: []].append(bill)
-        }
-        return map
-    }
-
-    /// 信用组「本月要还」与每张卡的逾期天数。
-    ///
-    /// 口径只有一条：**每张卡产出一个 `AccountDue`**（`DueMath` 保证账单与分期
-    /// 不会被相加），组里再 Σ 一次。整组的数字和那行明细都从这一个结果出，
-    /// 不存在第二套算法——详情页第八节踩过的「Σ账单 + Σ分期」在这里没有入口。
-    ///
-    /// 账单存在时由 `DueMath.accountDue(bills:)` 取本月账单金额；账单里本来就
-    /// 已经并入了本期到期的分期，所以那张卡的分期一根手指都不碰。
-    private func refreshDue(
-        periodsByAccount: [PersistentIdentifier: [InstallmentPeriod]],
-        billsByAccount: [PersistentIdentifier: [BillStatement]]
-    ) {
-        let creditAccounts = accounts.filter { $0.kind == .credit }
-        guard !creditAccounts.isEmpty else {
-            dueLine = nil
-            overdueDays = [:]
-            return
-        }
-
-        let today = Date.now
-        var dues: [AccountDue] = []
-        var days: [PersistentIdentifier: Int] = [:]
-
-        for account in creditAccounts {
-            // 只把未还的账单交给口径层；已还的那期不再参与金额。
-            let billDues = (billsByAccount[account.persistentModelID] ?? [])
-                .filter { !$0.isPaid }
-                .map { BillDue(amount: $0.dueAmount, dueDate: $0.dueDate) }
-
-            let entries = (periodsByAccount[account.persistentModelID] ?? []).map {
-                DueEntry(amount: $0.amount, dueDate: $0.dueDate, isPaid: $0.paidAt != nil)
+    /// 单个账户的流水账本（走势图输入）。
+    private func ledger(for account: Account) -> AccountLedger {
+        let entries: [LedgerPoint] = account.transactions
+            .filter { $0.deletedAt == nil }
+            .map { tx in
+                LedgerPoint(date: tx.date, delta: LedgerService.effect(of: tx))
             }
-
-            guard let due = DueMath.accountDue(
-                bills: billDues,
-                installments: entries,
-                today: today
-            ) else { continue }
-            dues.append(due)
-            if due.isOverdue { days[account.persistentModelID] = due.overdueDays }
-        }
-
-        dueLine = DueMath.group(dues).map { DueMath.line($0) }
-        overdueDays = days
-
-        // 「逾期标红」关掉时，红字与浮层天数一起收掉。
-        // 只关一半的话开关形同虚设（浮层还在标红），用户会认为开关坏了。
-        // 金额不受影响——开关管的是「提醒」，不是「口径」。
-        if settings.first?.overdueAlertEnabled == false {
-            dueLine = dueLine.map { DueLine(text: $0.text, overdueText: nil) }
-            overdueDays = [:]
-        }
+        return AccountLedger(
+            kind: account.kind,
+            initial: account.initialBalance,
+            entries: entries
+        )
     }
 }
 

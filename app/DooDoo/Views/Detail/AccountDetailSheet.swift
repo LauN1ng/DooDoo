@@ -93,27 +93,46 @@ struct AccountDetailSheet: View {
 
     /// 单卡的账单与期数都有界（每月一期、每计划几十期），在 body 里现算不会卡；
     /// 聚合成 `@State` 反而要在 4 个 onChange 上同步，容易漏。
+    ///
+    /// 每个数组都单独一个 `var`：把 map/flatMap 套在构造器参数里，
+    /// 编译器会报 `unable to type-check in reasonable time`（AssetsView 已踩过一次）。
     private var metrics: DetailMetrics {
-        let debt = CardDebt.owe(
+        let billSnapshots = cardBills
+        let periodSnapshots = cardPeriods
+        let owe = CardDebt.owe(
             CardDebtInput(
                 balance: account.currentBalance,
-                bills: bills.map { DebtBill(dueAmount: $0.dueAmount, dueDate: $0.dueDate, isPaid: $0.isPaid) },
-                periods: installments.flatMap { plan in
-                    periods(of: plan)
-                        .filter { $0.paidAt == nil }
-                        .map { DebtPeriod(amount: $0.amount, dueDate: $0.dueDate, isPaid: false) }
-                }
+                bills: billSnapshots,
+                periods: periodSnapshots.filter { !$0.isPaid }
             )
         )
-
         return DetailMath.metrics(
-            owe: debt,
-            bills: bills.map { DebtBill(dueAmount: $0.dueAmount, dueDate: $0.dueDate, isPaid: $0.isPaid) },
-            periods: installments.flatMap { plan in
-                periods(of: plan).map { DebtPeriod(amount: $0.amount, dueDate: $0.dueDate, isPaid: $0.paidAt != nil) }
-            },
+            owe: owe,
+            bills: billSnapshots,
+            periods: periodSnapshots,
             today: .now
         )
+    }
+
+    private var cardBills: [DebtBill] {
+        bills.map { bill in
+            DebtBill(dueAmount: bill.dueAmount, dueDate: bill.dueDate, isPaid: bill.isPaid)
+        }
+    }
+
+    private var cardPeriods: [DebtPeriod] {
+        var result: [DebtPeriod] = []
+        for plan in installments {
+            for period in periods(of: plan) {
+                let snapshot = DebtPeriod(
+                    amount: period.amount,
+                    dueDate: period.dueDate,
+                    isPaid: period.paidAt != nil
+                )
+                result.append(snapshot)
+            }
+        }
+        return result
     }
 
     // MARK: - 区块
