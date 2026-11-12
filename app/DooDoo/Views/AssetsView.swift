@@ -52,6 +52,9 @@ enum AssetGroup: String, Identifiable, CaseIterable {
 struct AssetsView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: [SortDescriptor(\Account.sortOrder)]) private var accounts: [Account]
+    /// 分期计划与期表：信用组「本月要还」的唯一数据源（账单未建，见 PROGRESS 下一步 1）。
+    @Query private var installments: [Installment]
+    @Query private var periods: [InstallmentPeriod]
 
     @State private var openGroup: AssetGroup?
     @State private var range: NetWorthRange = .year
@@ -61,6 +64,10 @@ struct AssetsView: View {
     @State private var mine: Decimal = 0
     @State private var owe: Decimal = 0
     @State private var series: [NetWorthPoint] = []
+    /// 信用组明细行（`本月要还 …`），聚合在 `refreshDue` 里算一次。
+    @State private var dueLine: DueLine?
+    /// 账户 → 逾期天数，浮层里把那行的「较上月」换成「逾期 N 天」。
+    @State private var overdueDays: [PersistentIdentifier: Int] = [:]
 
     var body: some View {
         ZStack {
@@ -70,6 +77,7 @@ struct AssetsView: View {
                     title: group.title,
                     accounts: accounts(in: group),
                     isLiability: group.isLiability,
+                    overdueDays: overdueDays,
                     onClose: { withAnimation(.easeOut(duration: 0.2)) { openGroup = nil } },
                     onSelect: { account in editingAccount = account }
                 )
@@ -83,6 +91,9 @@ struct AssetsView: View {
         .onChange(of: range) { refresh() }
         .onChange(of: accounts.count) { refresh() }
         .onChange(of: accounts.map(\.currentBalance)) { refresh() }
+        .onChange(of: periods.count) { refresh() }
+        .onChange(of: periods.map(\.amount)) { refresh() }
+        .onChange(of: installments.count) { refresh() }
         .sheet(item: $editingAccount) { account in
             AccountEditor(account: account, defaultKind: account.kind)
         }
@@ -115,7 +126,8 @@ struct AssetsView: View {
                                 accounts: list,
                                 total: list.reduce(Decimal.zero) { $0 + $1.currentBalance },
                                 isLiability: group.isLiability,
-                                detail: nil,
+                                // 只有信用组有「本月要还」；储蓄/借款没有还款日这个概念。
+                                detail: group == .credit ? dueLine : nil,
                                 onOpen: { open(group) },
                                 onAdd: { creatingGroup = group }
                             )
@@ -177,6 +189,55 @@ struct AssetsView: View {
             )
         }
         series = NetWorthSeries.points(ledgers, at: NetWorthSeries.dates(for: range))
+
+        refreshDue()
+    }
+
+    /// 信用组「本月要还」与每张卡的逾期天数。
+    ///
+    /// 口径只有一条：**每张卡产出一个 `AccountDue`**（`DueMath` 保证账单与分期
+    /// 不会被相加），组里再 Σ 一次。整组的数字和那行明细都从这一个结果出，
+    /// 不存在第二套算法——详情页第八节踩过的「Σ账单 + Σ分期」在这里没有入口。
+    ///
+    /// 目前账单（`BillStatement`）还没有数据源，所以每张卡都走分期到期；
+    /// 接上账单时只需给 `DueMath.accountDue(bill:)` 填值，这里一行都不用改。
+    private func refreshDue() {
+        let creditAccounts = accounts.filter { $0.kind == .credit }
+        guard !creditAccounts.isEmpty else {
+            dueLine = nil
+            overdueDays = [:]
+            return
+        }
+
+        // 期表只记 `installmentKey`，先把它折回账户。
+        var accountOfPlan: [String: Account] = [:]
+        for installment in installments {
+            if let account = installment.account { accountOfPlan[installment.key] = account }
+        }
+
+        var entriesByAccount: [PersistentIdentifier: [DueEntry]] = [:]
+        for period in periods {
+            guard let account = accountOfPlan[period.installmentKey] else { continue }
+            entriesByAccount[account.persistentModelID, default: []].append(
+                DueEntry(amount: period.amount, dueDate: period.dueDate, isPaid: period.paidAt != nil)
+            )
+        }
+
+        let today = Date.now
+        var dues: [AccountDue] = []
+        var days: [PersistentIdentifier: Int] = [:]
+
+        for account in creditAccounts {
+            guard let due = DueMath.accountDue(
+                installments: entriesByAccount[account.persistentModelID] ?? [],
+                today: today
+            ) else { continue }
+            dues.append(due)
+            if due.isOverdue { days[account.persistentModelID] = due.overdueDays }
+        }
+
+        dueLine = DueMath.group(dues).map { DueMath.line($0) }
+        overdueDays = days
     }
 }
 

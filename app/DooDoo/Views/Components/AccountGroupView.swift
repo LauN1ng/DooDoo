@@ -10,8 +10,9 @@ struct AccountGroupView: View {
     /// 单位：元，已带正负（欠款为负）。
     let total: Decimal
     let isLiability: Bool
-    /// 明细行，为空时不占位（M2a 还没有「本月要还」的数据）。
-    let detail: String?
+    /// 明细行，为空时不占位。目前只有信用组会传「本月要还」（规格 2.4）。
+    /// 逾期那段单独放在 `overdueText` 里，由这里拼成红字。
+    let detail: DueLine?
     let onOpen: () -> Void
     let onAdd: () -> Void
 
@@ -66,9 +67,11 @@ struct AccountGroupView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
             if let detail {
-                Text(detail)
+                // 两个 Text 相加才能让逾期那一段单独标红——不做横幅之后，
+                // 9.5pt 单行里这一抹红是逾期在资产页上唯一的可见位置。
+                (Text(detail.text).foregroundStyle(Palette.sub)
+                    + Text(detail.overdueText ?? "").foregroundStyle(Palette.expense))
                     .font(.system(size: 9.5))
-                    .foregroundStyle(Palette.sub)
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
             }

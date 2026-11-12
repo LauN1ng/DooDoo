@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 /// 整屏磨砂明细浮层（规格 4.x / 6.1）。
 ///
@@ -7,6 +8,9 @@ struct GroupOverlay: View {
     let title: String
     let accounts: [Account]
     let isLiability: Bool
+    /// 账户 → 逾期天数。有值的那个把「较上月」换成「逾期 N 天」——
+    /// 「较上月」现在是写死的 `—`（环比还没做），拿它换真数据比多塞一列干净。
+    var overdueDays: [PersistentIdentifier: Int] = [:]
     let onClose: () -> Void
     let onSelect: (Account) -> Void
 
@@ -71,7 +75,9 @@ struct GroupOverlay: View {
     }
 
     private func row(_ account: Account) -> some View {
-        Button {
+        let overdue = overdueDays[account.persistentModelID]
+
+        return Button {
             onSelect(account)
         } label: {
             HStack(spacing: 13) {
@@ -83,11 +89,19 @@ struct GroupOverlay: View {
                         value: MoneyMath.money(account.currentBalance),
                         tone: isLiability ? Palette.expense : Palette.ink
                     )
-                    field(
-                        title: "较上月",
-                        value: "—",
-                        tone: Palette.sub
-                    )
+                    if let overdue {
+                        field(
+                            title: "逾期",
+                            value: "\(overdue) 天",
+                            tone: Palette.expense
+                        )
+                    } else {
+                        field(
+                            title: "较上月",
+                            value: "—",
+                            tone: Palette.sub
+                        )
+                    }
                 }
             }
             .frame(height: 116)

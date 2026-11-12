@@ -56,8 +56,8 @@ struct SettingsView: View {
             }
 
             Section("偏好") {
-                Toggle("逾期横幅", isOn: toggle(\.overdueAlertEnabled))
-                Text("只在 App 内用横幅提示，不发系统通知。")
+                Toggle("逾期标红", isOn: toggle(\.overdueAlertEnabled))
+                Text("在信用组明细行和账户浮层里标出逾期，不做横幅，不发系统通知。")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
