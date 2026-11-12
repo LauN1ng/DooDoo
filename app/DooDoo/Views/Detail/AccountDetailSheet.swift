@@ -668,13 +668,17 @@ struct AccountDetailSheet: View {
 
             Spacer(minLength: 8)
 
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(MoneyMath.money(plan.remainingTotal))
-                    .font(.system(size: 13, weight: .semibold))
+            // 右列原来只有一个「剩余总额」，和上面「本月分期 332.01 · 6 笔」并排容易被读成矛盾
+            // （用户 2026-11-13：「把列表行右边显示改成本月 x / 剩余 x」）。
+            VStack(alignment: .trailing, spacing: 3) {
+                let due = monthDue(of: plan)
+                Text("本月 \(due > 0 ? MoneyMath.money(due) : "—")")
+                    .font(.system(size: 12.5, weight: .semibold))
                     .monospacedDigit()
-                    .foregroundStyle(Palette.ink)
-                Text(nextDueCaption(plan))
+                    .foregroundStyle(due > 0 ? Palette.ink : Palette.sub)
+                Text("剩余 \(MoneyMath.money(plan.remainingTotal))")
                     .font(.system(size: 9.5))
+                    .monospacedDigit()
                     .foregroundStyle(Palette.faint)
             }
         }
@@ -698,9 +702,11 @@ struct AccountDetailSheet: View {
         return CGFloat(min(max(ratio, 0), 1))
     }
 
-    private func nextDueCaption(_ plan: Installment) -> String {
-        let parts = Calendar.current.dateComponents([.month, .day], from: plan.nextDueDate)
-        return "\(parts.month ?? 0)/\(parts.day ?? 0) 到期"
+    /// 这笔分期本月要还多少（只算本月到期、未还的期）。
+    private func monthDue(of plan: Installment) -> Decimal {
+        periods(of: plan)
+            .filter { $0.paidAt == nil && DueMath.isDueInThisMonth($0.dueDate, today: .now) }
+            .reduce(Decimal.zero) { $0 + $1.amount }
     }
 
     // MARK: - 流水（规格第七节）
