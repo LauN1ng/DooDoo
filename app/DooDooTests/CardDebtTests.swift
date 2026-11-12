@@ -3,13 +3,13 @@ import Testing
 
 @testable import DooDoo
 
-/// 「我欠 / 欠款合计」的口径门禁（PRD 9.4 / 9.3，2026-11-12 用户定案「显示层派生」）。
+/// 「我欠 / 欠款合计」的口径门禁（PRD 9.4 / 9.3，2026-11-12 用户定案「相加」）。
 ///
 /// 这个文件存在的**唯一理由**是钉死两条：
-/// 1. 余额与「账单 + 分期」**取 max，不相加**——相加会在「既记了消费流水、又录了同一笔分期」
-///    时凭空空多出一份；
-/// 2. 本期账单里的分期由账单覆盖，只有**账单还款日之后**到期的分期才另算——
-///    不分青红皂白全部相加，等于把本期分期算两遍。
+/// 1. **余额与账期相加**：欠款 = 余额欠额 + 未还账单 + 未覆盖分期。取 max 会让
+///    「记一笔信用消费，欠款一动不动」（分期总额通常远大于余额），用户 11-12 真机反馈过；
+/// 2. **账期内部绝不重复**：本期账单里的分期由账单覆盖，只有**账单还款日之后**到期的
+///    分期才另算——不分青红皂白全加，等于把本期分期算两遍。
 ///
 /// 数字取自 `账户详情页规格冻结-v1.0.md` 8.4 与 PRD 附录的真实账单（AGENTS 7.3：不许自己编）：
 /// - 招行 8857：欠款 3,120.00、本期账单 1,115.03（11/22）、本月分期 449.67（128.00 + 216.67 + 105.00）
@@ -129,17 +129,16 @@ struct CardDebtTests {
 
     // MARK: - 余额更大时取余额（防重复计的核心）
 
-    @Test("流水记全了的人取余额，绝不与账单分期相加")
-    func balanceWinsWhenLarger() {
+    @Test("余额与账期相加：记一笔消费立刻体现在欠款里")
+    func balanceAddsToBooks() {
         let card = CardDebtInput(
             balance: dec("-4000.00"),
             bills: [DebtBill(dueAmount: dec("1115.03"), dueDate: date(2026, 11, 22), isPaid: false)],
             periods: currentPeriods + futurePeriods
         )
 
-        #expect(CardDebt.owe(card, calendar: calendar) == dec("4000.00"))
-        // 相加会变成 7,471.71，凭空多一份
-        #expect(CardDebt.owe(card, calendar: calendar) != dec("7471.71"))
+        // 4,000.00 + 1,115.03（账单）+ 2,356.68（12 月及以后的分期）= 7,471.71
+        #expect(CardDebt.owe(card, calendar: calendar) == dec("7471.71"))
     }
 
     @Test("余额为 0 而账单分期更大时取账单分期")
@@ -173,8 +172,8 @@ struct CardDebtTests {
         #expect(CardDebt.owe(loan, calendar: calendar) == dec("20000.00"))
     }
 
-    @Test("组内各卡先各自取 max，再相加")
-    func groupSumsPerCardMax() {
+    @Test("组内各卡先各自算清，再相加")
+    func groupSumsPerCard() {
         let cardA = CardDebtInput(
             balance: dec("-4000.00"),
             bills: [DebtBill(dueAmount: dec("1115.03"), dueDate: date(2026, 11, 22), isPaid: false)]
@@ -182,8 +181,8 @@ struct CardDebtTests {
         let cardB = CardDebtInput(balance: 0, periods: currentPeriods + futurePeriods)
         let loan = CardDebtInput(balance: dec("-20000.00"))
 
-        // 4,000.00 + 2,806.35 + 20,000.00
-        #expect(CardDebt.owe([cardA, cardB, loan], calendar: calendar) == dec("26806.35"))
+        // cardA = 4,000.00 + 1,115.03 = 5,115.03；cardB = 2,806.35；loan = 20,000.00
+        #expect(CardDebt.owe([cardA, cardB, loan], calendar: calendar) == dec("27921.38"))
     }
 
     @Test("同日不同时分秒不会漏算覆盖关系")

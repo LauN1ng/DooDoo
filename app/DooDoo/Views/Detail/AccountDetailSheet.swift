@@ -20,6 +20,8 @@ struct AccountDetailSheet: View {
 
     @State private var route: DetailRoute?
     @State private var editingAccount: Account?
+    /// 流水区块的分段：本月 / 全部（规格第七节）。
+    @State private var txScope: TxScope = .month
 
     var body: some View {
         NavigationStack {
@@ -30,6 +32,7 @@ struct AccountDetailSheet: View {
                     metricsBlock(m)
                     pastBillsSection
                     installmentsSection
+                    transactionsSection
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
@@ -497,6 +500,102 @@ struct AccountDetailSheet: View {
     private func nextDueCaption(_ plan: Installment) -> String {
         let parts = Calendar.current.dateComponents([.month, .day], from: plan.nextDueDate)
         return "\(parts.month ?? 0)/\(parts.day ?? 0) 到期"
+    }
+
+    // MARK: - 流水（规格第七节）
+
+    /// 流水区块的分段。规格第七节只有两个：本月 / 全部，默认本月。
+    private enum TxScope: String, CaseIterable, Identifiable {
+        case month = "本月"
+        case all = "全部"
+        var id: String { rawValue }
+    }
+
+    private var allCardTransactions: [Transaction] {
+        account.transactions
+            .filter { $0.deletedAt == nil }
+            .sorted { $0.date > $1.date }
+    }
+
+    private var shownTransactions: [Transaction] {
+        guard txScope == .month else { return allCardTransactions }
+        let calendar = Calendar.current
+        return allCardTransactions.filter { tx in
+            calendar.isDate(tx.date, equalTo: Date.now, toGranularity: .month)
+        }
+    }
+
+    /// 汇总行只是列表摘要，不参与任何账务计算——
+    /// 真正的欠款口径在 `CardDebt`，别把这里的支出合计当成欠款去对。
+    private var transactionSummary: String {
+        let list = shownTransactions
+        guard txScope == .month else { return "共 \(list.count) 笔" }
+        let spend = list
+            .filter { $0.kind == .expense }
+            .reduce(Decimal.zero) { $0 + $1.amount }
+        return "\(list.count) 笔 · 支出 \(MoneyMath.money(spend))"
+    }
+
+    private var transactionsSection: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(spacing: 8) {
+                Text("流水")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Palette.ink)
+
+                Text(transactionSummary)
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(Palette.sub)
+
+                Spacer(minLength: 8)
+
+                scopePicker
+            }
+
+            if shownTransactions.isEmpty {
+                emptyRow(txScope == .month ? "这个月这张卡没有流水" : "这张卡还没有流水")
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(shownTransactions) { tx in
+                        TxRowView(transaction: tx)
+                        if tx.id != shownTransactions.last?.id {
+                            Divider().overlay(Palette.line)
+                        }
+                    }
+                }
+                .padding(.horizontal, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Palette.card)
+                )
+            }
+
+            Text(txScope == .month ? "还款记录在「全部」里" : "按时间倒序")
+                .font(.system(size: 9.5))
+                .foregroundStyle(Palette.faint)
+        }
+    }
+
+    private var scopePicker: some View {
+        HStack(spacing: 2) {
+            ForEach(TxScope.allCases) { scope in
+                Button {
+                    txScope = scope
+                } label: {
+                    Text(scope.rawValue)
+                        .font(.system(size: 10.5, weight: .medium))
+                        .foregroundStyle(txScope == scope ? Palette.ink : Palette.sub)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule().fill(txScope == scope ? Palette.pillOn : Color.clear)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(2)
+        .background(Capsule().fill(Palette.tabBed))
     }
 
     private func emptyRow(_ text: String) -> some View {
