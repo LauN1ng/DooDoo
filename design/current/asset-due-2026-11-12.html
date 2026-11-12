@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>资产页 · 本月要还 + 逾期横幅（四版对照 2026-11-12）</title>
+<style>
+  :root{
+    --ink:#1D1C1A; --ink2:#6B6862; --ink3:#9A968D; --ink4:#B0ACA3;
+    --bg:#F7F5F1; --card:#fff; --line:#EAE7E0;
+    --red:#C0392B; --green:#2E9E6B; --blue:#4C8DF6;
+    --od:#A32D2D; --odbed:#FDECEC;
+    --warn:#94601B; --warnbed:#FCF3E1;
+  }
+  *{box-sizing:border-box;-webkit-font-smoothing:antialiased}
+  html,body{margin:0}
+  body{
+    background:#E9E4DB;color:var(--ink);
+    font-family:-apple-system,"SF Pro Text","PingFang SC","Microsoft YaHei",sans-serif;
+    padding:34px 0 60px;
+  }
+
+  /* ---------- 页头 ---------- */
+  .head{max-width:880px;margin:0 auto 26px;padding:0 6px}
+  .head h1{font-size:19px;font-weight:650;letter-spacing:-.01em;margin:0 0 8px}
+  .head p{font-size:12.5px;color:#6B6862;line-height:1.75;margin:0}
+  .head code{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;background:#DFD9CE;padding:1px 5px;border-radius:4px}
+
+  /* ---------- 对照板 ---------- */
+  .board{
+    max-width:880px;margin:0 auto;padding-top:6px;
+    display:grid;grid-template-columns:repeat(2,390px);gap:30px 40px;justify-content:center;
+  }
+  .cell{margin:0}
+  .cap{display:flex;align-items:baseline;gap:8px;margin:0 0 4px;padding:0 2px}
+  .cap .tag{
+    flex:0 0 auto;width:19px;height:19px;border-radius:5px;background:var(--ink);color:#fff;
+    font-size:11.5px;font-weight:700;display:flex;align-items:center;justify-content:center;
+    transform:translateY(-1px);
+  }
+  .cap .tag.rec{background:#2E9E6B}
+  .cap b{font-size:13px;font-weight:650;letter-spacing:-.005em}
+  .cap .sub{font-size:11px;color:#8A867D}
+  .note{font-size:11px;color:#7A756C;line-height:1.65;margin:9px 2px 0;padding:0}
+  .note b{color:#4A463F;font-weight:600}
+
+  /* ---------- 设备框 ---------- */
+  .device{
+    width:390px;height:844px;border-radius:44px;background:var(--bg);
+    overflow:hidden;position:relative;
+    box-shadow:0 0 0 9px #17171A,0 22px 50px rgba(20,18,16,.28);
+  }
+  .screen{
+    position:absolute;inset:0;overflow:hidden;
+    padding:0 16px;
+  }
+
+  /* 状态栏 */
+  .sbar{
+    height:52px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 12px;font-size:12.5px;font-weight:600;letter-spacing:.01em;
+  }
+  .sbar .rt{display:flex;align-items:center;gap:5px}
+  .batt{width:22px;height:10.5px;border:1px solid rgba(29,28,26,.42);border-radius:3px;position:relative;display:block}
+  .batt::before{content:"";position:absolute;inset:1.6px;background:var(--ink);border-radius:1.5px;right:5px}
+  .batt::after{content:"";position:absolute;right:-3px;top:3px;width:2px;height:4.5px;background:rgba(29,28,26,.42);border-radius:0 1px 1px 0}
+
+  /* 页头 */
+  .phead{display:flex;align-items:center;justify-content:space-between;padding:2px 4px 10px}
+  .logo{font-size:19px;font-weight:650;letter-spacing:-.02em}
+  .tabs{
+    width:112px;height:34px;background:#EBE7E0;border-radius:17px;
+    display:flex;align-items:center;padding:2px;
+  }
+  .tabs i{
+    width:36px;height:30px;border-radius:15px;display:flex;align-items:center;justify-content:center;
+  }
+  .tabs i svg{width:15px;height:15px;stroke:#8A867D;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .tabs i.on{background:#fff;box-shadow:0 1px 3px rgba(29,28,26,.13)}
+  .tabs i.on svg{stroke:var(--ink)}
+
+  /* 总览卡 */
+  .nw{
+    background:#fff;border-radius:24px;padding:15px 16px 12px;
+    box-shadow:0 1px 2px rgba(29,28,26,.04),0 8px 20px rgba(29,28,26,.05);
+  }
+  .nwr{display:flex;gap:18px}
+  .nwc{flex:1}
+  .nwc .k{font-size:10px;color:var(--ink3);display:flex;align-items:center;gap:4px}
+  .nwc .k .dot{width:5px;height:5px;border-radius:50%}
+  .nwc .v{font-size:20px;font-weight:650;letter-spacing:-.03em;margin-top:5px;font-variant-numeric:tabular-nums}
+  .nwc .d{font-size:9.5px;color:var(--ink3);margin-top:3px}
+  .nwc .d .up{color:var(--red)}
+  .spark{display:block;width:100%;height:44px;margin-top:6px}
+  .pills{display:flex;gap:4px;margin-top:6px}
+  .pills span{
+    flex:1;text-align:center;font-size:10.5px;color:var(--ink3);padding:5px 0;border-radius:999px;
+  }
+  .pills span.on{background:#F3F0EA;color:var(--ink);font-weight:600}
+
+  /* 分组 */
+  .grp{margin-top:16px}
+  .grph{display:flex;align-items:center;gap:8px;padding:0 4px 10px}
+  .grph .nm{font-size:15px;font-weight:650;letter-spacing:-.01em}
+  .grph .tt{font-size:11px;color:#8A867D;white-space:nowrap}
+  .grph .tg{
+    margin-left:auto;width:24px;height:24px;flex:0 0 24px;border-radius:50%;
+    background:#EBE7E0;color:#5C594F;font-size:15px;line-height:1;
+    display:flex;align-items:center;justify-content:center;padding-bottom:1px;
+  }
+
+  /* 逾期横幅（红） + 临期（黄） */
+  .od{
+    border-radius:12px;padding:8px 12px;margin-bottom:9px;
+    font-size:11px;line-height:1.5;display:flex;align-items:flex-start;gap:7px;
+  }
+  .od .ic{flex:0 0 auto;font-size:11px;transform:translateY(.5px)}
+  .od .tx{flex:1;min-width:0}
+  .od b{font-weight:650}
+  .od .aw{color:inherit;opacity:.5;font-size:11px;flex:0 0 auto;transform:translateY(-.5px)}
+  .od.red{background:var(--odbed);color:var(--od)}
+  .od.yel{background:var(--warnbed);color:var(--warn)}
+
+  /* 「本月要还」白条（对照详情页规格 3.3） */
+  .duebar{
+    background:#fff;border-radius:14px;padding:11px 14px;
+    display:flex;align-items:baseline;justify-content:space-between;
+    box-shadow:0 1px 2px rgba(29,28,26,.03),0 6px 16px rgba(29,28,26,.045);
+    margin-bottom:10px;
+  }
+  .duebar .dl{font-size:11px;color:var(--ink3)}
+  .duebar .dv{font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+
+  /* 卡堆 + 右侧汇总 */
+  .agg{display:flex;align-items:center;gap:13px;padding:0 4px}
+  .hdeck{position:relative;width:146px;height:116px;flex:0 0 146px}
+  .hc{
+    position:absolute;left:50%;margin-left:-66px;width:132px;height:82px;border-radius:13px;
+    background:linear-gradient(135deg,var(--c1),var(--c2));
+    transform-origin:bottom center;
+    box-shadow:0 2px 7px rgba(29,28,26,.17),inset 0 0 0 .5px rgba(255,255,255,.16);
+  }
+  .hc.back{
+    box-shadow:0 -1px 0 rgba(255,255,255,.50),0 2px 6px rgba(29,28,26,.16),inset 0 0 0 .5px rgba(255,255,255,.22);
+    filter:brightness(var(--bk,.88));
+  }
+  .hc.k2{bottom:0;margin-left:-70px;transform:rotate(-1deg);z-index:1}
+  .hc.k1{bottom:16px;margin-left:-62px;transform:rotate(.8deg);z-index:2}
+  .hc.k0{bottom:32px;z-index:3;padding:10px 12px 0;display:flex;flex-direction:column}
+  .hcn{font-size:12.5px;font-weight:650;color:#fff;line-height:1.2}
+  .hcs{font-size:9.5px;color:rgba(255,255,255,.76);margin-top:3px;letter-spacing:.04em}
+  .hcf{margin-top:auto;display:flex;justify-content:flex-end;padding-bottom:7px}
+  .hcf .net{font-size:7pt;font-weight:700;letter-spacing:.08em;color:rgba(255,255,255,.55)}
+  .hprog{height:2.5px;border-radius:2px;background:rgba(255,255,255,.32);margin-bottom:9px;flex:0 0 auto}
+  .hprog i{display:block;height:100%;background:rgba(255,255,255,.95);border-radius:2px}
+  .cnt{
+    position:absolute;right:9px;bottom:6px;z-index:9;min-width:23px;height:23px;padding:0 6px;
+    border-radius:999px;background:#1D1C1A;color:#fff;font-size:11px;font-weight:650;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 1px 4px rgba(29,28,26,.30);
+  }
+  .oflag{
+    position:absolute;right:0;top:0;background:#fff;color:var(--od);
+    font-size:9.5px;font-weight:700;padding:2px 7px;border-bottom-left-radius:8px;z-index:4;
+  }
+
+  .aggr{flex:1;min-width:0}
+  .aggr .k{font-size:10.5px;color:var(--ink3)}
+  .aggr .v{
+    font-size:22px;font-weight:650;letter-spacing:-.03em;margin-top:4px;
+    font-variant-numeric:tabular-nums;line-height:1.05;white-space:nowrap;
+  }
+  .aggr .v.red{color:var(--red)}
+  .aggr .m{font-size:9.5px;color:var(--ink3);margin-top:7px;line-height:1.5;white-space:nowrap}
+  .aggr .m b{color:var(--ink2);font-weight:600}
+  .aggfoot{display:flex;align-items:center;justify-content:space-between;padding:10px 6px 0;font-size:10.5px;color:var(--ink3)}
+  .aggfoot .arw{color:var(--ink4);font-size:12px}
+
+  /* 储蓄组（只露一点，证明「横幅只属于信用组」） */
+  .grp.save .aggr .v{font-size:22px}
+  .mask-bottom{position:absolute;left:0;right:0;bottom:0;height:60px;background:linear-gradient(transparent,var(--bg))}
+
+  /* ---------- 口径面板 ---------- */
+  .calc{max-width:880px;margin:46px auto 0;background:#fff;border-radius:18px;padding:22px 24px;box-shadow:0 1px 3px rgba(29,28,26,.05),0 10px 26px rgba(29,28,26,.06)}
+  .calc h2{font-size:15px;font-weight:650;margin:0 0 4px;letter-spacing:-.01em}
+  .calc .lead{font-size:12px;color:#6B6862;margin:0 0 16px;line-height:1.7}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th,td{text-align:right;padding:7px 8px;border-bottom:1px solid #F1EDE6}
+  th{font-size:10.5px;font-weight:600;color:#9A968D;border-bottom:1px solid #E4DFD6}
+  th:first-child,td:first-child{text-align:left}
+  td.num{font-variant-numeric:tabular-nums}
+  tr.sum td{border-bottom:0;font-weight:650;padding-top:10px}
+  .wrong{margin-top:16px;background:#FDECEC;border-radius:12px;padding:12px 14px;font-size:12px;color:#A32D2D;line-height:1.75}
+  .wrong .big{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
+  .rule{margin-top:16px;font-size:12px;color:#4A463F;line-height:1.85}
+  .rule code{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;background:#F3F0EA;padding:2px 6px;border-radius:5px}
+  .todo{margin-top:18px;border-top:1px solid #F1EDE6;padding-top:16px;font-size:12px;color:#6B6862;line-height:1.9}
+  .todo b{color:var(--ink);font-weight:650}
+</style>
+</head>
+<body>
+
+<div class="head">
+  <h1>资产页 · 本月要还 + 逾期横幅 · 四版对照</h1>
+  <p>
+    同一屏数据、同一套卡片与字体，只换两件事：<b>「本月要还」放哪种形态</b>（灰明细行 / 白条）、<b>逾期横幅放哪一层</b>（不做 / 贴信用组组头 / 页顶总览卡之上）。
+    A 是当前冻结规格 2.4 的原样，其余三版是加上 PRD 要求的两样东西之后的样子。
+    数据统一为：信用 9 个 · 欠款合计 28,466.00 · <b>本月要还 2,742.00 · 3 笔 · 最近 11/14</b>；招行 8857 逾期 82 天 512.80，花呗 11/14 还剩 2 天。
+  </p>
+</div>
+
+<div class="board">
+
+  <!-- ============ A ============ -->
+  <figure class="cell">
+    <div class="cap"><span class="tag">A</span><b>灰明细行 · 不做横幅</b><span class="sub">= 当前冻结规格 2.4 原样</span></div>
+    <div class="device"><div class="screen">
+      <div class="sbar"><span>9:41</span><span class="rt"><span class="batt"></span></span></div>
+      <div class="phead"><span class="logo">DooDoo</span><span class="tabs">
+        <i><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></i>
+        <i class="on"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M3 10h18"/></svg></i>
+        <i><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg></i>
+      </span></div>
+      <div class="nw">
+        <div class="nwr">
+          <div class="nwc"><div class="k"><span class="dot" style="background:#3A9E6B"></span>我有</div>
+            <div class="v">3,120.00</div><div class="d"><span style="color:var(--green)">↘</span> 6.2%</div></div>
+          <div class="nwc"><div class="k"><span class="dot" style="background:#E8734A"></span>我欠</div>
+            <div class="v">48,466.00</div><div class="d"><span style="color:var(--green)">↘</span> 1.8%</div></div>
+        </div>
+        <svg class="spark" viewBox="0 0 320 44" preserveAspectRatio="none">
+          <path d="M6 14 C40 10, 58 22, 92 20 S148 30, 184 26 S250 34, 288 30" fill="none" stroke="#4C8DF6" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M6 30 C40 32, 58 26, 92 28 S148 20, 184 24 S250 18, 288 22" fill="none" stroke="#E8734A" stroke-width="1.6" stroke-linecap="round"/>
+          <circle cx="288" cy="30" r="2.6" fill="#fff" stroke="#4C8DF6" stroke-width="1.6"/>
+          <circle cx="288" cy="22" r="2.6" fill="#fff" stroke="#E8734A" stroke-width="1.6"/>
+        </svg>
+        <div class="pills"><span>1周</span><span>1月</span><span>3月</span><span>今年</span><span class="on">1年</span></div>
+      </div>
+
+      <div class="grp">
+        <div class="grph"><span class="nm">信用</span><span class="tt">9 个 · 28,466.00</span><span class="tg">+</span></div>
+        <div class="agg">
+          <div class="hdeck">
+            <div class="hc back k2" style="--c1:#D4342B;--c2:#8C1410;--bk:.76"></div>
+            <div class="hc back k1" style="--c1:#2C7BFF;--c2:#0B4FCC;--bk:.88"></div>
+            <div class="hc k0" style="--c1:#D4342B;--c2:#8C1410">
+              <div class="hcn">招商银行</div><div class="hcs">信用卡</div>
+              <div class="hcf"><span class="net">UNIONPAY</span></div>
+              <div class="hprog"><i style="width:0%"></i></div>
+            </div>
+            <span class="cnt">9</span>
+          </div>
+          <div class="aggr">
+            <div class="k">欠款合计</div><div class="v red">28,466.00</div>
+            <div class="m">本月要还 <b>2,742.00</b> · 3 笔 · 最近 11/14</div>
+          </div>
+        </div>
+        <div class="aggfoot"><span>含逾期 1 个</span><span class="arw">›</span></div>
+      </div>
+
+      <div class="grp save">
+        <div class="grph"><span class="nm">储蓄</span><span class="tt">8 个 · 3,120.00</span><span class="tg">+</span></div>
+        <div class="agg">
+          <div class="hdeck">
+            <div class="hc back k2" style="--c1:#3A9E6B;--c2:#186B45;--bk:.76"></div>
+            <div class="hc back k1" style="--c1:#4C8DF6;--c2:#1E5CBF;--bk:.88"></div>
+            <div class="hc k0" style="--c1:#3A9E6B;--c2:#186B45">
+              <div class="hcn">招商银行</div><div class="hcs">储蓄卡</div>
+              <div class="hcf"><span class="net">UNIONPAY</span></div>
+            </div>
+            <span class="cnt">8</span>
+          </div>
+          <div class="aggr">
+            <div class="k">余额合计</div><div class="v">3,120.00</div>
+            <div class="m">较上月 <b style="color:var(--green)">↘ 4.8%</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="mask-bottom"></div>
+    </div></div>
+    <p class="note"><b>2,742.00 只出现在 9.5pt 灰字里</b>，和「3 笔 · 最近 11/14」挤在一行，压在 22pt 的 <b>28,466.00</b> 下面。规格早就为它留了槽位（<code>AccountGroupView.detail</code>，代码里现在传的是 nil）。<br>代价：底线 3 靠一行灰色小字承担；逾期一个字都没有——只是下面那行「含逾期 1 个」。</p>
+  </figure>
+
+  <!-- ============ B ============ -->
+  <figure class="cell">
+    <div class="cap"><span class="tag">B</span><b>灰明细行 · 横幅贴组头</b><span class="sub">最少改动</span></div>
+    <div class="device"><div class="screen">
+      <div class="sbar"><span>9:41</span><span class="rt"><span class="batt"></span></span></div>
+      <div class="phead"><span class="logo">DooDoo</span><span class="tabs">
+        <i><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></i>
+        <i class="on"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M3 10h18"/></svg></i>
+        <i><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg></i>
+      </span></div>
+      <div class="nw">
+        <div class="nwr">
+          <div class="nwc"><div class="k"><span class="dot" style="background:#3A9E6B"></span>我有</div>
+            <div class="v">3,120.00</div><div class="d"><span style="color:var(--green)">↘</span> 6.2%</div></div>
+          <div class="nwc"><div class="k"><span class="dot" style="background:#E8734A"></span>我欠</div>
+            <div class="v">48,466.00</div><div class="d"><span style="color:var(--green)">↘</span> 1.8%</div></div>
+        </div>
+        <svg class="spark" viewBox="0 0 320 44" preserveAspectRatio="none">
+          <path d="M6 14 C40 10, 58 22, 92 20 S148 30, 184 26 S250 34, 288 30" fill="none" stroke="#4C8DF6" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M6 30 C40 32, 58 26, 92 28 S148 20, 184 24 S250 18, 288 22" fill="none" stroke="#E8734A" stroke-width="1.6" stroke-linecap="round"/>
+          <circle cx="288" cy="30" r="2.6" fill="#fff" stroke="#4C8DF6" stroke-width="1.6"/>
+          <circle cx="288" cy="22" r="2.6" fill="#fff" stroke="#E8734A" stroke-width="1.6"/>
+        </svg>
+        <div class="pills"><span>1周</span><span>1月</span><span>3月</span><span>今年</span><span class="on">1年</span></div>
+      </div>
+
+      <div class="grp">
+        <div class="od red"><span class="ic">!</span><span class="tx"><b>招行 8857 逾期 82 天</b> · 2026-08 期 512.80 未还</span><span class="aw">›</span></div>
+        <div class="od yel"><span class="ic">!</span><span class="tx"><b>花呗 11/14 到期</b> · 还剩 2 天 · 986.44</span><span class="aw">›</span></div>
+        <div class="grph"><span class="nm">信用</span><span class="tt">9 个 · 28,466.00</span><span class="tg">+</span></div>
+        <div class="agg">
+          <div class="hdeck">
+            <div class="hc back k2" style="--c1:#D4342B;--c2:#8C1410;--bk:.76"></div>
+            <div class="hc back k1" style="--c1:#2C7BFF;--c2:#0B4FCC;--bk:.88"></div>
+            <div class="hc k0" style="--c1:#D4342B;--c2:#8C1410">
+              <div class="hcn">招商银行</div><div class="hcs">信用卡</div>
+              <div class="hcf"><span class="net">UNIONPAY</span></div>
+              <div class="hprog"><i style="width:0%"></i></div>
+            </div>
+            <span class="cnt">9</span>
+          </div>
+          <div class="aggr">
+            <div class="k">欠款合计</div><div class="v red">28,466.00</div>
+            <div class="m">本月要还 <b>2,742.00</b> · 3 笔 · 最近 11/14</div>
+          </div>
+        </div>
+        <div class="aggfoot"><span>含逾期 1 个</span><span class="arw">›</span></div>
+      </div>
+
+      <div class="grp save">
+        <div class="grph"><span class="nm">储蓄</span><span class="tt">8 个 · 3,120.00</span><span class="tg">+</span></div>
+        <div class="agg">
+          <div class="hdeck">
+            <div class="hc back k2" style="--c1:#3A9E6B;--c2:#186B45;--bk:.76"></div>
+            <div class="hc back k1" style="--c1:#4C8DF6;--c2:#1E5CBF;--bk:.88"></div>
+            <div class="hc k0" style="--c1:#3A9E6B;--c2:#186B45">
+              <div class="hcn">招商银行</div><div class="hcs">储蓄卡</div>
+              <div class="hcf"><span class="net">UNIONPAY</span></div>
+            </div>
+            <span class="cnt">8</span>
+          </div>
+          <div class="aggr">
+            <div class="k">余额合计</div><div class="v">3,120.00</div>
+            <div class="m">较上月 <b style="color:var(--green)">↘ 4.8%</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="mask-bottom"></div>
+    </div></div>
+    <p class="note"><b>横幅在组件外面，两行 30pt 一起压在「信用」二字上方。</b>红黄两级同时在：红 = 已逾期（82 天 + 金额），黄 = 3 天内到期（措辞换成「还剩 N 天」）。<b>2,742.00 仍是 9.5pt 灰字</b>——所以这一屏最响的是逾期，不是「这月要还多少」。<br>要点：横幅由整组数据算出，不是某张卡自带的；换组合计会变，横幅跟着变。</p>
+  </figure>
+
+  <!-- ============ C ============ -->
+  <figure class="cell">
+    <div class="cap"><span class="tag rec">C</span><b>白条 · 横幅贴组头</b><span class="sub">推荐</span></div>
+    <div class="device"><div class="screen">
+      <div class="sbar"><span>9:41</span><span class="rt"><span class="batt"></span></span></div>
+      <div class="phead"><span class="logo">DooDoo</span><span class="tabs">
+        <i><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></i>
+        <i class="on"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M3 10h18"/></svg></i>
+        <i><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg></i>
+      </span></div>
+      <div class="nw">
+        <div class="nwr">
+          <div class="nwc"><div class="k"><span class="dot" style="background:#3A9E6B"></span>我有</div>
+            <div class="v">3,120.00</div><div class="d"><span style="color:var(--green)">↘</span> 6.2%</div></div>
+          <div class="nwc"><div class="k"><span class="dot" style="background:#E8734A"></span>我欠</div>
+            <div class="v">48,466.00</div><div class="d"><span style="color:var(--green)">↘</span> 1.8%</div></div>
+        </div>
+        <svg class="spark" viewBox="0 0 320 44" preserveAspectRatio="none">
+          <path d="M6 14 C40 10, 58 22, 92 20 S148 30, 184 26 S250 34, 288 30" fill="none" stroke="#4C8DF6" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M6 30 C40 32, 58 26, 92 28 S148 20, 184 24 S250 18, 288 22" fill="none" stroke="#E8734A" stroke-width="1.6" stroke-linecap="round"/>
+          <circle cx="288" cy="30" r="2.6" fill="#fff" stroke="#4C8DF6" stroke-width="1.6"/>
+          <circle cx="288" cy="22" r="2.6" fill="#fff" stroke="#E8734A" stroke-width="1.6"/>
+        </svg>
+        <div class="pills"><span>1周</span><span>1月</span><span>3月</span><span>今年</span><span class="on">1年</span></div>
+      </div>
+
+      <div class="grp">
+        <div class="od red"><span class="ic">!</span><span class="tx"><b>招行 8857 逾期 82 天</b> · 2026-08 期 512.80 未还</span><span class="aw">›</span></div>
+        <div class="od yel"><span class="ic">!</span><span class="tx"><b>花呗 11/14 到期</b> · 还剩 2 天 · 986.44</span><span class="aw">›</span></div>
+        <div class="grph"><span class="nm">信用</span><span class="tt">9 个 · 28,466.00</span><span class="tg">+</span></div>
+        <div class="duebar">
+          <span class="dl">本月要还 · 3 笔 · 最近 11/14</span>
+          <span class="dv">2,742.00</span>
+        </div>
+        <div class="agg">
+          <div class="hdeck">
+            <div class="hc back k2" style="--c1:#D4342B;--c2:#8C1410;--bk:.76"></div>
+            <div class="hc back k1" style="--c1:#2C7BFF;--c2:#0B4FCC;--bk:.88"></div>
+            <div class="hc k0" style="--c1:#D4342B;--c2:#8C1410">
+              <div class="hcn">招商银行</div><div class="hcs">信用卡</div>
+              <div class="hcf"><span class="net">UNIONPAY</span></div>
+              <div class="hprog"><i style="width:0%"></i></div>
+            </div>
+            <span class="cnt">9</span>
+          </div>
+          <div class="aggr">
+            <div class="k">欠款合计</div><div class="v red">28,466.00</div>
+          </div>
+        </div>
+        <div class="aggfoot"><span>含逾期 1 个</span><span class="arw">›</span></div>
+      </div>
+
+      <div class="grp save">
+        <div class="grph"><span class="nm">储蓄</span><span class="tt">8 个 · 3,120.00</span><span class="tg">+</span></div>
+        <div class="agg">
+          <div class="hdeck">
+            <div class="hc back k2" style="--c1:#3A9E6B;--c2:#186B45;--bk:.76"></div>
+            <div class="hc back k1" style="--c1:#4C8DF6;--c2:#1E5CBF;--bk:.88"></div>
+            <div class="hc k0" style="--c1:#3A9E6B;--c2:#186B45">
+              <div class="hcn">招商银行</div><div class="hcs">储蓄卡</div>
+              <div class="hcf"><span class="net">UNIONPAY</span></div>
+            </div>
+            <span class="cnt">8</span>
+          </div>
+          <div class="aggr">
+            <div class="k">余额合计</div><div class="v">3,120.00</div>
+            <div class="m">较上月 <b style="color:var(--green)">↘ 4.8%</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="mask-bottom"></div>
+    </div></div>
+    <p class="note"><b>「本月要还」拿到自己的容器（白卡，形态照详情页规格 3.3）。</b>左灰字给「几笔、哪天」，右 14.5pt 给金额，与 22pt 的欠款合计同列对齐，眼睛扫一列就能读完「欠多少 → 这月还多少」。<br>代价：这个元素资产页冻结规格里没有，属结构新增；同时原 9.5pt 灰明细行必须删掉，否则同一数字出现两次。</p>
+  </figure>
+
+  <!-- ============ D ============ -->
+  <figure class="cell">
+    <div class="cap"><span class="tag">D</span><b>白条 · 横幅挪页顶</b><span class="sub">最醒目，代价最大</span></div>
+    <div class="device"><div class="screen">
+      <div class="sbar"><span>9:41</span><span class="rt"><span class="batt"></span></span></div>
+      <div class="phead"><span class="logo">DooDoo</span><span class="tabs">
+        <i><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></i>
+        <i class="on"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M3 10h18"/></svg></i>
+        <i><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg></i>
+      </span></div>
+
+      <div class="od red" style="margin-bottom:6px"><span class="ic">!</span><span class="tx"><b>招行 8857 逾期 82 天</b> · 2026-08 期 512.80 未还</span><span class="aw">›</span></div>
+      <div class="od yel" style="margin-bottom:12px"><span class="ic">!</span><span class="tx"><b>花呗 11/14 到期</b> · 还剩 2 天 · 986.44</span><span class="aw">›</span></div>
+
+      <div class="nw">
+        <div class="nwr">
+          <div class="nwc"><div class="k"><span class="dot" style="background:#3A9E6B"></span>我有</div>
+            <div class="v">3,120.00</div><div class="d"><span style="color:var(--green)">↘</span> 6.2%</div></div>
+          <div class="nwc"><div class="k"><span class="dot" style="background:#E8734A"></span>我欠</div>
+            <div class="v">48,466.00</div><div class="d"><span style="color:var(--green)">↘</span> 1.8%</div></div>
+        </div>
+        <svg class="spark" viewBox="0 0 320 44" preserveAspectRatio="none">
+          <path d="M6 14 C40 10, 58 22, 92 20 S148 30, 184 26 S250 34, 288 30" fill="none" stroke="#4C8DF6" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M6 30 C40 32, 58 26, 92 28 S148 20, 184 24 S250 18, 288 22" fill="none" stroke="#E8734A" stroke-width="1.6" stroke-linecap="round"/>
+          <circle cx="288" cy="30" r="2.6" fill="#fff" stroke="#4C8DF6" stroke-width="1.6"/>
+          <circle cx="288" cy="22" r="2.6" fill="#fff" stroke="#E8734A" stroke-width="1.6"/>
+        </svg>
+        <div class="pills"><span>1周</span><span>1月</span><span>3月</span><span>今年</span><span class="on">1年</span></div>
+      </div>
+
+      <div class="grp">
+        <div class="grph"><span class="nm">信用</span><span class="tt">9 个 · 28,466.00</span><span class="tg">+</span></div>
+        <div class="duebar">
+          <span class="dl">本月要还 · 3 笔 · 最近 11/14</span>
+          <span class="dv">2,742.00</span>
+        </div>
+        <div class="agg">
+          <div class="hdeck">
+            <div class="hc back k2" style="--c1:#D4342B;--c2:#8C1410;--bk:.76"></div>
+            <div class="hc back k1" style="--c1:#2C7BFF;--c2:#0B4FCC;--bk:.88"></div>
+            <div class="hc k0" style="--c1:#D4342B;--c2:#8C1410">
+              <div class="hcn">招商银行</div><div class="hcs">信用卡</div>
+              <div class="hcf"><span class="net">UNIONPAY</span></div>
+              <div class="hprog"><i style="width:0%"></i></div>
+            </div>
+            <span class="cnt">9</span>
+          </div>
+          <div class="aggr">
+            <div class="k">欠款合计</div><div class="v red">28,466.00</div>
+          </div>
+        </div>
+        <div class="aggfoot"><span>含逾期 1 个</span><span class="arw">›</span></div>
+      </div>
+
+      <div class="grp save">
+        <div class="grph"><span class="nm">储蓄</span><span class="tt">8 个 · 3,120.00</span><span class="tg">+</span></div>
+        <div class="agg">
+          <div class="hdeck">
+            <div class="hc back k2" style="--c1:#3A9E6B;--c2:#186B45;--bk:.76"></div>
+            <div class="hc back k1" style="--c1:#4C8DF6;--c2:#1E5CBF;--bk:.88"></div>
+            <div class="hc k0" style="--c1:#3A9E6B;--c2:#186B45">
+              <div class="hcn">招商银行</div><div class="hcs">储蓄卡</div>
+              <div class="hcf"><span class="net">UNIONPAY</span></div>
+            </div>
+            <span class="cnt">8</span>
+          </div>
+          <div class="aggr">
+            <div class="k">余额合计</div><div class="v">3,120.00</div>
+            <div class="m">较上月 <b style="color:var(--green)">↘ 4.8%</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="mask-bottom"></div>
+    </div></div>
+    <p class="note"><b>横幅顶到页面最上，两行 66pt 把总览卡整体下推：</b>「我有 3,120.00 / 我欠 48,466.00」被挤到第三条才读到，<b>第一眼看到的是逾期，不是资产总额</b>——而总览卡是这个 tab 的立身之本。两组卡堆仍在首屏内，没被裁。<br>语义也偏了：逾期只发生在信用卡，放页顶会读成「整个账本出事了」；PRD 写的是「信用组：卡堆 + 欠款合计 + 本月要还 + 逾期横幅」。<br>唯一优点：这是全 App 唯一能保证「一进来就撞上」的位置。</p>
+  </figure>
+
+</div>
+
+<!-- ---------- 口径 ---------- -->
+<div class="calc">
+  <h2>口径：2,742.00 是 Σ 各卡的「本月要还」，不是 Σ账单 + Σ分期</h2>
+  <p class="lead">每张卡只看<b>一个来源</b>——有本期账单就取账单 dueAmount（分期已经含在里面），没有账单才退回分期到期额。组内只做「卡与卡相加」，绝不「账单与分期相加」。下面这组数就是详情页这轮修掉的错，这里逐分复现一遍。</p>
+  <table>
+    <thead><tr><th>卡</th><th>本期账单 dueAmount</th><th>其中本月到期分期</th><th>这张卡取</th></tr></thead>
+    <tbody>
+      <tr><td>招行 8857</td><td class="num">1,115.03</td><td class="num">449.67</td><td class="num">1,115.03</td></tr>
+      <tr><td>花呗</td><td class="num">986.44</td><td class="num">156.00</td><td class="num">986.44</td></tr>
+      <tr><td>京东白条</td><td class="num">640.53</td><td class="num">88.00</td><td class="num">640.53</td></tr>
+      <tr><td>其余 6 张（本月无到期）</td><td class="num">—</td><td class="num">—</td><td class="num">0.00</td></tr>
+      <tr class="sum"><td>合计</td><td class="num">2,742.00</td><td class="num">693.67</td><td class="num" style="color:var(--green)">2,742.00 ✓</td></tr>
+    </tbody>
+  </table>
+  <div class="wrong">
+    错误算法：<span class="big">2,742.00 + 693.67 = 3,435.67 ✗</span><br>
+    分期到期额<b>本来就在当期账单里</b>，再按来源相加等于把它算两遍，多出 693.67——正好是三张卡的分期部分之和。
+  </div>
+  <div class="rule">
+    落成代码就是一条硬约束：每张卡返回<b>一个</b> <code>AccountDue</code>（含来源标记），组只允许 <code>Σ 各卡</code>。没有第二个聚合入口，也就没有第二次犯这个错的机会。<br>
+    逾期另算：<b>不计入</b>本月要还（它是 8 月的账），只在横幅和明细里出现。
+  </div>
+  <div class="todo">
+    <b>选完要定的事</b><br>
+    ① 形态：A/B 的灰明细行，还是 C/D 的白条（选白条要顺手删掉灰明细行）<br>
+    ② 横幅位置：不贴（A）/ 贴信用组组头（B、C）/ 页顶（D）<br>
+    ③ 点击落点：详情页还没实现，本轮建议「点横幅 → 信用组磨砂浮层」把逾期的卡标红，详情页建好后一处换成 push
+  </div>
+</div>
+
+</body>
+</html>
