@@ -1,0 +1,14 @@
+const out = 'D:/Work/WorkBuddy_File/account/design/current/';
+await page.setViewportSize({ width: 900, height: 1000 });
+await page.goto('file:///D:/Work/WorkBuddy_File/account/design/current/account-detail-v1.0.html', { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(700);
+await page.addStyleTag({ content: '*,*::before,*::after{animation:none !important;transition:none !important}' });
+await page.waitForTimeout(200);
+await page.locator('#screen').screenshot({ path: out + '_snap-v1-top.png' });
+await page.evaluate(() => { const sc = document.querySelector('#screen .dtscroll'); if (sc) sc.scrollTop = 400; });
+await page.waitForTimeout(200);
+await page.locator('#screen').screenshot({ path: out + '_snap-v1-mid.png' });
+await page.evaluate(() => { const sc = document.querySelector('#screen .dtscroll'); if (sc) sc.scrollTop = 1100; });
+await page.waitForTimeout(200);
+await page.locator('#screen').screenshot({ path: out + '_snap-v1-bot.png' });
+return { ok: true };
