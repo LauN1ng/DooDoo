@@ -25,7 +25,7 @@ struct SmokeTests {
     func inMemoryStore() throws {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(
-            for: Account.self, Category.self, Transaction.self, Installment.self, InstallmentPeriod.self, AppSettings.self,
+            for: Account.self, Category.self, Transaction.self, Installment.self, InstallmentPeriod.self, BillStatement.self, AppSettings.self,
             configurations: config
         )
         let context = ModelContext(container)

@@ -1,0 +1,510 @@
+import SwiftUI
+import SwiftData
+
+/// 卡详情（`账户详情页规格冻结-v1.0.md` 的最小落地，PROGRESS M3-8）。
+///
+/// **形态是 sheet，不是 push**。原因是资产页还没有导航栈：点卡堆先出的是组浮层，
+/// 详情从浮层里再开一层。等 M4 把 tab 换成 NavigationStack 时，这层 sheet 内容
+/// 可以整块搬进 `AccountDetailView`——规格 10.1 的结构本来就是
+/// 「卡面 → 指标区 → 走势图 → 往期账单 → 分期 → 流水」，这里先把
+/// **指标区 / 往期账单 / 分期**三块做出来，走势图与流水留到有数据源之后。
+///
+/// 数值全部走 `Math/` 的纯函数（`CardDebt` / `DetailMath` / `DueMath`），这里只摆位置。
+struct AccountDetailSheet: View {
+    let account: Account
+
+    @Environment(\.dismiss) private var dismiss
+    @Query private var allBills: [BillStatement]
+    @Query private var allInstallments: [Installment]
+    @Query private var allPeriods: [InstallmentPeriod]
+
+    @State private var route: DetailRoute?
+    @State private var editingAccount: Account?
+
+    var body: some View {
+        NavigationStack {
+            ScrollView(showsIndicators: false) {
+                let m = metrics
+                VStack(alignment: .leading, spacing: 20) {
+                    header(m)
+                    metricsBlock(m)
+                    pastBillsSection
+                    installmentsSection
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 28)
+            }
+            .background(Palette.page)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text(account.name)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Palette.ink)
+                }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("编辑") { editingAccount = account }
+                        .font(.system(size: 15))
+                        .foregroundStyle(Palette.ink2)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("完成") { dismiss() }
+                        .font(.system(size: 15))
+                        .foregroundStyle(Palette.ink2)
+                }
+            }
+            .sheet(item: $route) { route in
+                switch route {
+                case .billEntry:
+                    BillEntrySheet(account: account)
+                case .periods(let installment):
+                    PeriodEditorSheet(installment: installment)
+                case .newInstallment:
+                    InstallmentEntryView(preferredAccount: account)
+                }
+            }
+            .sheet(item: $editingAccount) { account in
+                AccountEditor(account: account, defaultKind: account.kind)
+            }
+        }
+    }
+
+    // MARK: - 数据
+
+    private var bills: [BillStatement] {
+        allBills
+            .filter { $0.account?.persistentModelID == account.persistentModelID }
+            .sorted { $0.dueDate > $1.dueDate }
+    }
+
+    private var installments: [Installment] {
+        allInstallments
+            .filter { $0.account?.persistentModelID == account.persistentModelID }
+            .sorted { $0.nextDueDate < $1.nextDueDate }
+    }
+
+    /// 某分期计划下全部期（按期号）。期表只记 `installmentKey`，得按 key 折。
+    private func periods(of installment: Installment) -> [InstallmentPeriod] {
+        allPeriods
+            .filter { $0.installmentKey == installment.key }
+            .sorted { $0.index < $1.index }
+    }
+
+    /// 单卡的账单与期数都有界（每月一期、每计划几十期），在 body 里现算不会卡；
+    /// 聚合成 `@State` 反而要在 4 个 onChange 上同步，容易漏。
+    private var metrics: DetailMetrics {
+        let debt = CardDebt.owe(
+            CardDebtInput(
+                balance: account.currentBalance,
+                bills: bills.map { DebtBill(dueAmount: $0.dueAmount, dueDate: $0.dueDate, isPaid: $0.isPaid) },
+                periods: installments.flatMap { plan in
+                    periods(of: plan)
+                        .filter { $0.paidAt == nil }
+                        .map { DebtPeriod(amount: $0.amount, dueDate: $0.dueDate, isPaid: false) }
+                }
+            )
+        )
+
+        return DetailMath.metrics(
+            owe: debt,
+            bills: bills.map { DebtBill(dueAmount: $0.dueAmount, dueDate: $0.dueDate, isPaid: $0.isPaid) },
+            periods: installments.flatMap { plan in
+                periods(of: plan).map { DebtPeriod(amount: $0.amount, dueDate: $0.dueDate, isPaid: $0.paidAt != nil) }
+            },
+            today: .now
+        )
+    }
+
+    // MARK: - 区块
+
+    private func header(_ m: DetailMetrics) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            CardFace(account: account, size: .detail)
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text(account.name)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Palette.ink)
+                    .lineLimit(1)
+
+                Text(subtitle)
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(Palette.sub)
+                    .lineLimit(1)
+
+                if m.overdueDays > 0 {
+                    Text("逾期 \(m.overdueDays) 天")
+                        .font(.system(size: 10.5, weight: .semibold))
+                        .foregroundStyle(Palette.overdraft)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(Palette.overdraftBed))
+                }
+            }
+            .padding(.top, 2)
+
+            Spacer(minLength: 0)
+        }
+    }
+
+    private var subtitle: String {
+        let masked = account.maskedNumber
+        return masked.isEmpty ? account.typeLabel : "\(account.typeLabel) · \(masked)"
+    }
+
+    private func metricsBlock(_ m: DetailMetrics) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 8) {
+                metricColumn(
+                    title: "欠款",
+                    value: MoneyMath.money(m.owe),
+                    note: account.creditLimit.map { "额度 \(MoneyMath.money($0))" } ?? "含分期与账单",
+                    tone: Palette.expense
+                )
+                metricColumn(
+                    title: "本期消费",
+                    value: m.consumed.map { MoneyMath.money($0) } ?? "—",
+                    note: "不含分期",
+                    tone: Palette.ink
+                )
+                metricColumn(
+                    title: "本月分期",
+                    value: m.monthInstallment > 0 ? MoneyMath.money(m.monthInstallment) : "—",
+                    note: monthInstallmentNote,
+                    tone: Palette.ink
+                )
+            }
+            .padding(.top, 18)
+
+            if let limit = account.creditLimit, limit > 0 {
+                limitBar(owe: m.owe, limit: limit)
+                    .padding(.top, 15)
+            }
+
+            monthDueBar(m)
+                .padding(.top, 10)
+        }
+    }
+
+    private var monthInstallmentNote: String {
+        let count = installments
+            .flatMap { periods(of: $0) }
+            .filter { $0.paidAt == nil && DueMath.isDueInThisMonth($0.dueDate, today: .now) }
+            .count
+        return count > 0 ? "\(count) 笔" : "无"
+    }
+
+    private func metricColumn(title: String, value: String, note: String, tone: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.system(size: 10.5))
+                .foregroundStyle(Palette.sub)
+                .lineLimit(1)
+            Text(value)
+                .font(.system(size: 17, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(tone)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(note)
+                .font(.system(size: 9.5))
+                .foregroundStyle(Palette.faint)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// 额度进度条（规格 3.2）。**不写「3,120 / 4,600」**——欠款在第一列、额度在第一列副标题，
+    /// 这里再写一遍就是同一个数第三次出现（规格第九节去重清单）。
+    private func limitBar(owe: Decimal, limit: Decimal) -> some View {
+        let used = min(max(owe / limit, 0), 1)
+        let available = limit - owe
+        return VStack(spacing: 8) {
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Palette.line)
+                    Capsule()
+                        .fill(Palette.ink)
+                        .frame(width: geo.size.width * CGFloat(truncating: used as NSDecimalNumber))
+                }
+            }
+            .frame(height: 5)
+
+            HStack {
+                Text("已用 \(MoneyMath.percent(used * 100, digits: 0))")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Palette.sub)
+                Spacer()
+                Text("可用 \(MoneyMath.money(available > 0 ? available : 0))")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Palette.ink2)
+            }
+        }
+    }
+
+    /// 「本月要还」白条（规格 3.3）。详情页唯一的合计落点。
+    @ViewBuilder
+    private func monthDueBar(_ m: DetailMetrics) -> some View {
+        if let monthDue = m.monthDue {
+            HStack {
+                Text(monthDueCaption(m))
+                    .font(.system(size: 11))
+                    .foregroundStyle(Palette.sub)
+                Spacer(minLength: 8)
+                Text(MoneyMath.money(monthDue))
+                    .font(.system(size: 14.5, weight: .semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(Palette.ink)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Palette.card)
+            )
+        }
+    }
+
+    private func monthDueCaption(_ m: DetailMetrics) -> String {
+        guard let date = m.monthDueDate else { return "本月要还" }
+        let parts = Calendar.current.dateComponents([.month, .day], from: date)
+        return "本月要还 · \(parts.month ?? 0)/\(parts.day ?? 0) 到期"
+    }
+
+    // MARK: - 往期账单
+
+    /// 往期账单：只取早于本月开始的那些（本期由三列 + 白条回答，未来期还没出账）。
+    private var pastBills: [BillStatement] {
+        let calendar = Calendar.current
+        guard let monthStart = calendar.dateInterval(of: .month, for: .now)?.start else {
+            return bills
+        }
+        return bills.filter { calendar.startOfDay(for: $0.dueDate) < monthStart }
+    }
+
+    private var pastBillsSection: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(spacing: 8) {
+                Text("往期账单")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Palette.ink)
+
+                let overdue = pastBills.filter { $0.isOverdue(on: .now) }.count
+                Text(overdue > 0 ? "\(pastBills.count) 期 · 含逾期 \(overdue) 期" : "\(pastBills.count) 期")
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(Palette.sub)
+
+                Spacer(minLength: 8)
+
+                Button {
+                    route = .billEntry
+                } label: {
+                    Text("＋ 录账单")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Palette.ink2)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Capsule().fill(Palette.tabBed))
+                }
+                .buttonStyle(.plain)
+            }
+
+            if pastBills.isEmpty {
+                emptyRow("还没录过往期账单")
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(pastBills) { bill in
+                        billRow(bill)
+                        if bill.id != pastBills.last?.id {
+                            Divider().overlay(Palette.line)
+                        }
+                    }
+                }
+                .padding(.horizontal, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Palette.card)
+                )
+            }
+        }
+    }
+
+    private func billRow(_ bill: BillStatement) -> some View {
+        HStack(alignment: .center, spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(bill.period) 期")
+                    .font(.system(size: 12.5, weight: .semibold))
+                    .foregroundStyle(Palette.ink)
+                Text(bill.dueDateCaption(on: .now))
+                    .font(.system(size: 9.5))
+                    .foregroundStyle(Palette.sub)
+            }
+
+            Spacer(minLength: 8)
+
+            Text(MoneyMath.money(bill.dueAmount))
+                .font(.system(size: 13, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(Palette.ink)
+
+            statusTag(bill.displayStatus(on: .now))
+        }
+        .padding(.vertical, 9)
+    }
+
+    private func statusTag(_ status: BillStatus) -> some View {
+        let (text, color, bed) = tagStyle(status)
+        return Text(text)
+            .font(.system(size: 9.5, weight: .medium))
+            .foregroundStyle(color)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2.5)
+            .background(Capsule().fill(bed))
+    }
+
+    private func tagStyle(_ status: BillStatus) -> (String, Color, Color) {
+        switch status {
+        case .pending: (status.title, Palette.ink2, Palette.pillOn)
+        case .paid: (status.title, Palette.sub, Palette.line)
+        case .overdue: (status.title, Palette.overdraft, Palette.overdraftBed)
+        }
+    }
+
+    // MARK: - 分期
+
+    private var installmentsSection: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(spacing: 8) {
+                Text("分期")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Palette.ink)
+
+                let total = installments.reduce(Decimal.zero) { $0 + $1.remainingTotal }
+                Text("\(installments.count) 笔 · 剩余 \(MoneyMath.money(total))")
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(Palette.sub)
+
+                Spacer(minLength: 8)
+
+                Button {
+                    route = .newInstallment
+                } label: {
+                    Text("＋ 录分期")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Palette.ink2)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Capsule().fill(Palette.tabBed))
+                }
+                .buttonStyle(.plain)
+            }
+
+            if installments.isEmpty {
+                emptyRow("这张卡没有分期")
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(installments) { plan in
+                        Button {
+                            route = .periods(plan)
+                        } label: {
+                            installmentRow(plan)
+                        }
+                        .buttonStyle(.plain)
+                        if plan.id != installments.last?.id {
+                            Divider().overlay(Palette.line)
+                        }
+                    }
+                }
+                .padding(.horizontal, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Palette.card)
+                )
+            }
+        }
+    }
+
+    private func installmentRow(_ plan: Installment) -> some View {
+        HStack(spacing: 10) {
+            // 进度环：已还期数 / 总期数（规格第六节 34pt）。
+            ZStack {
+                Circle()
+                    .stroke(Palette.line, lineWidth: 2.5)
+                Circle()
+                    .trim(from: 0, to: progress(plan))
+                    .stroke(Palette.ink, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                Text("\(plan.paidPeriods)/\(plan.totalPeriods)")
+                    .font(.system(size: 8.5, weight: .semibold))
+                    .foregroundStyle(Palette.ink2)
+            }
+            .frame(width: 34, height: 34)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(plan.name)
+                    .font(.system(size: 12.5, weight: .semibold))
+                    .foregroundStyle(Palette.ink)
+                    .lineLimit(1)
+                Text("每期 \(MoneyMath.money(plan.perPeriodAmount)) · 剩 \(plan.remainingPeriods) 期")
+                    .font(.system(size: 9.5))
+                    .foregroundStyle(Palette.sub)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 8)
+
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(MoneyMath.money(plan.remainingTotal))
+                    .font(.system(size: 13, weight: .semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(Palette.ink)
+                Text(nextDueCaption(plan))
+                    .font(.system(size: 9.5))
+                    .foregroundStyle(Palette.faint)
+            }
+        }
+        .padding(.vertical, 9)
+        .contentShape(Rectangle())
+    }
+
+    private func progress(_ plan: Installment) -> CGFloat {
+        guard plan.totalPeriods > 0 else { return 0 }
+        let ratio = Double(plan.paidPeriods) / Double(plan.totalPeriods)
+        return CGFloat(min(max(ratio, 0), 1))
+    }
+
+    private func nextDueCaption(_ plan: Installment) -> String {
+        let parts = Calendar.current.dateComponents([.month, .day], from: plan.nextDueDate)
+        return "\(parts.month ?? 0)/\(parts.day ?? 0) 到期"
+    }
+
+    private func emptyRow(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 11))
+            .foregroundStyle(Palette.faint)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Palette.card)
+            )
+    }
+}
+
+/// 卡详情里会推开的两个子页（规格 11.6：这两个子页的交互 v1.0 未锁定）。
+private enum DetailRoute: Identifiable {
+    case billEntry
+    case periods(Installment)
+    case newInstallment
+
+    var id: String {
+        switch self {
+        case .billEntry: "billEntry"
+        case .periods(let plan): "periods-\(plan.key)"
+        case .newInstallment: "newInstallment"
+        }
+    }
+}

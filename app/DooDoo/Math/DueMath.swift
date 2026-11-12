@@ -184,6 +184,65 @@ enum DueMath {
         )
     }
 
+    /// 一张卡在「已录账单、可能还有往期逾期」时的本月要还。
+    ///
+    /// 与单个 `bill:` 版本的唯一区别：**往期逾期账单不进金额、只进逾期计数**
+    /// （PRD 9.12——8 月漏还的钱属于 8 月，算进 11 月会和 11 月重复）。
+    /// 本月账单无论是否已过还款日都进金额：它本来就属于本月，过了日子只是同时标红。
+    ///
+    /// 边界：本月既无账单也无分期、但有往期逾期账单时仍产出结果（`amount = 0`），
+    /// 否则「本月没有应还 · 逾期 1 笔 82 天」这行会整个消失，逾期再次不可见。
+    static func accountDue(
+        bills: [BillDue],
+        installments: [DueEntry] = [],
+        today: Date,
+        calendar: Calendar = .current
+    ) -> AccountDue? {
+        let currentBill = bills
+            .filter { isDueInThisMonth($0.dueDate, today: today, calendar: calendar) }
+            .max { $0.dueDate < $1.dueDate }
+
+        let pastOverdue = bills.filter {
+            !isDueInThisMonth($0.dueDate, today: today, calendar: calendar)
+                && isOverdue(dueDate: $0.dueDate, isPaid: false, today: today, calendar: calendar)
+        }
+        let pastOverdueDays = pastOverdue
+            .map { overdueDays(dueDate: $0.dueDate, today: today, calendar: calendar) }
+            .max() ?? 0
+
+        guard let base = accountDue(
+            bill: currentBill,
+            installments: installments,
+            today: today,
+            calendar: calendar
+        ) else {
+            guard !pastOverdue.isEmpty else { return nil }
+            return AccountDue(
+                amount: 0,
+                source: .bill,
+                itemCount: 0,
+                nearestDueDate: pastOverdue.map(\.dueDate).min(),
+                overdueCount: pastOverdue.count,
+                overdueDays: pastOverdueDays
+            )
+        }
+
+        guard !pastOverdue.isEmpty else { return base }
+
+        let nearest = [base.nearestDueDate, pastOverdue.map(\.dueDate).min()]
+            .compactMap { $0 }
+            .min()
+
+        return AccountDue(
+            amount: base.amount,
+            source: base.source,
+            itemCount: base.itemCount,
+            nearestDueDate: nearest,
+            overdueCount: base.overdueCount + pastOverdue.count,
+            overdueDays: max(base.overdueDays, pastOverdueDays)
+        )
+    }
+
     // MARK: - 整组
 
     /// 整组合计。**输入就是每张卡唯一的那个 `AccountDue`**，所以这里只有一种加法。

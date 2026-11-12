@@ -25,7 +25,7 @@ struct InstallmentModelTests {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(
             for: Account.self, Category.self, Transaction.self,
-            Installment.self, InstallmentPeriod.self, AppSettings.self,
+            Installment.self, InstallmentPeriod.self, BillStatement.self, AppSettings.self,
             configurations: config
         )
         return ModelContext(container)

@@ -18,6 +18,7 @@ struct DooDooApp: App {
                 Transaction.self,
                 Installment.self,
                 InstallmentPeriod.self,
+                BillStatement.self,
                 AppSettings.self
             )
         } catch {

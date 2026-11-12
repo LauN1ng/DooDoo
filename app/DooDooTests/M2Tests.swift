@@ -129,7 +129,7 @@ struct LedgerRecalcTests {
     private func makeContainer() throws -> ModelContainer {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         return try ModelContainer(
-            for: Account.self, Category.self, Transaction.self, Installment.self, InstallmentPeriod.self, AppSettings.self,
+            for: Account.self, Category.self, Transaction.self, Installment.self, InstallmentPeriod.self, BillStatement.self, AppSettings.self,
             configurations: config
         )
     }

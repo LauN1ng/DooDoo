@@ -280,4 +280,95 @@ struct DueMathTests {
         #expect(DueMath.monthDay(date(2026, 11, 8), calendar: calendar) == "11/08")
         #expect(DueMath.monthDay(date(2026, 1, 1), calendar: calendar) == "01/01")
     }
+
+    // MARK: - 账单接入（M3-8）
+
+    @Test("本月有账单时只取账单金额，本期到期分期一根手指都不碰")
+    func billWinsOverInstallments() throws {
+        let due = try #require(
+            DueMath.accountDue(
+                bills: [BillDue(amount: dec("1115.03"), dueDate: date(2026, 11, 22))],
+                installments: installmentEntries,
+                today: today,
+                calendar: calendar
+            )
+        )
+
+        #expect(due.amount == dec("1115.03"))
+        #expect(due.source == .bill)
+        #expect(due.itemCount == 1)
+        // 相加会得到 1,564.70（= 1,115.03 + 449.67 里的分期部分），正是规格 8.2 禁止的算法
+        #expect(due.amount != dec("1564.70"))
+    }
+
+    @Test("往期逾期账单不进金额，只进逾期计数")
+    func pastOverdueBillDoesNotCountInAmount() throws {
+        let due = try #require(
+            DueMath.accountDue(
+                bills: [
+                    BillDue(amount: dec("1115.03"), dueDate: date(2026, 11, 22)),
+                    BillDue(amount: dec("512.80"), dueDate: date(2026, 8, 22)),
+                ],
+                installments: [],
+                today: today,
+                calendar: calendar
+            )
+        )
+
+        #expect(due.amount == dec("1115.03"))
+        #expect(due.overdueCount == 1)
+        #expect(due.overdueDays == 82)
+        #expect(due.nearestDueDate == date(2026, 8, 22))
+    }
+
+    @Test("本月没有账单也没有分期，但往期逾期还在时仍要产出，红字才有地方挂")
+    func pastOverdueOnlyStillProduces() throws {
+        let due = try #require(
+            DueMath.accountDue(
+                bills: [BillDue(amount: dec("512.80"), dueDate: date(2026, 8, 22))],
+                installments: [],
+                today: today,
+                calendar: calendar
+            )
+        )
+
+        #expect(due.amount == 0)
+        #expect(due.overdueCount == 1)
+        #expect(due.overdueDays == 82)
+    }
+
+    @Test("本月账单已过还款日时，金额照算并同时计逾期")
+    func currentBillPastDueCountsBoth() throws {
+        let due = try #require(
+            DueMath.accountDue(
+                bills: [BillDue(amount: dec("1115.03"), dueDate: date(2026, 11, 5))],
+                installments: [],
+                today: today,
+                calendar: calendar
+            )
+        )
+
+        #expect(due.amount == dec("1115.03"))
+        #expect(due.overdueCount == 1)
+        #expect(due.overdueDays == 7)
+    }
+
+    @Test("一张卡同时有本月账单与往期逾期时，金额只算本月，逾期计数两笔")
+    func currentBillPlusPastOverdue() throws {
+        let due = try #require(
+            DueMath.accountDue(
+                bills: [
+                    BillDue(amount: dec("1115.03"), dueDate: date(2026, 11, 5)),
+                    BillDue(amount: dec("512.80"), dueDate: date(2026, 8, 22)),
+                ],
+                installments: [],
+                today: today,
+                calendar: calendar
+            )
+        )
+
+        #expect(due.amount == dec("1115.03"))
+        #expect(due.overdueCount == 2)
+        #expect(due.overdueDays == 82)
+    }
 }

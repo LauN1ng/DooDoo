@@ -24,6 +24,12 @@ import SwiftUI
 /// 给定总额和期数根本推不出单期金额；抄一个末期就能反推（见 `InstallmentMath.splitEndingAt`）。
 /// 不填就退回均摊，跟 M3-4 完全一致。
 struct InstallmentEntryView: View {
+    /// 从卡详情进来时预选这张卡；从设置页进来为 `nil`，沿用上一笔挂的卡。
+    ///
+    /// 设置页那个入口是 M3-2 的临时位置（PROGRESS 原话：等资产页「本月要还」上线后
+    /// 入口会挪进账户里）。M3-8 起详情页的分期区块也有入口，两边共用这个面板。
+    var preferredAccount: Account? = nil
+
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
 
@@ -71,6 +77,7 @@ struct InstallmentEntryView: View {
         .overlay(alignment: .top) { receiptBanner }
         .task {
             vm.load(context: context)
+            if let preferredAccount { vm.selectAccount(preferredAccount) }
             // 第一个该填的是「剩余应还」——账单上最大的那个数。
             focus = .due
         }
@@ -800,5 +807,5 @@ struct InstallmentEntryView: View {
 
 #Preview {
     InstallmentEntryView()
-        .modelContainer(for: [Account.self, Category.self, Transaction.self, Installment.self, InstallmentPeriod.self, AppSettings.self], inMemory: true)
+        .modelContainer(for: [Account.self, Category.self, Transaction.self, Installment.self, InstallmentPeriod.self, BillStatement.self, AppSettings.self], inMemory: true)
 }
