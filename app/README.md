@@ -66,6 +66,8 @@ app/
 3. Windows 上用 **Sideloadly** 拿自己的 Apple ID 重签。Sideloadly 需要 iTunes 提供 Apple 驱动，**装官网版 iTunes，不要装 Microsoft Store 版**（商店版不带驱动）。
 4. 装到 iPhone：首次要先在手机上打开开发者模式（见下表）并信任证书。
 
+**怎么确认装的是新包**：设置 tab 的「版本」里括号里的数字就是**本次 CI 的 run 号**（`CURRENT_PROJECT_VERSION` 由 CI 用 `github.run_number` 注入，每 push 一次加一）。它不再是手写固定值，所以数字相同就一定是同一个包，数字变大就是新包。**别再拿它当「版本」看——它只用来分辨新旧。**
+
 关键限制（**不是 bug，是 iOS 的规则**）：
 
 | 限制 | 说明 |

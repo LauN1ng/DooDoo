@@ -31,7 +31,9 @@ targets:
         PRODUCT_NAME: DooDoo
         PRODUCT_BUNDLE_IDENTIFIER: com.doodoo.app
         MARKETING_VERSION: "0.1.0"
-        CURRENT_PROJECT_VERSION: "8"
+        # 构建号。CI 会用 `github.run_number` 覆盖它（见 .github/workflows/ios.yml），
+        # 这样每次 CI 出的包号唯一递增，一眼能分新旧——手写固定值会一直停在同一个号上。
+        CURRENT_PROJECT_VERSION: "9"
         TARGETED_DEVICE_FAMILY: "1"          # 仅 iPhone
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: DooDoo

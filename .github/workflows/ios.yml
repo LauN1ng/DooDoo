@@ -187,6 +187,7 @@ jobs:
             EXPANDED_CODE_SIGN_IDENTITY="" \
             DEVELOPMENT_TEAM="" \
             PROVISIONING_PROFILE_SPECIFIER="" \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} \
             build | tee build-ipa.log
 
       - name: 打包成 IPA
