@@ -96,6 +96,13 @@ final class Transaction {
     /// 每期还的是同一个账户的欠款，不是新的消费。
     var installmentKey: String?
 
+    /// 账期，形如 `2026-11`（PRD 第八节 v2.0 字段）。
+    ///
+    /// 还款流水用它标「还的是哪个账期」，撤销和「本月已还」的判断都靠它。
+    /// 可选、默认 `nil`——老库自动迁移只认「可选」或「带默认值」，加这个字段不会崩。
+    /// 普通消费的账期归属（账单周期）留到下一步「账单期关联」再接。
+    var billPeriod: String?
+
     var category: Category?
 
     /// 这一笔自己的 Fluent3D 图标（bundle 资源名，如 `"HotBeverage"`）。
