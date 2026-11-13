@@ -3,9 +3,13 @@ import SwiftData
 
 /// 分期计划的写入入口（M3-2）。
 ///
-/// **它不动余额**——分期是一张还款时间表，真正动钱的是挂在上面的 `.repayment`
-/// 流水（走 `LedgerService`）。两条路径别混：AGENTS 7.2 说的「余额只能由
-/// `LedgerService` 写」，指的是钱；这里只写「欠多少、什么时候还」。
+/// **它动余额**（2026-11-13 口径统一起）。计划里的债必须进 `currentBalance`——
+/// 余额是唯一真相，分期不再靠第二套派生去补金额，否则「我欠」永远看不见这笔债。
+///
+/// 唯一例外是 `createdFromEntry`：那种计划由「记一笔」的全额 `expense` 入账，
+/// 这里再入一次就是双份。
+///
+/// 仍然遵守 AGENTS 7.2：改余额一律走 `LedgerService`，本文件不直接赋值。
 ///
 /// 建计划时顺手把未来每一期落库（PRD 9.5.4）：已还的历史只存汇总，
 /// 未来逐期存，因为任意一期都可能被账单改正（9.5.5）。
@@ -24,8 +28,8 @@ enum InstallmentService {
     /// - `remainingInterest`：账单把利息单列时的**剩余期**利息（e招贷 851.57）。
     ///   给了它，年化改走剩余口径（见 `Installment.estimatedAnnualRate`），不吃整笔公式
     /// - `createdFromEntry`：这张计划是不是在「记一笔」里跟消费一起建的（M3-10）。
-    ///   那种计划的消费已按全额记了 `expense`，所以「我欠」不再把它的未还期加上一遍
-    ///   （见 `Installment.createdFromEntry` / `CardDebt.owe`）
+    ///   那种计划的消费已按全额记了 `expense`，**所以这里不再重复入账**。
+    ///   语义在 2026-11-13 口径统一时反转：从「我欠别算我」变成「我已经入过账了」
     /// - `iconName`：列表展示用，默认 `Receipt`（bundle 里的 Fluent3D PNG 名）
     ///
     /// 边界：`remaining <= 0` 时仍建计划但**不生成期表**（已还清的历史分期，
@@ -68,8 +72,63 @@ enum InstallmentService {
         )
         context.insert(plan)
         try generateFuturePeriods(for: plan, calendar: calendar, in: context)
+
+        // 债务入账（2026-11-13）：把「剩余应还」写进账户余额。
+        //
+        // 为什么必须有这一步：欠款 = max(0, −余额)，分期若只登记不入账，
+        // 详情页看得见 3,852.15 的期表，资产页却说欠 0。
+        //
+        // 为什么 `createdFromEntry` 跳过：那种消费已按 PRD 9.5.6 记了**全额** `expense`，
+        // 余额里已经有了；再入一次会让 1,440.39 变成 2,880.78。
+        if !createdFromEntry, let account, let due = plan.remainingDue, due > 0 {
+            try LedgerService.adjustAccountBalance(
+                account,
+                to: account.currentBalance - due,
+                in: context
+            )
+        }
+
         try context.save()
         return plan
+    }
+
+    /// 把库里已存在、但从未入账的分期计划一次性计入余额（2026-11-13 口径切换的迁移）。
+    ///
+    /// 切换前分期只记「欠多少、什么时候还」，金额靠 `CardDebt` 事后补；切换后欠款只读余额，
+    /// 所以这批计划必须补一次入账，否则它们成为僵尸数据——期表在，金额不在。
+    ///
+    /// - 幂等：跑完在 `UserDefaults` 写标记，重复调用直接返回 0。
+    /// - `createdFromEntry` 跳过（消费全额已在余额里）。
+    /// - 同卡多笔计划先求和再一次入账，避免每笔都触发一次全表重算。
+    ///
+    /// 返回受影响的账户数。
+    @discardableResult
+    static func backfillDebtBaseline(in context: ModelContext) throws -> Int {
+        let flag = "doodoo.creditDebt.backfill.v1"
+        guard !UserDefaults.standard.bool(forKey: flag) else { return 0 }
+
+        let plans = try context.fetch(FetchDescriptor<Installment>())
+        var owedByAccount: [PersistentIdentifier: Decimal] = [:]
+        for plan in plans where !plan.createdFromEntry {
+            guard plan.remainingDue != nil, plan.remainingTotal > 0 else { continue }
+            guard let account = plan.account else { continue }
+            owedByAccount[account.persistentModelID, default: 0] += plan.remainingTotal
+        }
+
+        var affected = 0
+        for account in try context.fetch(FetchDescriptor<Account>()) {
+            guard let owed = owedByAccount[account.persistentModelID], owed > 0 else { continue }
+            try LedgerService.adjustAccountBalance(
+                account,
+                to: account.currentBalance - owed,
+                in: context
+            )
+            affected += 1
+        }
+
+        UserDefaults.standard.set(true, forKey: flag)
+        if affected > 0 { try context.save() }
+        return affected
     }
 
     /// 把 M3-2 时期误填进 `remainingPrincipal` 的「剩余应还」搬到 `remainingDue`。

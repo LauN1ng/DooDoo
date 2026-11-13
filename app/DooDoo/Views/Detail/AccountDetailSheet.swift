@@ -126,13 +126,9 @@ struct AccountDetailSheet: View {
     private var metrics: DetailMetrics {
         let billSnapshots = cardBills
         let periodSnapshots = cardPeriods
-        let owe = CardDebt.owe(
-            CardDebtInput(
-                balance: account.currentBalance,
-                bills: billSnapshots,
-                periods: periodSnapshots.filter { !$0.isPaid }
-            )
-        )
+        // 欠款只有一条口径：余额为负即欠款（`CreditDebt`）。账单与期表不参与金额，
+        // 它们分别只喂「本期消费 / 本月要还」。
+        let owe = CreditDebt.owe(balance: account.currentBalance)
         return DetailMath.metrics(
             owe: owe,
             bills: billSnapshots,

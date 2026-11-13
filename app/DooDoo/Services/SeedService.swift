@@ -26,11 +26,15 @@ enum SeedService {
         try backfillIcons(context: context)
         try ensureBuiltInCategories(context: context)
         try LedgerService.recalculateAll(in: context)
-        try normalizeLiabilitySigns(context: context)
         // M3-3：老分期把「剩余应还」误存在「剩余本金」里，搬回来。
-        // 排最后是因为它只动分期，不影响余额；且 `recalculateAll` 之后再改
-        // 分期不会引起二次重算。
+        // **必须排在 backfill 之前**——2026-11-13 起分期要入账，而 backfill 只认
+        // `remainingDue`；先搬字段，才有东西可入。
         try InstallmentService.migrateLegacyRemainingPrincipal(calendar: calendar, in: context)
+        // 2026-11-13 口径切换：库里已存在的分期一次性计入余额。
+        // 排在符号归一之前——入账后这些卡余额变负，`normalizeLiabilitySigns`
+        // 就不会把它们当成「正余额异常」再翻一次符号。幂等标记在方法内部。
+        try InstallmentService.backfillDebtBaseline(in: context)
+        try normalizeLiabilitySigns(context: context)
     }
 
     /// 数据修复（2026-11-09 真机反馈 #8，推荐方案 A）。

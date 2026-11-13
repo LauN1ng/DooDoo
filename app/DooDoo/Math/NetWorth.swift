@@ -21,14 +21,13 @@ enum NetWorth {
             .reduce(Decimal.zero) { $0 + $1.balance }
     }
 
-    /// 我欠多少钱 = Σ 信用 + Σ 借款，**取正值**（欠款在库里是负数）。
+    /// 我欠多少钱 = Σ 每张负债卡 `max(0, −余额)`。
     ///
-    /// 边界：若数据异常导致求和为正，返回 0 而不是负数——「我欠 −100 元」没有意义。
+    /// **逐卡取正后求和**，不能先求和再取正：那样一张卡的溢缴（正余额）会抵掉
+    /// 另一张卡的欠款——旧的实现就是这么错的，导致顶部「我欠」的标题与它自己的
+    /// 走势线用了两种口径。现在两者同源（`CreditDebt`）。
     static func owe(_ accounts: [AccountSnapshot]) -> Decimal {
-        let sum = accounts
-            .filter { $0.kind.isLiability }
-            .reduce(Decimal.zero) { $0 + $1.balance }
-        return sum < 0 ? -sum : 0
+        CreditDebt.owe(balances: accounts.filter { $0.kind.isLiability }.map(\.balance))
     }
 
     /// 净资产 = 我有 − 我欠。

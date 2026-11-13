@@ -9,7 +9,7 @@ import Testing
 /// 门禁要钉住三件事：
 /// 1. 勾了分期 → **一条全额 `expense`** + **一张剩余期数 = 全期的计划**
 /// 2. 这条消费带上账期（`billPeriod`），且默认值是按账户账单周期算的
-/// 3. 「我欠」不会因为「全额消费 + 分期计划」而翻倍（`CardDebt` 的例外）
+/// 3. 「我欠」不会因为「全额消费 + 分期计划」而翻倍（`createdFromEntry` 的计划不入账）
 @MainActor
 struct EntryInstallmentTests {
     private func dec(_ text: String) -> Decimal {
@@ -117,7 +117,7 @@ struct EntryInstallmentTests {
         #expect(periods.first?.dueDate == Calendar.current.startOfDay(for: day(2026, 12, 10)))
     }
 
-    @Test("「我欠」不翻倍：全额消费已在余额里，分期期表不再加一遍")
+    @Test("「我欠」不翻倍：全额消费已在余额里，计划不再重复入账")
     func oweDoesNotDoubleCount() throws {
         let context = try makeContext()
         let (_, credit) = try makeAccounts(in: context)
@@ -128,38 +128,30 @@ struct EntryInstallmentTests {
         vm.installmentFirstDue = day(2026, 12, 10)
         vm.save(in: context)
 
-        let plans = try context.fetch(FetchDescriptor<Installment>())
-        let plan = try #require(plans.first)
-        let periods = try InstallmentService.periods(for: plan.key, in: context)
-
-        // 走真实聚合路径：coveredKeys 从 createdFromEntry 来，不是视图自己拼
-        let covered = Set(plans.filter(\.createdFromEntry).map(\.key))
-        let input = AssetSummaryService.debtInput(
-            for: credit, bills: [], periods: periods, coveredKeys: covered
-        )
-        // 1,000（原欠款）+ 1,440.39（这笔全额）——不是 3,880.78
-        #expect(CardDebt.owe(input) == dec("2440.39"))
+        // 一条全额 expense 把余额从 −1,000 推到 −2,440.39；
+        // 计划是 `createdFromEntry`，所以不再入账。
+        #expect(credit.currentBalance == dec("-2440.39"))
+        // 欠款 = 余额的负数。旧口径在这里会给出 3,880.78（余额 + 期表又加一遍）。
+        #expect(CreditDebt.owe(balance: credit.currentBalance) == dec("2440.39"))
     }
 
-    @Test("存量分期（不是记一笔建的）仍然要加进「我欠」")
-    func legacyPlanStillCounted() throws {
+    @Test("存量分期入账一次：欠款 = 余额，不需要第二套派生")
+    func legacyPlanAmountsIntoBalance() throws {
         let context = try makeContext()
         let (_, credit) = try makeAccounts(in: context)
 
-        let plan = try InstallmentService.insert(
+        try InstallmentService.insert(
             name: "存量分期", account: credit,
             totalPeriods: 6, paidPeriods: 0,
             perPeriodAmount: dec("200"), remainingDue: dec("1200"),
             nextDueDate: day(2026, 12, 22),
             in: context
         )
-        let periods = try InstallmentService.periods(for: plan.key, in: context)
-        let covered = Set([plan].filter(\.createdFromEntry).map(\.key))
-        let input = AssetSummaryService.debtInput(
-            for: credit, bills: [], periods: periods, coveredKeys: covered
-        )
-        // 1,000 + 1,200
-        #expect(CardDebt.owe(input) == dec("2200.00"))
+
+        // 建计划即入账：−1,000 − 1,200 = −2,200。这是 2026-11-13 口径统一的核心，
+        // 录了分期欠款就必须变——否则「我欠」看不见这笔债。
+        #expect(credit.currentBalance == dec("-2200.00"))
+        #expect(CreditDebt.owe(balance: credit.currentBalance) == dec("2200.00"))
     }
 
     @Test("储蓄账户：不出现分期块，也不建计划")

@@ -33,19 +33,13 @@ enum AssetSummaryService {
         let periodsByAccount = groupPeriodsByAccount(installments: installments, periods: periods)
         let billsByAccount = groupBillsByAccount(bills: bills)
 
-        // 「我欠」显示层派生：每张负债卡取 max(余额欠额, 未还账单 + 覆盖日之后的分期)。
-        let coveredKeys = Set(installments.filter(\.createdFromEntry).map(\.key))
+        // 「我欠」= 每张负债卡 max(0, −余额)，逐卡取正后求和（`CreditDebt`）。
+        // 账单与分期**不参与金额**——前者只答「本月要还」，后者只答「何时还完」。
         var oweByAccount: [PersistentIdentifier: Decimal] = [:]
         for account in accounts where account.kind.isLiability {
-            let input = debtInput(
-                for: account,
-                bills: billsByAccount[account.persistentModelID] ?? [],
-                periods: periodsByAccount[account.persistentModelID] ?? [],
-                coveredKeys: coveredKeys
-            )
-            oweByAccount[account.persistentModelID] = CardDebt.owe(input, calendar: calendar)
+            oweByAccount[account.persistentModelID] = CreditDebt.owe(balance: account.currentBalance)
         }
-        let owe = oweByAccount.values.reduce(Decimal.zero) { $0 + $1 }
+        let owe = CreditDebt.owe(balances: Array(oweByAccount.values))
 
         let due = dueLine(
             accounts: accounts,
@@ -90,36 +84,6 @@ enum AssetSummaryService {
             map[account.persistentModelID, default: []].append(bill)
         }
         return map
-    }
-
-    /// 单卡的欠款输入。
-    ///
-    /// - `coveredKeys`：在「记一笔」里跟消费一起建的计划（消费全额已进余额），
-    ///   它们的期**不参与**账期那一项，否则欠款翻倍（`CardDebt` 顶部的例外说明）。
-    static func debtInput(
-        for account: Account,
-        bills: [BillStatement],
-        periods: [InstallmentPeriod],
-        coveredKeys: Set<String> = []
-    ) -> CardDebtInput {
-        let billSnapshots: [DebtBill] = bills.map { bill in
-            DebtBill(dueAmount: bill.dueAmount, dueDate: bill.dueDate, isPaid: bill.isPaid)
-        }
-        let periodSnapshots: [DebtPeriod] = periods
-            .filter { $0.paidAt == nil }
-            .map { period in
-                DebtPeriod(
-                    amount: period.amount,
-                    dueDate: period.dueDate,
-                    isPaid: false,
-                    isCoveredByBalance: coveredKeys.contains(period.installmentKey)
-                )
-            }
-        return CardDebtInput(
-            balance: account.currentBalance,
-            bills: billSnapshots,
-            periods: periodSnapshots
-        )
     }
 
     // MARK: - 本月要还
