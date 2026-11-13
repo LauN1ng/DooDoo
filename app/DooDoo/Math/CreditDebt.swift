@@ -41,11 +41,22 @@ enum CreditDebt {
         balance < 0 ? -balance : 0
     }
 
-    /// 多张负债卡的合计（正数，单位元）。
+    /// 多张负债卡的合计，入参是**余额**（负数表示欠款）。
     ///
     /// **逐卡取 max 后求和**，不能先求和再取正——那样一张卡的溢缴会把另一张卡的欠款抵掉，
     /// 旧的 `NetWorth.owe` 就是这么错的。
     static func owe(balances: [Decimal]) -> Decimal {
         balances.reduce(Decimal.zero) { $0 + owe(balance: $1) }
+    }
+
+    /// 多张负债卡的合计，入参是**已经取正的欠额**（如 `oweByAccount` 里的值）。
+    ///
+    /// ⚠️ **不要拿这个函数收余额，也不要拿 `owe(balances:)` 收欠额。**
+    /// 两件事名字太像，2026-11-13 真机「我欠 0.00」就是这么来的：
+    /// 聚合层把欠额（1,000）当余额传给 `owe(balances:)`，
+    /// `max(0, −1,000)` 又把它归零，于是顶部恒为 0、组头却是 -22,772.69。
+    /// 两个入口分开命名，就是为了让这种误用编译期就看得见。
+    static func total(ofOwed owed: [Decimal]) -> Decimal {
+        owed.reduce(Decimal.zero) { $0 + $1 }
     }
 }

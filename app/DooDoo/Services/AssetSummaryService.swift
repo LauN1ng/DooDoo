@@ -5,10 +5,11 @@ import SwiftData
 struct AssetSummary {
     /// 账户 → 欠多少（正数）。负债账户都有值，储蓄为 0。
     ///
-    /// **这是「我欠」的唯一数据源**：合计不再单独存一份，由调用方
-    /// （或 `CreditDebt.owe(balances:)`）现算。2026-11-13 之前这里还有一个
-    /// `owe` 字段，与视图里的 `@State owe` 各存一份，真机上出现过
-    /// 顶部 0.00 / 组头 -22,772.69 的分叉。
+    /// **这是「我欠」的唯一数据源**，而且存的已经是**取正的欠额**。
+    /// 合计要用 `CreditDebt.total(ofOwed:)`，**不能**用 `CreditDebt.owe(balances:)`
+    /// ——后者收余额，会把欠额归零（2026-11-13 真机「我欠 0.00」的根因）。
+    /// 2026-11-13 之前这里还有一个 `owe` 字段，与视图里的 `@State owe` 各存一份，
+    /// 真机上出现过顶部 0.00 / 组头 -22,772.69 的分叉。
     let oweByAccount: [PersistentIdentifier: Decimal]
     /// 信用组那行明细（`本月要还 …`）。
     let dueLine: DueLine?

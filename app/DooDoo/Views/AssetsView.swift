@@ -75,9 +75,13 @@ struct AssetsView: View {
     /// 不可能再出现不同值。
     @State private var oweByAccount: [PersistentIdentifier: Decimal] = [:]
 
-    /// 「我欠」= 逐卡取正后求和，**求和逻辑只放在 `CreditDebt` 一处，这里不另存 State**。
+    /// 「我欠」= 逐卡欠额直接相加。
+    ///
+    /// 注意入参是**已取正的欠额**，所以走 `total(ofOwed:)` 而不是 `owe(balances:)`——
+    /// 后者收的是余额，把 1,000 的欠额当余额传进去会被 `max(0, −1,000)` 归零，
+    /// 那正是 #70 里「我欠恒为 0.00」的真凶。
     private var owe: Decimal {
-        CreditDebt.owe(balances: Array(oweByAccount.values))
+        CreditDebt.total(ofOwed: Array(oweByAccount.values))
     }
 
     /// 信用组明细行（`本月要还 …`），由 `AssetSummaryService` 聚合。

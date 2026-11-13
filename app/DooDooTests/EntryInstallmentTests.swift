@@ -298,7 +298,9 @@ struct EntryInstallmentTests {
         )
 
         // 顶部「我欠」、组头「欠款合计」都从这一份派生，不可能分叉。
-        let total = CreditDebt.owe(balances: Array(summary.oweByAccount.values))
+        // 注意用 `total(ofOwed:)`：字典里是**已取正的欠额**，
+        // 若误用 `owe(balances:)`（收余额）会被 max(0, −x) 归零——真机 0.00 就是这么来的。
+        let total = CreditDebt.total(ofOwed: Array(summary.oweByAccount.values))
         #expect(total == CreditDebt.owe(balance: credit.currentBalance))
         #expect(total == dec("1000"))
         #expect(summary.oweByAccount[savings.persistentModelID] == nil, "储蓄账户不进欠款字典")
