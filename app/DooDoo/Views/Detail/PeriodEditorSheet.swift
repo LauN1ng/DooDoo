@@ -121,6 +121,12 @@ private struct PeriodEditView: View {
         }
     }
 
+    /// 金额输入的字面解析。≤ 0 视为无效，不写进模型（避免把 0 期金额当真）。
+    private func parsed(_ text: String) -> Decimal? {
+        let value = MoneyMath.decimal(text.trimmingCharacters(in: .whitespaces))
+        return value > 0 ? value : nil
+    }
+
     /// 手工改过金额或标了已还之后，计划的「剩余应还」要跟着改——
     /// 否则详情页顶部的剩余总额还停在原始账单数上，和期表对不上。
     /// 写回 `remainingDue` 而不是留着让它按每期金额推算：这里期表才是真值。
