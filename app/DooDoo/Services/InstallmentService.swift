@@ -131,6 +131,61 @@ enum InstallmentService {
         return affected
     }
 
+    /// 给「记一笔里跟消费一起建」的分期补上 `Transaction.installmentKey`。
+    ///
+    /// M3-10 建计划时没把 key 写回那条全额消费流水，于是账户详情页的「本期消费」
+    /// 把分期本金全额也算了一笔——白条那屏 5,999 的分期让「本期消费 6,049.00」
+    /// 与「本月分期 533.33」并排，两列相加没有任何意义（规格 8.1 要求不含分期本金）。
+    ///
+    /// 匹配是**严格的**，宁可漏补也不误标：
+    /// - 同账户、`kind == .expense`、未软删、还没绑过任何计划
+    /// - 金额等于该计划的**当前剩余总额**（没有还款时就是原始全额）
+    /// - 日期与 `createdAt` 同一天
+    /// - 候选必须**恰好一笔**，否则跳过
+    ///
+    /// 已经还过款的计划匹配不上（剩余总额变小了），会原样留着——那种情况下
+    /// 「本期消费」仍会多算一笔本金，但不至于把无关消费标成分期。
+    static func backfillEntryPrincipalKeys(in context: ModelContext) throws -> Int {
+        let flag = "doodoo.entryPrincipalKeys.v1"
+        guard !UserDefaults.standard.bool(forKey: flag) else { return 0 }
+
+        let plans = try context.fetch(FetchDescriptor<Installment>()).filter(\.createdFromEntry)
+        guard !plans.isEmpty else {
+            UserDefaults.standard.set(true, forKey: flag)
+            return 0
+        }
+
+        let txs = try context.fetch(FetchDescriptor<Transaction>())
+        var linked = Set(txs.compactMap(\.installmentKey))
+        let calendar = Calendar.current
+        var affected = 0
+
+        for plan in plans where !linked.contains(plan.key) {
+            guard let account = plan.account else { continue }
+            let target = plan.remainingTotal
+            guard target > 0 else { continue }
+            let createdDay = calendar.startOfDay(for: plan.createdAt)
+
+            let candidates = txs.filter { tx in
+                tx.deletedAt == nil
+                    && tx.kind == .expense
+                    && tx.installmentKey == nil
+                    && tx.account?.persistentModelID == account.persistentModelID
+                    && tx.amount == target
+                    && calendar.startOfDay(for: tx.date) == createdDay
+            }
+            // 同一天同金额买了两笔一样的，就分不清哪笔是分期的——不猜。
+            guard candidates.count == 1, let tx = candidates.first else { continue }
+            tx.installmentKey = plan.key
+            linked.insert(plan.key)
+            affected += 1
+        }
+
+        UserDefaults.standard.set(true, forKey: flag)
+        if affected > 0 { try context.save() }
+        return affected
+    }
+
     /// 把 M3-2 时期误填进 `remainingPrincipal` 的「剩余应还」搬到 `remainingDue`。
     ///
     /// M3-2 的表单有「剩余本金」一栏，但账单上根本没有这个数——用户 11-11 把

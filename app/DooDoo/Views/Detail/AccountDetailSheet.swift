@@ -144,17 +144,31 @@ struct AccountDetailSheet: View {
         }
     }
 
-    /// 本月这张卡的支出流水合计。没有账单时「本期消费」用它——
-    /// 用户 2026-11-12 真机回传：花呗有 56.00 流水，这一列却显示「—」。
+    /// 本期消费的流水：**当前账期内、不含分期本金**（规格 8.1）。
+    ///
+    /// 2026-11-13 真机回传：白条那屏写着「本期消费 6,049.00 · 不含分期」，
+    /// 可 6,049 里含着一笔 5,999 的分期本金全额——备注与数字自己打架。
+    /// 旧实现在没有账单时直接 Σ 本月全部 `expense`，既没排除分期本金，
+    /// 也没有按账期归属（分期与账单分属两个期间，并排必然像没同步）。
+    /// 现在改走 `DetailMath.periodSpend`，口径可单测。
     private var monthSpend: Decimal {
-        let calendar = Calendar.current
-        return account.transactions
-            .filter { tx in
-                tx.deletedAt == nil
-                    && tx.kind == .expense
-                    && calendar.isDate(tx.date, equalTo: Date.now, toGranularity: .month)
+        let cycle = BillCycleMath.cycle(
+            for: .now,
+            cycleStartDay: account.billCycleStart,
+            cycleEndDay: account.billCycleEnd,
+            dueDay: account.dueDay
+        )
+        let entries: [SpendEntry] = account.transactions
+            .filter { $0.deletedAt == nil && $0.kind == .expense }
+            .map { tx in
+                SpendEntry(
+                    amount: tx.amount,
+                    billPeriod: tx.billPeriod,
+                    isInstallmentPrincipal: tx.installmentKey != nil,
+                    date: tx.date
+                )
             }
-            .reduce(Decimal.zero) { $0 + $1.amount }
+        return DetailMath.periodSpend(entries, period: cycle.period, today: .now)
     }
 
     private var cardPeriods: [DebtPeriod] {

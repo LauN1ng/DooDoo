@@ -107,6 +107,10 @@ struct EntryInstallmentTests {
         #expect(plan.perPeriodAmount == dec("120.03"))
         #expect(plan.createdFromEntry, "记一笔建的，账期那一项不再加它")
         #expect(plan.account?.persistentModelID == credit.persistentModelID)
+        #expect(
+            tx.installmentKey == plan.key,
+            "分期本金必须钉回那条全额流水，否则「本期消费」会把它算进去（规格 8.1）"
+        )
 
         let periods = try InstallmentService.periods(for: plan.key, in: context)
         #expect(periods.count == 12)
@@ -276,5 +280,27 @@ struct EntryInstallmentTests {
         let all = try context.fetch(FetchDescriptor<Transaction>())
         let tx = try #require(all.first { $0.kind == .repayment })
         #expect(tx.billPeriod == "2026-11")
+    }
+
+    // MARK: - 「我欠」只有一份数据
+
+    @Test("资产聚合只给逐卡欠额，没有第二份合计（2026-11-13 顶部 0.00 / 组头 -22,772.69）")
+    func summaryHasNoSecondTotal() throws {
+        let context = try makeContext()
+        let (savings, credit) = try makeAccounts(in: context)
+
+        let summary = AssetSummaryService.make(
+            accounts: [savings, credit],
+            installments: [],
+            periods: [],
+            bills: [],
+            alertsEnabled: true
+        )
+
+        // 顶部「我欠」、组头「欠款合计」都从这一份派生，不可能分叉。
+        let total = CreditDebt.owe(balances: Array(summary.oweByAccount.values))
+        #expect(total == CreditDebt.owe(balance: credit.currentBalance))
+        #expect(total == dec("1000"))
+        #expect(summary.oweByAccount[savings.persistentModelID] == nil, "储蓄账户不进欠款字典")
     }
 }

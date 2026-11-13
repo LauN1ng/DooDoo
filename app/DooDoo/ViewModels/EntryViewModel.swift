@@ -516,7 +516,7 @@ final class EntryViewModel {
                 // 这里只补「剩下 N 期、每期多少、什么时候还」那张表，不动余额。
                 if installmentEnabled, canUseInstallment {
                     let icon = selectedCategory?.iconName ?? ""
-                    try InstallmentService.insert(
+                    let plan = try InstallmentService.insert(
                         name: installmentPlanName,
                         account: payer,
                         totalPeriods: installmentPeriods,
@@ -528,6 +528,11 @@ final class EntryViewModel {
                         iconName: icon.isEmpty ? "Receipt" : icon,
                         in: context
                     )
+                    // 规格 8.1：**本期消费不含分期本金**。把计划 key 钉回那条全额流水，
+                    // 账户详情页的「本期消费」据此跳过它（本金只以「本月分期」的当期额出现）。
+                    // 2026-11-13 之前没写这一笔，导致 5,999 的分期在「本期消费」里
+                    // 与「本月分期 533.33」并列，两列相加没有意义。
+                    tx.installmentKey = plan.key
                 }
             case .income:
                 try LedgerService.insert(

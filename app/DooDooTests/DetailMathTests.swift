@@ -183,4 +183,45 @@ struct DetailMathTests {
         #expect(past.first?.dueDate == date(2026, 10, 22))
         #expect(past.contains { $0.dueDate == date(2026, 11, 22) } == false)
     }
+
+    // MARK: - 本期消费的流水口径（2026-11-13 用户定案 A）
+
+    @Test("分期本金不进本期消费：白条 5,999 分期 + 50 新消费 → 本期消费 50")
+    func installmentPrincipalExcluded() {
+        // 真机数据：白条本期刷了两笔，一笔 5,999 勾了 12 期、一笔 50 不分期。
+        // 旧实现两笔都算，得出 6,049，与旁边「本月分期 533.33」相加毫无意义。
+        let entries = [
+            SpendEntry(amount: dec("5999"), billPeriod: "2026-11", isInstallmentPrincipal: true, date: date(2026, 11, 13)),
+            SpendEntry(amount: dec("50"), billPeriod: "2026-11", isInstallmentPrincipal: false, date: date(2026, 11, 13)),
+        ]
+
+        let spend = DetailMath.periodSpend(entries, period: "2026-11", today: today, calendar: calendar)
+
+        #expect(spend == dec("50"))
+    }
+
+    @Test("只算当前账期：上期账期的流水不进本期消费")
+    func onlyCurrentPeriod() {
+        let entries = [
+            SpendEntry(amount: dec("120"), billPeriod: "2026-10", isInstallmentPrincipal: false, date: date(2026, 10, 20)),
+            SpendEntry(amount: dec("80"), billPeriod: "2026-11", isInstallmentPrincipal: false, date: date(2026, 11, 3)),
+        ]
+
+        let spend = DetailMath.periodSpend(entries, period: "2026-11", today: today, calendar: calendar)
+
+        #expect(spend == dec("80"))
+    }
+
+    @Test("没有账期名时退回自然月，不会把这一列算成 0")
+    func fallbackToCalendarMonth() {
+        // 老数据 / 账户没填账单周期：`billPeriod` 是 nil，只能按自然月兜底。
+        let entries = [
+            SpendEntry(amount: dec("30"), billPeriod: nil, isInstallmentPrincipal: false, date: date(2026, 11, 2)),
+            SpendEntry(amount: dec("70"), billPeriod: nil, isInstallmentPrincipal: false, date: date(2026, 10, 28)),
+        ]
+
+        let spend = DetailMath.periodSpend(entries, period: nil, today: today, calendar: calendar)
+
+        #expect(spend == dec("30"))
+    }
 }

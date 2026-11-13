@@ -31,11 +31,59 @@ struct DetailMetrics: Equatable, Sendable {
     let overdueDays: Int
 }
 
+/// 一笔消费流水的最小快照，供 `DetailMath.periodSpend` 过滤。
+///
+/// 只带三个判断依据：金额、账期归属、是不是分期本金。
+struct SpendEntry: Sendable, Equatable {
+    let amount: Decimal
+    /// `Transaction.billPeriod`，形如 `2026-11`。`nil` = 没记过账期。
+    let billPeriod: String?
+    /// `Transaction.installmentKey != nil`：这笔是某张分期计划的**本金全额**。
+    let isInstallmentPrincipal: Bool
+    let date: Date
+
+    init(amount: Decimal, billPeriod: String?, isInstallmentPrincipal: Bool, date: Date) {
+        self.amount = amount
+        self.billPeriod = billPeriod
+        self.isInstallmentPrincipal = isInstallmentPrincipal
+        self.date = date
+    }
+}
+
 /// 卡详情的数值口径。纯函数，不碰 SwiftData。
 ///
 /// 唯一容易错的地方是 8.2 那条：**「本月要还」直接取账单金额，不得由消费与分期反推**。
 /// 分期到期额本来就已并入当期账单，反推会把分期算两遍（1,115.03 → 1,564.70）。
 enum DetailMath {
+    /// 「本期消费」的流水口径（2026-11-13 用户定案 A）。
+    ///
+    /// **只算当前账期内、不含分期本金的消费。**
+    ///
+    /// 为什么必须排除分期本金：规格 8.1 的恒等式是
+    /// `本期账单 = 本期消费 + 本月到期分期`。一笔 5,999 的 12 期分期，
+    /// 在本期账单里只贡献 499.99，本金 5,999 摊在未来 12 个月。若把本金全额
+    /// 算进「本期消费」，白条那屏会变成「本期消费 6,049 + 本月分期 533.33」，
+    /// 两列相加没有任何意义，还会让人以为这月要还 6,582。
+    ///
+    /// 边界：
+    /// - 有账期名：只认 `billPeriod == period` 的流水（同一账期内补记也算进来）
+    /// - 账期名缺失（老数据 / 账户没填账单周期）：退回「自然月」，
+    ///   否则这一列会永远显示 0
+    static func periodSpend(
+        _ entries: [SpendEntry],
+        period: String?,
+        today: Date,
+        calendar: Calendar = .current
+    ) -> Decimal {
+        entries
+            .filter { entry in
+                guard !entry.isInstallmentPrincipal else { return false }
+                if let period, let own = entry.billPeriod { return own == period }
+                return calendar.isDate(entry.date, equalTo: today, toGranularity: .month)
+            }
+            .reduce(Decimal.zero) { $0 + $1.amount }
+    }
+
     /// - Parameters:
     ///   - owe: 该卡欠款（正数），由 `CardDebt` 在调用方算好。
     ///   - bills: 该卡全部账单（含已还的历史期）。

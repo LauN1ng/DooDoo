@@ -66,10 +66,20 @@ struct AssetsView: View {
     @State private var detailAccount: Account?
 
     @State private var mine: Decimal = 0
-    @State private var owe: Decimal = 0
     @State private var series: [NetWorthPoint] = []
-    /// 账户 → 该卡欠多少（正数）。「我欠」与信用/借款组「欠款合计」共用这一份（见 `CardDebt`）。
+    /// 账户 → 该卡欠多少（正数）。**「我欠」、组头「欠款合计」、浮层每行共用这一份。**
+    ///
+    /// 2026-11-13 真机回传：顶部显示「我欠 0.00」而信用组头是 -22,772.69。
+    /// 两者本该同源，却各自存了一个 `@State`——同一个数存两份就会分叉。
+    /// 现在**只保留这一份数据**，`owe` 改成从它现算的计算属性，顶部与组头
+    /// 不可能再出现不同值。
     @State private var oweByAccount: [PersistentIdentifier: Decimal] = [:]
+
+    /// 「我欠」= 逐卡取正后求和，**求和逻辑只放在 `CreditDebt` 一处，这里不另存 State**。
+    private var owe: Decimal {
+        CreditDebt.owe(balances: Array(oweByAccount.values))
+    }
+
     /// 信用组明细行（`本月要还 …`），由 `AssetSummaryService` 聚合。
     @State private var dueLine: DueLine?
     /// 账户 → 逾期天数，浮层里把那行的「较上月」换成「逾期 N 天」。
@@ -239,7 +249,6 @@ struct AssetsView: View {
             alertsEnabled: settings.first?.overdueAlertEnabled ?? true
         )
         oweByAccount = summary.oweByAccount
-        owe = summary.owe
         dueLine = summary.dueLine
         overdueDays = summary.overdueDays
 

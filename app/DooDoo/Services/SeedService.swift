@@ -35,6 +35,10 @@ enum SeedService {
         // 就不会把它们当成「正余额异常」再翻一次符号。幂等标记在方法内部。
         try InstallmentService.backfillDebtBaseline(in: context)
         try normalizeLiabilitySigns(context: context)
+        // M3-10 遗留：记一笔建的分期没把 key 写回那条全额消费流水，
+        // 「本期消费」因此把分期本金全额也算进去了（白条 5,999）。
+        // 它只补一个流水标记，不碰余额，排最后即可。
+        try InstallmentService.backfillEntryPrincipalKeys(in: context)
     }
 
     /// 数据修复（2026-11-09 真机反馈 #8，推荐方案 A）。

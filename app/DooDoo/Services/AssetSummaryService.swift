@@ -4,9 +4,12 @@ import SwiftData
 /// 资产页需要的一次性聚合结果。
 struct AssetSummary {
     /// 账户 → 欠多少（正数）。负债账户都有值，储蓄为 0。
+    ///
+    /// **这是「我欠」的唯一数据源**：合计不再单独存一份，由调用方
+    /// （或 `CreditDebt.owe(balances:)`）现算。2026-11-13 之前这里还有一个
+    /// `owe` 字段，与视图里的 `@State owe` 各存一份，真机上出现过
+    /// 顶部 0.00 / 组头 -22,772.69 的分叉。
     let oweByAccount: [PersistentIdentifier: Decimal]
-    /// 我欠合计（正数）。
-    let owe: Decimal
     /// 信用组那行明细（`本月要还 …`）。
     let dueLine: DueLine?
     /// 账户 → 逾期天数，浮层里把「较上月」换成「逾期 N 天」。
@@ -33,13 +36,13 @@ enum AssetSummaryService {
         let periodsByAccount = groupPeriodsByAccount(installments: installments, periods: periods)
         let billsByAccount = groupBillsByAccount(bills: bills)
 
-        // 「我欠」= 每张负债卡 max(0, −余额)，逐卡取正后求和（`CreditDebt`）。
-        // 账单与分期**不参与金额**——前者只答「本月要还」，后者只答「何时还完」。
+        // 「我欠」= 每张负债卡 max(0, −余额)。账单与分期**不参与金额**——
+        // 前者只答「本月要还」，后者只答「何时还完」。
+        // 合计不在这里算：只给逐卡字典，顶部与组头都从它派生（单源，不可能分叉）。
         var oweByAccount: [PersistentIdentifier: Decimal] = [:]
         for account in accounts where account.kind.isLiability {
             oweByAccount[account.persistentModelID] = CreditDebt.owe(balance: account.currentBalance)
         }
-        let owe = CreditDebt.owe(balances: Array(oweByAccount.values))
 
         let due = dueLine(
             accounts: accounts,
@@ -52,7 +55,6 @@ enum AssetSummaryService {
 
         return AssetSummary(
             oweByAccount: oweByAccount,
-            owe: owe,
             dueLine: due.line,
             overdueDays: due.overdueDays
         )
