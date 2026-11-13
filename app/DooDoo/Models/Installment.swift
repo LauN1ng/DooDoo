@@ -98,6 +98,19 @@ final class Installment {
     /// 下一期的还款日。**不是历史首期**——存量录入时用户只填「还剩几期、下期什么时候还」。
     var nextDueDate: Date
 
+    /// 这张计划是不是**在「记一笔」里跟消费一起建的**（M3-10，PRD 9.5.6）。
+    ///
+    /// 两种计划在账上完全不同：
+    /// - **存量录入**（`false`）：消费那笔没进本 App，账户余额里一分钱都没有，
+    ///   所以「我欠」必须把它的未还期加上（`CardDebt` 的账期那一项）。
+    /// - **记一笔新建**（`true`）：消费按**全额**记了一条 `expense`，欠款已经进了
+    ///   `Account.currentBalance`。这时再把未还期加一遍就会**翻倍**
+    ///   （1,440.39 的平板记成 2,880.78）。
+    ///
+    /// 所以 `CardDebt` 只对 `false` 的那些期做「余额之外再加」。
+    /// 带默认值 → 老库自动迁移，存量计划保持原行为。
+    var createdFromEntry: Bool = false
+
     /// Fluent3D 图标资源名（bundle 里的 PNG，不带扩展名）。空串 = 用账户默认图标。
     var iconName: String = ""
 
@@ -118,6 +131,7 @@ final class Installment {
         remainingInterest: Decimal? = nil,
         totalRebate: Decimal? = nil,
         nextDueDate: Date,
+        createdFromEntry: Bool = false,
         iconName: String = "",
         createdAt: Date = .now
     ) {
@@ -135,6 +149,7 @@ final class Installment {
         self.remainingInterest = remainingInterest
         self.totalRebate = totalRebate
         self.nextDueDate = nextDueDate
+        self.createdFromEntry = createdFromEntry
         self.iconName = iconName
         self.createdAt = createdAt
     }

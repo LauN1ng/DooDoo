@@ -6,7 +6,8 @@ import SwiftUI
 /// 依据 `docs/design/spec/记一笔规格冻结-v1.0.md`：
 /// 标题 → 类型分段 → 卡 → 归属 → 金额 → 类型专属字段 → 备注 → 余额预览 → 主按钮。
 ///
-/// M2b 起包含还款与转账；**账单期关联与分期开关留 M3**（界面已预留位置）。
+/// M2b 起包含还款与转账；**M3-10 起含内联分期开关与账期归属**
+/// （支出 + 负债账户才出现分期块；信用/借款账户的归属行可切账期）。
 struct EntryView: View {
     /// 打开时默认停在哪个类型。
     var initialType: TransactionKind = .expense
@@ -167,6 +168,7 @@ struct EntryView: View {
             AccountCardStrip(accounts: vm.payerCandidates, selection: $vm.payer)
             attribution(paying: vm.type == .expense ? "从" : "存进", account: vm.payer)
             amountRow
+            installmentBlock
             CategoryPicker(
                 tops: vm.topCategories,
                 subs: vm.subCategories,
@@ -227,16 +229,8 @@ struct EntryView: View {
             Text(account?.displayShortName ?? "—")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Palette.ink)
-            if let pill = attributionPill(account) {
-                Text(pill)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(Palette.mine)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(Palette.mine.opacity(0.10))
-                    )
+            if let account {
+                attributionPill(account)
             }
             Spacer(minLength: 0)
         }
@@ -245,17 +239,51 @@ struct EntryView: View {
         .padding(.bottom, 2)
     }
 
-    private func attributionPill(_ account: Account?) -> String? {
-        guard let account else { return nil }
-        // 真机反馈 #4：收入页只看了账户类型，写成了「存进 支付宝 立即扣款」。
-        if vm.type == .income { return "立即到账" }
-        if account.kind == .credit, let start = account.billCycleStart, let end = account.billCycleEnd {
-            return "账单期 \(start)/15–\(end) · 计入下月"
+    /// 归属行右侧那枚小胶囊。
+    ///
+    /// - 收入：「立即到账」（真机反馈 #4，此前写成「立即扣款」）
+    /// - 储蓄 / 现金：「立即扣款」
+    /// - 信用 / 借款：**账期**。点开可以切到下一期——跨账单日补记、商户延迟入账时用得上，
+    ///   默认值不用点（M3-10，PRD 9.7 补录）
+    @ViewBuilder
+    private func attributionPill(_ account: Account) -> some View {
+        if vm.type == .income {
+            periodPill("立即到账")
+        } else if account.kind.isLiability {
+            Menu {
+                Button("按账单周期（默认）") { vm.billPeriodOverride = nil }
+                ForEach(vm.billPeriodChoices, id: \.self) { period in
+                    Button("计入 \(BillCycleMath.monthLabel(period))") {
+                        vm.billPeriodOverride = period
+                    }
+                }
+            } label: {
+                periodPill(vm.billCycleCaption(for: account), showsChevron: true)
+            }
+            .buttonStyle(.plain)
+        } else {
+            periodPill("立即扣款")
         }
-        if account.kind == .savings || account.kind == .cash {
-            return "立即扣款"
+    }
+
+    private func periodPill(_ text: String, showsChevron: Bool = false) -> some View {
+        HStack(spacing: 3) {
+            Text(text)
+                .font(.system(size: 10, weight: .semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+            if showsChevron {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 7, weight: .bold))
+            }
         }
-        return nil
+        .foregroundStyle(Palette.mine)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(Palette.mine.opacity(0.10))
+        )
     }
 
     // MARK: - 金额
@@ -281,6 +309,157 @@ struct EntryView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
+    }
+
+    // MARK: - 内联分期（M3-10，PRD 9.5.6）
+
+    /// 勾上「分期」后：这一笔按**全额**记一条支出，同时生成一张期数表。
+    ///
+    /// 只在「支出 + 负债账户」上出现——储蓄卡当场扣钱，没有「以后每月还」这回事。
+    /// 为什么必须记全额而不是记每期分摊额：只记 120.03 会让花呗欠款少算 1,320.36，
+    /// PRD 9.3 的欠款公式当场不闭合（细节见 PRD 9.5.6）。
+    @ViewBuilder
+    private var installmentBlock: some View {
+        if vm.canUseInstallment {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Text("分期")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Palette.ink)
+
+                    Text(vm.installmentEnabled
+                         ? "\(vm.installmentPeriods) 期 · 每期 ¥\(MoneyMath.money(vm.installmentPerPeriod))"
+                         : "一次性还清")
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(Palette.faint)
+                        .lineLimit(1)
+
+                    Spacer(minLength: 8)
+
+                    Toggle("", isOn: $vm.installmentEnabled)
+                        .labelsHidden()
+                        .tint(accent)
+                }
+
+                if vm.installmentEnabled {
+                    periodChips
+                    perPeriodRow
+                    firstDueRow
+
+                    Text(installmentFooter)
+                        .font(.system(size: 10))
+                        .foregroundStyle(Palette.faint)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .lineSpacing(2)
+
+                    if let message = vm.installmentValidationMessage {
+                        Text(message)
+                            .font(.system(size: 10))
+                            .foregroundStyle(Palette.overdraft)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Palette.card)
+                    .shadow(color: .black.opacity(0.04), radius: 2, x: 0, y: 1)
+            )
+            .padding(.horizontal, 16)
+            .padding(.top, 2)
+        }
+    }
+
+    /// 常见期数。不给自定义输入框：真实分期就是 3 / 6 / 12 / 24 这几档，
+    /// 多一个键盘字段等于每次记账多一次点击（「记账不打断」是底线之一）。
+    private let installmentOptions = [3, 6, 12, 24]
+
+    private var periodChips: some View {
+        HStack(spacing: 6) {
+            ForEach(installmentOptions, id: \.self) { count in
+                let selected = vm.installmentPeriods == count
+                Button {
+                    vm.installmentPeriods = count
+                } label: {
+                    Text("\(count) 期")
+                        .font(.system(size: 11.5, weight: selected ? .semibold : .regular))
+                        .foregroundStyle(selected ? Palette.card : Palette.ink2)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule().fill(selected ? accent : Palette.tabBed)
+                        )
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(selected ? [.isSelected] : [])
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    /// 每期金额。留空就是自动摊平（总额 ÷ 期数，余数落首期）——
+    /// 用户从付款页抄来的 120.03 填这里，与总额差几分是正常的。
+    private var perPeriodRow: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text("每期")
+                .font(.system(size: 12))
+                .foregroundStyle(Palette.sub)
+            Spacer(minLength: 0)
+            Text("¥")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Palette.faint)
+            TextField("自动 " + MoneyMath.money(vm.installmentAutoPerPeriod),
+                      text: $vm.installmentPerPeriodText)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .font(.system(size: 17, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(Palette.ink)
+                .frame(maxWidth: 140)
+            if !vm.installmentPerPeriodText.isEmpty {
+                Button {
+                    vm.installmentPerPeriodText = ""
+                } label: {
+                    Text("自动")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Palette.mine)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("改回自动摊平")
+            }
+        }
+    }
+
+    /// 首期还款日。默认按账户 `dueDay` 推下一个还款日，改过就按改的。
+    private var firstDueRow: some View {
+        HStack(spacing: 6) {
+            Text("首期还款日")
+                .font(.system(size: 12))
+                .foregroundStyle(Palette.sub)
+            Spacer(minLength: 0)
+            DatePicker(
+                "",
+                selection: Binding(
+                    get: { vm.installmentFirstDueDate },
+                    set: { vm.installmentFirstDue = $0 }
+                ),
+                displayedComponents: .date
+            )
+            .labelsHidden()
+            .datePickerStyle(.compact)
+        }
+    }
+
+    private var installmentFooter: String {
+        let per = MoneyMath.money(vm.installmentPerPeriod)
+        let first = MoneyMath.money(vm.installmentFirstAmount)
+        let split = vm.installmentFirstAmount == vm.installmentPerPeriod
+            ? "\(vm.installmentPeriods) 期 × ¥\(per)"
+            : "首期 ¥\(first)，其余 \(max(1, vm.installmentPeriods - 1)) 期 × ¥\(per)"
+        let total = MoneyMath.money(vm.installmentTotal)
+        return "\(split)；总额 ¥\(total) 记一笔支出，之后每月还一期"
     }
 
     private var receivedRow: some View {

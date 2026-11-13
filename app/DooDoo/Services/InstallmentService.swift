@@ -23,6 +23,9 @@ enum InstallmentService {
     ///   `splitEndingAt` 反推中间各期，末期用真值——末期抵了减免的账单只有这条路算得准
     /// - `remainingInterest`：账单把利息单列时的**剩余期**利息（e招贷 851.57）。
     ///   给了它，年化改走剩余口径（见 `Installment.estimatedAnnualRate`），不吃整笔公式
+    /// - `createdFromEntry`：这张计划是不是在「记一笔」里跟消费一起建的（M3-10）。
+    ///   那种计划的消费已按全额记了 `expense`，所以「我欠」不再把它的未还期加上一遍
+    ///   （见 `Installment.createdFromEntry` / `CardDebt.owe`）
     /// - `iconName`：列表展示用，默认 `Receipt`（bundle 里的 Fluent3D PNG 名）
     ///
     /// 边界：`remaining <= 0` 时仍建计划但**不生成期表**（已还清的历史分期，
@@ -41,6 +44,7 @@ enum InstallmentService {
         remainingInterest: Decimal? = nil,
         totalRebate: Decimal? = nil,
         nextDueDate: Date,
+        createdFromEntry: Bool = false,
         iconName: String = "Receipt",
         calendar: Calendar = .current,
         in context: ModelContext
@@ -59,6 +63,7 @@ enum InstallmentService {
             remainingInterest: remainingInterest,
             totalRebate: totalRebate,
             nextDueDate: calendar.startOfDay(for: nextDueDate),
+            createdFromEntry: createdFromEntry,
             iconName: iconName
         )
         context.insert(plan)

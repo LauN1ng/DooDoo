@@ -24,11 +24,18 @@ struct DebtPeriod: Sendable, Equatable {
     let dueDate: Date
     /// 已还。
     let isPaid: Bool
+    /// 这一期所属的计划是**在「记一笔」里跟消费一起建的**（M3-10）。
+    ///
+    /// 那种计划的消费按全额记了 `expense`，欠款已经在账户余额里了，
+    /// 再加一遍就是双份（见 `Installment.createdFromEntry`）。
+    /// 默认 `false`：存量计划与所有老调用点行为不变。
+    let isCoveredByBalance: Bool
 
-    init(amount: Decimal, dueDate: Date, isPaid: Bool) {
+    init(amount: Decimal, dueDate: Date, isPaid: Bool, isCoveredByBalance: Bool = false) {
         self.amount = amount
         self.dueDate = dueDate
         self.isPaid = isPaid
+        self.isCoveredByBalance = isCoveredByBalance
     }
 }
 
@@ -72,6 +79,12 @@ struct CardDebtInput: Sendable, Equatable {
 /// 会算两遍，欠款偏高。用户当前用法是「信用卡几乎不记流水，只录分期」，
 /// 重复的情形很少；真要精确得靠账单周期分层，留到有需要时再说。
 ///
+/// **例外：记一笔新建的分期不参与账期那一项**（2026-11-13，M3-10）。
+/// 那种计划在创建时已经按 PRD 9.5.6 记了一条**全额** `expense`，
+/// 欠款已经在 `balance` 里；若再加一次未还期，1,440.39 的平板会显示成 2,880.78。
+/// 判据是 `Installment.createdFromEntry`，不是「余额有没有变」——
+/// 后者会被还款流水、溢缴等情况带偏。存量计划（`false`）保持上面那套相加逻辑。
+///
 /// ## 账期内部仍然绝不重复
 ///
 /// 相加只发生在「余额」与「账期」之间。账期内部，本期到期的分期已经并进本期账单
@@ -94,6 +107,8 @@ enum CardDebt {
         let uncoveredPeriods = card.periods
             .filter { period in
                 guard !period.isPaid else { return false }
+                // 记一笔新建的分期：消费全额已进余额，这里再加就是双份（M3-10）。
+                guard !period.isCoveredByBalance else { return false }
                 guard let coverage else { return true }   // 没有任何账单：所有未还期都算
                 return calendar.startOfDay(for: period.dueDate) > coverage
             }

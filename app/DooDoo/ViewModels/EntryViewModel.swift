@@ -52,6 +52,30 @@ final class EntryViewModel {
     /// 保存失败时的提示，由视图展示。
     var errorMessage: String?
 
+    // MARK: - 内联分期（M3-10，PRD 9.5.6）
+
+    /// 「这笔分几期还」的开关。**只在支出 + 信用/借款账户上有意义**——
+    /// 储蓄卡是当场扣钱，没有「以后每月还」这回事，界面上也不该出现。
+    var installmentEnabled = false
+
+    /// 期数。默认 12 期（花呗 / 白条最常见的一档）。
+    var installmentPeriods: Int = 12
+
+    /// 每期金额文本。**留空 = 自动摊平**（总额 ÷ 期数，余数落首期）。
+    /// 用户填了就按用户的数，只是展示与校验，期表仍以总额为准摊。
+    var installmentPerPeriodText: String = ""
+
+    /// 首期还款日。`nil` = 按账户 `dueDay` 带出下一个还款日。
+    var installmentFirstDue: Date?
+
+    // MARK: - 账期归属（M3-10）
+
+    /// 用户手动指定的账期（`2026-12`）。`nil` = 按账户账单周期与发生日自动算。
+    ///
+    /// 默认自动就够（15 号之后的消费落下一期），手动只在「商户延迟入账、
+    /// 跨账单日补记」这类边界上用，所以不占一步操作。
+    var billPeriodOverride: String?
+
     // MARK: - 数据
 
     private(set) var accounts: [Account] = []
@@ -182,6 +206,127 @@ final class EntryViewModel {
         }
     }
 
+    // MARK: - 分期派生（M3-10）
+
+    /// 分期块能不能出现：**支出 + 负债账户**两个条件同时成立。
+    /// `payer` 换回储蓄卡时它自己就变 `false`，界面不用额外监听。
+    var canUseInstallment: Bool {
+        type == .expense && (payer?.kind.isLiability ?? false)
+    }
+
+    /// 分期总额 = 这一笔的记账金额。
+    ///
+    /// **必须记全额、不能只记每期分摊额**（PRD 9.5.6）：只记 120.03 会让花呗欠款
+    /// 少算 1,320.36，PRD 9.3 的欠款公式当场不闭合。代价是利息进了消费统计
+    /// （约 1.5% 量级），v1 不做统计图表，接受。
+    var installmentTotal: Decimal { amount }
+
+    /// 按总额摊平后的标准每期（余数落首期，与期表同一口径）。
+    var installmentAutoPerPeriod: Decimal {
+        guard installmentPeriods > 0, amount > 0 else { return 0 }
+        return InstallmentMath.splitEvenly(total: amount, count: installmentPeriods)?.perPeriod ?? 0
+    }
+
+    /// 界面上那个「每期」：用户填了用用户的，没填用摊平值。
+    var installmentPerPeriod: Decimal {
+        let text = installmentPerPeriodText.trimmingCharacters(in: .whitespaces)
+        let manual = MoneyMath.decimal(text)
+        if !text.isEmpty, manual > 0 { return manual }
+        return installmentAutoPerPeriod
+    }
+
+    /// 首期金额（摊平后吸收分币余数的那一期）。
+    var installmentFirstAmount: Decimal {
+        guard installmentPeriods > 0, amount > 0 else { return installmentPerPeriod }
+        return InstallmentMath.splitEvenly(total: amount, count: installmentPeriods)?.firstPeriod
+            ?? installmentPerPeriod
+    }
+
+    /// 首期还款日：用户改过就用改过的；否则跟着**这一笔落在的那一期账单**走
+    /// （花呗 11/05 的消费 → 2026-11 → 11/25；11/20 的消费 → 2026-12 → 12/25）。
+    var installmentFirstDueDate: Date {
+        if let installmentFirstDue { return installmentFirstDue }
+        guard let payer else { return InstallmentIntake.defaultDueDate(dueDay: nil) }
+        let period = resolvedBillPeriod ?? billCycle(for: payer).period
+        if let due = BillCycleMath.dueDate(
+            for: period,
+            dueDay: payer.dueDay,
+            cycleEndDay: payer.billCycleEnd
+        ) {
+            return due
+        }
+        // 账户没填还款日：退回「今天之后最近的 dueDay」那条老路（没有 dueDay 时就是今天）
+        return InstallmentIntake.defaultDueDate(dueDay: payer.dueDay)
+    }
+
+    /// 计划名：有备注用备注（「AirPods」），没有就用分类名。
+    var installmentPlanName: String {
+        let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty { return trimmed }
+        return "\(selectedCategory?.name ?? "消费") · 分期"
+    }
+
+    /// 每期 × 期数 与总额的差。0 或几分钱都正常（余数落首期）。
+    var installmentGap: Decimal {
+        installmentPerPeriod * Decimal(installmentPeriods) - amount
+    }
+
+    /// 分期块的校验。`nil` = 没问题；开关关着或账户不是负债也返回 `nil`
+    /// （那种情况下这个块根本不显示，不该拿它的规则挡住保存）。
+    var installmentValidationMessage: String? {
+        guard installmentEnabled, canUseInstallment else { return nil }
+        if installmentPeriods < 2 { return "分期至少要 2 期" }
+        if installmentPerPeriod <= 0 { return "填一下每期金额" }
+        // 差几分是正常的（除不尽，余数落首期）；差的超过 1 元说明期数或金额抄错了，
+        // 与其静默按总额摊出一张跟用户心理预期不同的表，不如当场拦下。
+        if abs(installmentGap) > Decimal(string: "1.00")! {
+            return "每期 × 期数 = ¥\(MoneyMath.money(installmentPerPeriod * Decimal(installmentPeriods)))"
+                + "，与总额差 ¥\(MoneyMath.money(abs(installmentGap)))"
+        }
+        return nil
+    }
+
+    // MARK: - 账期派生（M3-10）
+
+    /// 付款账户 + 发生日 → 这一笔消费归到哪一期账单。
+    ///
+    /// 只有负债账户有账期；储蓄卡当场扣钱，`nil`（还款走另一条：发生月即被还的那期）。
+    var resolvedBillPeriod: String? {
+        guard type == .expense, let payer, payer.kind.isLiability else { return nil }
+        if let billPeriodOverride { return billPeriodOverride }
+        return billCycle(for: payer).period
+    }
+
+    /// 归属行那句说明。手动改过账期时标「手动」，免得用户以为是自动算的。
+    func billCycleCaption(for account: Account) -> String {
+        guard account.kind.isLiability else { return "" }
+        let cycle = billCycle(for: account)
+        if let billPeriodOverride {
+            return "计入 \(BillCycleMath.monthLabel(billPeriodOverride)) · 手动"
+        }
+        return BillCycleMath.caption(cycle) ?? "计入 \(BillCycleMath.monthLabel(cycle.period))"
+    }
+
+    /// 可选的账期：自动算的这一期 + 下一期。
+    ///
+    /// 只给两档是刻意的——真实需求只有「跨账单日补记」和「商户延迟入账」，
+    /// 再往前/往后翻属于例外，做成长列表会把这个默认值变成一道选择题。
+    var billPeriodChoices: [String] {
+        guard let payer, payer.kind.isLiability else { return [] }
+        let auto = billCycle(for: payer).period
+        guard let next = BillCycleMath.shift(auto, months: 1) else { return [auto] }
+        return [auto, next]
+    }
+
+    private func billCycle(for account: Account) -> BillCycleMath.Cycle {
+        BillCycleMath.cycle(
+            for: date,
+            cycleStartDay: account.billCycleStart,
+            cycleEndDay: account.billCycleEnd,
+            dueDay: account.dueDay
+        )
+    }
+
     // MARK: - 校验
 
     /// 能不能存。`nil` 表示可以存。
@@ -208,6 +353,7 @@ final class EntryViewModel {
         if type == .expense || type == .income, selectedCategory == nil {
             return "选一个分类"
         }
+        if let message = installmentValidationMessage { return message }
         return nil
     }
 
@@ -268,6 +414,13 @@ final class EntryViewModel {
         receivedText = ""
         feeText = ""
         feeDriven = false
+        // 分期与账期都是「这一笔」的，切类型/重开面板一律回到默认（M3-10）。
+        // 不跨笔保留期数是有意的：上一笔 24 期、这一笔 3 期，留着更容易记错。
+        installmentEnabled = false
+        installmentPeriods = 12
+        installmentPerPeriodText = ""
+        installmentFirstDue = nil
+        billPeriodOverride = nil
 
         switch type {
         case .expense:
@@ -343,7 +496,7 @@ final class EntryViewModel {
         do {
             switch type {
             case .expense:
-                try LedgerService.insert(
+                let tx = try LedgerService.insert(
                     amount: amount,
                     kind: .expense,
                     date: date,
@@ -354,7 +507,28 @@ final class EntryViewModel {
                     grade: grade,
                     in: context
                 )
+                // 账期归属（M3-10）：`LedgerService.insert` 内部已经 save 过一次，
+                // 这个字段补在它之后，由下面的 `context.save()` 一起落盘。
+                tx.billPeriod = resolvedBillPeriod
                 rememberGrade()
+
+                // PRD 9.5.6：勾了分期就再建一张计划。**消费已经在上面按全额记了账**，
+                // 这里只补「剩下 N 期、每期多少、什么时候还」那张表，不动余额。
+                if installmentEnabled, canUseInstallment {
+                    let icon = selectedCategory?.iconName ?? ""
+                    try InstallmentService.insert(
+                        name: installmentPlanName,
+                        account: payer,
+                        totalPeriods: installmentPeriods,
+                        paidPeriods: 0,
+                        perPeriodAmount: installmentPerPeriod,
+                        remainingDue: amount,
+                        nextDueDate: installmentFirstDueDate,
+                        createdFromEntry: true,
+                        iconName: icon.isEmpty ? "Receipt" : icon,
+                        in: context
+                    )
+                }
             case .income:
                 try LedgerService.insert(
                     amount: amount,
@@ -368,7 +542,7 @@ final class EntryViewModel {
                 )
             case .repayment:
                 guard let target else { return }
-                try LedgerService.insert(
+                let paid = try LedgerService.insert(
                     amount: amount,
                     kind: .repayment,
                     date: date,
@@ -377,6 +551,10 @@ final class EntryViewModel {
                     toAccount: target,
                     in: context
                 )
+                // 还款也要标账期：撤销与「这一期已还」的判断都靠它。
+                // 口径沿用账户详情页的卡片级还款——**发生月**就是被还的那一期
+                // （11/25 还的是 2026-11）。真正的「还哪一期」要等账单选择，M4 再说。
+                paid.billPeriod = billPeriodOverride ?? BillCycleMath.periodText(for: date)
             case .transfer:
                 guard let target else { return }
                 try LedgerService.insert(

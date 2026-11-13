@@ -168,7 +168,9 @@ struct AccountDetailSheet: View {
                 let snapshot = DebtPeriod(
                     amount: period.amount,
                     dueDate: period.dueDate,
-                    isPaid: period.paidAt != nil
+                    isPaid: period.paidAt != nil,
+                    // 记一笔新建的计划：消费全额已进余额，这一期不再进「我欠」（M3-10）
+                    isCoveredByBalance: plan.createdFromEntry
                 )
                 result.append(snapshot)
             }

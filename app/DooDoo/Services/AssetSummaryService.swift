@@ -34,12 +34,14 @@ enum AssetSummaryService {
         let billsByAccount = groupBillsByAccount(bills: bills)
 
         // 「我欠」显示层派生：每张负债卡取 max(余额欠额, 未还账单 + 覆盖日之后的分期)。
+        let coveredKeys = Set(installments.filter(\.createdFromEntry).map(\.key))
         var oweByAccount: [PersistentIdentifier: Decimal] = [:]
         for account in accounts where account.kind.isLiability {
             let input = debtInput(
                 for: account,
                 bills: billsByAccount[account.persistentModelID] ?? [],
-                periods: periodsByAccount[account.persistentModelID] ?? []
+                periods: periodsByAccount[account.persistentModelID] ?? [],
+                coveredKeys: coveredKeys
             )
             oweByAccount[account.persistentModelID] = CardDebt.owe(input, calendar: calendar)
         }
@@ -91,10 +93,14 @@ enum AssetSummaryService {
     }
 
     /// 单卡的欠款输入。
+    ///
+    /// - `coveredKeys`：在「记一笔」里跟消费一起建的计划（消费全额已进余额），
+    ///   它们的期**不参与**账期那一项，否则欠款翻倍（`CardDebt` 顶部的例外说明）。
     static func debtInput(
         for account: Account,
         bills: [BillStatement],
-        periods: [InstallmentPeriod]
+        periods: [InstallmentPeriod],
+        coveredKeys: Set<String> = []
     ) -> CardDebtInput {
         let billSnapshots: [DebtBill] = bills.map { bill in
             DebtBill(dueAmount: bill.dueAmount, dueDate: bill.dueDate, isPaid: bill.isPaid)
@@ -102,7 +108,12 @@ enum AssetSummaryService {
         let periodSnapshots: [DebtPeriod] = periods
             .filter { $0.paidAt == nil }
             .map { period in
-                DebtPeriod(amount: period.amount, dueDate: period.dueDate, isPaid: false)
+                DebtPeriod(
+                    amount: period.amount,
+                    dueDate: period.dueDate,
+                    isPaid: false,
+                    isCoveredByBalance: coveredKeys.contains(period.installmentKey)
+                )
             }
         return CardDebtInput(
             balance: account.currentBalance,

@@ -1,14 +1,14 @@
 # ViewModels · 状态与输入校验
 
-> 状态：**M3-3**——`EntryViewModel.swift`（记一笔四类型）+ `InstallmentEntryViewModel.swift`（存量分期快速连录，手填 3 个数）。
+> 状态：**M3-10**——`EntryViewModel.swift`（记一笔四类型，含内联分期与账期归属）+ `InstallmentEntryViewModel.swift`（存量分期快速连录，手填 3 个数）。
 > **不是空目录。** 本文件此前写「M0 空目录」，那是 2026-11-08 的快照，已过期（2026-11-10 核准）。
 
 ## 入口
 
 | 文件 | 职责 |
 |---|---|
-| `EntryViewModel.swift` | `@Observable final class`。记一笔的全部草稿状态与校验，四类型共用一份：`.expense` / `.income` / `.repayment` / `.transfer` |
-| `InstallmentEntryViewModel.swift` | 存量分期连录的状态与校验。只收 3 个手填值（剩余应还 / 剩余期数 / 含利息），**每期金额是只读派生**（`剩余应还 ÷ 期数`，余数落末期），还款日由账户带出。存完**只清这笔独有的字段**，账户与还款日留到下一笔；「还差 N 笔」数库不另存计数器（目标笔数在 `UserDefaults`） |
+| `EntryViewModel.swift` | `@Observable final class`。记一笔的全部草稿状态与校验，四类型共用一份：`.expense` / `.income` / `.repayment` / `.transfer`。M3-10 起还管内联分期（`installmentEnabled` / 期数 / 每期 / 首期日）与账期归属（`resolvedBillPeriod` / `billPeriodOverride`） |
+| `InstallmentEntryViewModel.swift` | 存量分期连录的状态与校验。只收 3 个手填值（剩余应还 / 剩余期数 / 含利息），**每期金额是只读派生**（`剩余应还 ÷ 期数`，余数落**首期**），还款日由账户带出。存完**只清这笔独有的字段**，账户与还款日留到下一笔；「还差 N 笔」数库不另存计数器（目标笔数在 `UserDefaults`） |
 
 它实际管这些：
 
@@ -21,6 +21,8 @@
 | 账户 | `payer` / `target` + `payerCandidates` / `targetCandidates` | 候选集随类型变（还款只列信用/借款，转账排除自身） |
 | 余额预览 | `payerBalanceAfter` / `targetBalanceAfter` | 保存前先给结果，不用回列表看 |
 | 评分 | `grade` + `rememberGrade()` | 保存后把档位写回分类，下次自动带出（PRD 9.13） |
+| 内联分期 | `installmentEnabled` / `installmentPeriods` / `installmentPerPeriodText` / `installmentFirstDue` | 仅支出 + 信用/借款（`canUseInstallment`）。每期留空 = 自动摊平（`splitEvenly`，余数落首期）；差 > 1 元拦下（`installmentValidationMessage`） |
+| 账期归属 | `resolvedBillPeriod` / `billPeriodOverride` / `billPeriodChoices` | 按账户账单周期自动算（`BillCycleMath`，账期名取周期止所在月），可手动切本期/下一期；储蓄无账期 |
 | 校验 | `validationMessage` / `canSave` | 单一出口，视图只读这两个 |
 
 ## 职责边界
