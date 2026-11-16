@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<title>选完二级后，一级格子直接换成二级 · DooDoo M4</title>
+<style>
+  :root{--page:#F7F5F1;--card:#FFFFFF;--ink:#1D1D1F;--ink2:#5F5F66;--sub:#6E6E76;--faint:#9A9AA2;
+        --glow:168,124,247;--line:#ECE7DE;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--page);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI",sans-serif;
+       color:var(--ink);display:flex;justify-content:center;padding:34px 20px 40px;}
+  .wrap{width:600px;}
+  h1{font-size:19px;font-weight:600;letter-spacing:-.01em;}
+  .lede{margin-top:8px;font-size:13px;color:#5C574E;line-height:1.75}
+  .lede b{color:var(--ink);font-weight:600}
+  .case{background:var(--card);border:1px solid var(--line);border-radius:20px;
+         box-shadow:0 1px 2px rgba(29,28,26,.04),0 10px 26px rgba(29,28,26,.05);
+         padding:16px 14px 14px;margin-top:16px;}
+  .tag{font-size:11px;font-weight:600;color:var(--sub);letter-spacing:.02em;margin:0 0 12px 4px;}
+  .catrow{display:flex;justify-content:space-between;}
+  .c{width:52px;display:flex;flex-direction:column;align-items:center;gap:5px;position:relative;}
+  .c img{width:36px;height:36px;object-fit:contain;position:relative;z-index:1;
+          filter:drop-shadow(0 1px 1.5px rgba(29,28,26,.10));}
+  .c span{font-size:11px;color:var(--sub);white-space:nowrap;}
+  .c .glow{position:absolute;top:-9px;left:-9px;width:70px;height:70px;border-radius:50%;
+            background:radial-gradient(circle,rgba(var(--glow),1) 0%,transparent 62%);
+            opacity:0;transform:scale(.6);filter:blur(3px);pointer-events:none;}
+  .c.on .glow{opacity:.28;transform:scale(1.12);}
+  .c.on img{transform:scale(1.12) translateY(-2px);
+             filter:drop-shadow(0 6px 9px rgba(29,28,26,.22));}
+  .c.on span{color:var(--ink);font-weight:600;}
+  .old{margin-top:18px;background:rgba(255,255,255,.5);border:1px dashed rgba(29,28,26,.22);
+        border-radius:14px;padding:14px 16px;}
+  .old .h{font-size:11px;font-weight:600;color:#A33;letter-spacing:.02em;margin-bottom:8px;}
+  .old .line{font-size:13px;color:var(--faint);text-decoration:line-through;}
+  .old .why{margin-top:8px;font-size:12px;color:#5C574E;line-height:1.7;}
+  .foot{margin-top:26px;font-size:12px;color:#5C574E;line-height:1.9;
+         border-top:1px solid rgba(29,28,26,.10);padding-top:14px;}
+  .foot b{color:var(--ink);font-weight:600}
+  .badge{display:inline-block;background:var(--ink);color:#fff;font-size:10px;font-weight:600;
+          border-radius:5px;padding:2px 6px;margin-right:6px;vertical-align:1px;}
+</style></head><body><div class="wrap">
+  <h1>选完二级，一级格子自己就是结果</h1>
+  <p class="lede">同一行、同一格、同一处光——变的只是<b>格子里装的是哪个贴纸</b>。不用再在下面补一句「已选 吃 › 早餐」。</p>
+
+  <div class="case"><div class="tag">A · 刚打开，还没选二级：格子显示大类自己</div><div class="catrow"><div class="c on"><div class="glow"></div><img src="../../assets/emoji/picked/ForkAndKnifeWithPlate.png" alt="吃"><span>吃</span></div><div class="c"><div class="glow"></div><img src="../../assets/emoji/picked/Necktie.png" alt="穿"><span>穿</span></div><div class="c"><div class="glow"></div><img src="../../assets/emoji/picked/Houses.png" alt="住"><span>住</span></div><div class="c"><div class="glow"></div><img src="../../assets/emoji/picked/LightRail.png" alt="行"><span>行</span></div><div class="c"><div class="glow"></div><img src="../../assets/emoji/picked/Joystick.png" alt="乐"><span>乐</span></div><div class="c"><div class="glow"></div><img src="../../assets/emoji/picked/Hospital.png" alt="医"><span>医</span></div><div class="c"><div class="glow"></div><img src="../../assets/emoji/picked/CatFace.png" alt="情"><span>情</span></div><div class="c"><div class="glow"></div><img src="../../assets/emoji/picked/Package.png" alt="其他"><span>其他</span></div></div></div>
+  <div class="case"><div class="tag">B · 选了「咖啡」：吃 → 咖啡，图标和文字一起换</div><div class="catrow"><div class="c on"><div class="glow"></div><img src="../../assets/emoji/picked/HotBeverage.png" alt="咖啡"><span>咖啡</span></div><div class="c"><div class="glow"></div><img src="../../assets/emoji/picked/Necktie.png" alt="穿"><span>穿</span></div><div class="c"><div class="glow"></div><img src="../../assets/emoji/picked/Houses.png" alt="住"><span>住</span></div><div class="c"><div class="glow"></div><img src="../../assets/emoji/picked/LightRail.png" alt="行"><span>行</span></div><div class="c"><div class="glow"></div><img src="../../assets/emoji/picked/Joystick.png" alt="乐"><span>乐</span></div><div class="c"><div class="glow"></div><img src="../../assets/emoji/picked/Hospital.png" alt="医"><span>医</span></div><div class="c"><div class="glow"></div><img src="../../assets/emoji/picked/CatFace.png" alt="情"><span>情</span></div><div class="c"><div class="glow"></div><img src="../../assets/emoji/picked/Package.png" alt="其他"><span>其他</span></div></div></div>
+  <div class="case"><div class="tag">C · 换成「早餐」：同一格再换一次，位置和光都不动</div><div class="catrow"><div class="c on"><div class="glow"></div><img src="../../assets/emoji/picked/Bread.png" alt="早餐"><span>早餐</span></div><div class="c"><div class="glow"></div><img src="../../assets/emoji/picked/Necktie.png" alt="穿"><span>穿</span></div><div class="c"><div class="glow"></div><img src="../../assets/emoji/picked/Houses.png" alt="住"><span>住</span></div><div class="c"><div class="glow"></div><img src="../../assets/emoji/picked/LightRail.png" alt="行"><span>行</span></div><div class="c"><div class="glow"></div><img src="../../assets/emoji/picked/Joystick.png" alt="乐"><span>乐</span></div><div class="c"><div class="glow"></div><img src="../../assets/emoji/picked/Hospital.png" alt="医"><span>医</span></div><div class="c"><div class="glow"></div><img src="../../assets/emoji/picked/CatFace.png" alt="情"><span>情</span></div><div class="c"><div class="glow"></div><img src="../../assets/emoji/picked/Package.png" alt="其他"><span>其他</span></div></div></div>
+
+  <div class="old">
+    <div class="h">删掉的那一行</div>
+    <div class="line">已选&nbsp;&nbsp;吃 › 咖啡</div>
+    <div class="why">它是在替一个本可以直接呈现的结果做旁白。同一屏里「吃」出现两次、「咖啡」出现两次，还多占 16pt 高度——而一级行本来就有 8 个格子可以承载这个信息。</div>
+  </div>
+
+  <div class="foot">
+    <b><span class="badge">关键</span>点这一格，打开的仍是「吃」的抽屉。</b>格子的内容是二级，身份仍是一级：再点它，浮层里还是那 8 个抽屉，当前选中的那个带放大和加粗。想换大类，点旁边任意一格即可。<br>
+    <b>光跟着格子走，不跟着二级走。</b>散射色取一级（吃 = 紫），切到咖啡、早餐都不换色——同一次切换只该有一件事在动。<br>
+    <b>名字长度实测：</b>二级共 51 个，50 个是 2 字、只有「手续费」「加班费」是 3 字，11pt 下 33pt 宽，52pt 的格子放得下，不需要缩字号。
+  </div>
+</div></body></html>
