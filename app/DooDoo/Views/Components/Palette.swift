@@ -40,6 +40,27 @@ enum Palette {
     static let overdraft = Color(hex: 0xA32D2D)
     static let overdraftBed = Color(hex: 0xFDECEC)
 
+    // MARK: - 消费评分四档
+
+    /// 档位色**只给文字和占位符用**，不铺底、不描边（2026-11-16 定案：
+    /// 评分位的颜色全部由徽章素材自己提供，界面不再叠一层重点色）。
+    /// 四档在浅底上的对比度：夯 5.9:1 / 飘 6.2:1 / 拉 7.8:1 / NPC 4.6:1，均过 AA。
+    static func gradeTint(_ grade: SpendGrade) -> Color {
+        switch grade {
+        case .hang: Color(hex: 0xB01D42)
+        case .piao: Color(hex: 0x1A64B8)
+        case .la: Color(hex: 0x5A31C0)
+        case .npc: Color(hex: 0x7A7A80)
+        }
+    }
+
+    /// 未评分空位的中性灰。用的是 NPC 档的色相，但只出 44% 透明度——
+    /// 它承载的是「这里可以填」而不是「已经选了 NPC」。
+    static let gradeVacant = Color(hex: 0x7A7A80)
+
+    /// 备注卡里隔开评分位的那条竖虚线（比分隔线 `line` 深一档，才看得出是「断」的）。
+    static let dividerDash = Color(hex: 0xDBD6CC)
+
     /// 主色（分类选中描边、按钮实底、金额强调）。
     ///
     /// 2026-11-16 起**默认改为品牌绿**（此前默认墨黑）：用户反馈"记一笔界面黑色太多"，

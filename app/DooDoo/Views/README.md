@@ -10,7 +10,7 @@
 |---|---|---|
 | `FlowView` | M1 | `docs/design/spec/首页规格冻结-v1.0.md` |
 | `AssetsView` | M2 | `docs/design/spec/资产页规格冻结-v1.0.md`（正文 v1.1） |
-| `Entry/EntryView` | M1b / M2b / M3-10 | `docs/design/spec/记一笔规格冻结-v2.1.md`（四类型、二级分类、内联分期、账期归属、自绘键盘默认收起） |
+| `Entry/EntryView` | M1b / M2b / M3-10 | `docs/design/spec/记一笔规格冻结-v2.3.md`（四类型、二级分类、内联分期、账期归属、自绘键盘默认收起、评分位单徽章） |
 | `Components/NumberPad` | M4 第 5 条 | 规格「五·补」：`NumberPad` 键位 + `NumberPadDock` 键盘坞（默认收起 44pt，点数值行 / 上滑抓条展开） |
 | `CardFace` | M2b → 11-09 换资源 | 规格第三节四档尺寸；**底图走 `Assets.xcassets/Card` 资源 + `Texture` 纹理，文字层实时画**（原「六层代码画」已废弃） |
 | `SettingsView` | M0 起可用；M3-2 加分期入口 | PRD 9.15 + M5 验收清单 |

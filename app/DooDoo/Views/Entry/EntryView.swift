@@ -33,6 +33,23 @@ struct EntryView: View {
     /// 转账保存后的短回执。非 nil 时先显示 1.1 秒再关面板（真机反馈 #12）。
     @State private var receipt: String?
 
+    // MARK: - 评分位动画状态（M4 2026-11-16）
+
+    /// 徽章是否已落位。`false` = 要么还没评分，要么正在从 0.72 弹入。
+    @State private var gradeIconShown = false
+    /// 档位文字是否已出现。比徽章晚 40ms，**不同步是刻意的**：先立图标再出字，
+    /// 两者同帧出现会读成「一行字带个图标」，反了。
+    @State private var gradeTextShown = false
+    /// 果冻动画的触发计数，每次换档 +1（`keyframeAnimator` 见到新值重播一遍）。
+    @State private var gradeIconTick = 0
+    @State private var gradeTextTick = 0
+    /// 首次评分的「空位框退场」是否还在播。播完置 false，框从此不再出现。
+    @State private var gradeFrameExiting = false
+    /// 空位框退场的形变量：缩到 0.18 + 透明，130ms。**没有模糊**——
+    /// 模糊会让它和同时出现的徽章糊成一片，那正是「割裂」的来源。
+    @State private var gradeFrameScale: CGFloat = 1
+    @State private var gradeFrameOpacity: Double = 1
+
     /// 面板里需要数字键盘的字段。备注不在其中。
     private enum NumberField: Hashable {
         case amount, received, fee, perPeriod
@@ -83,6 +100,22 @@ struct EntryView: View {
         .onChange(of: noteFocused) { _, focused in
             if focused, padOpen { setPad(open: false) }
         }
+        // 分类切换会把档位换成该分类上次的档位（PRD 9.13 规则 3），也可能换回 nil。
+        // 本视图自己点击时 `gradeFrameExiting` 已置位，这里直接让路，避免和 tapGrade 的时序打架。
+        .onChange(of: vm.grade) { _, newValue in
+            guard !gradeFrameExiting else { return }
+            if newValue == nil {
+                gradeIconShown = false
+                gradeTextShown = false
+                gradeFrameScale = 1
+                gradeFrameOpacity = 1
+            } else {
+                gradeIconShown = true
+                gradeTextShown = true
+                gradeIconTick += 1
+                gradeTextTick += 1
+            }
+        }
         .task(id: receipt) {
             // 有回执就停一下再关，没有就由保存处直接 dismiss。
             guard receipt != nil else { return }
@@ -96,6 +129,10 @@ struct EntryView: View {
             vm.date = DayMath.entryTimestamp(for: initialDate)
             vm.load(context: context)
             activeField = .amount
+            // 兜底：载入或切类型后可能已经带着档位（分类记忆），图标要直接立住，
+            // 不能停在 `gradeIconShown == false` 那个「还没落位」的状态上。
+            gradeIconShown = vm.grade != nil
+            gradeTextShown = vm.grade != nil
         }
     }
 
@@ -279,9 +316,6 @@ struct EntryView: View {
             )
             .padding(.top, 4)
 
-            if vm.type == .expense {
-                gradeRow
-            }
             noteRow
             previewBox
 
@@ -593,62 +627,208 @@ struct EntryView: View {
         .onTapGesture { activate(.received) }
     }
 
-    // MARK: - 评分（仅支出）
+    // MARK: - 评分位（仅支出，嵌在备注卡右侧）
+    //
+    // 2026-11-16 定案，推翻 v2.0 的「四档 chip 并排 + 跳过」：
+    // ① 只显示**一枚**徽章，位置在备注卡内、竖虚线右侧——不单独占一行；
+    // ② 四档不再并排，也没有「值不值」三个字，颜色全部由徽章素材自己提供；
+    // ③ 未评分不是 NPC，而是一个 21pt 虚线空位 + 加号；点一下才落第一档；
+    // ④ 点过之后只在这四档里循环，**永不回到空位**（虚线消失是彻底的）。
+    //
+    // 几何对齐（这轮最关键的一处，别再凭感觉改）：
+    // 徽章原图 80px、内容 76px、圆角约 8px → 圆角只占 11.4%，显示 22pt 时圆角 2.5pt。
+    // 所以空位框必须做成 **21pt / 圆角 2.5**（不是 28 / 6.6）：尺寸和圆角都贴住徽章，
+    // 徽章长满时才能把它完整盖掉。框大一圈、圆角大一倍，眼睛就会读成「一个框罩着一个图标」，
+    // 那才是之前反复出现的「割裂感」的真正来源。
 
-    private var gradeRow: some View {
-        HStack(spacing: 7) {
-            Text("值不值")
-                .font(.system(size: 10.5))
-                .foregroundStyle(Palette.faint)
-                .padding(.trailing, 1)
-
-            ForEach(SpendGrade.allCases, id: \.self) { grade in
-                let selected = vm.grade == grade
-                Button {
-                    vm.grade = selected ? nil : grade
-                } label: {
-                    HStack(spacing: 3) {
-                        // 正式徽章（Fluent 3D 字块），不用 emoji：emoji 跨设备渲染不一致，和卡面调性也打架
-                        Image(grade.assetName)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 18, height: 18)
-                        Text(grade.title)
-                            .font(.system(size: 11.5, weight: selected ? .semibold : .regular))
-                            .foregroundStyle(selected ? Palette.ink : Palette.ink2)
-                    }
-                    .padding(.leading, 7)
-                    .padding(.trailing, 10)
-                    .padding(.vertical, 6)
-                    .background(
-                        // 2026-11-16：评分选中从实底黑块改为浅底 + 主色描边，
-                        // 与分类/账户的选中语言统一；一屏里不再出现第三个黑块。
-                        Capsule().fill(selected ? accentWash : Palette.card)
-                    )
-                    .overlay(
-                        Capsule().strokeBorder(selected ? accent : Palette.line,
-                                               lineWidth: selected ? 1.5 : 1)
-                    )
-                }
-                .buttonStyle(.plain)
-            }
-
-            Spacer(minLength: 0)
-
-            Button("跳过") { vm.grade = nil }
-                .font(.system(size: 11))
-                .foregroundStyle(Palette.faint)
-                .buttonStyle(.plain)
+    /// 竖向虚线隔断。SwiftUI 没有现成的虚线直线，用 0 宽 Path 描边。
+    private struct DashedRule: Shape {
+        func path(in rect: CGRect) -> Path {
+            var path = Path()
+            path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
+            return path
         }
-        .padding(.horizontal, 18)
-        .padding(.top, 12)
-        .padding(.bottom, 8)
+    }
+
+    /// 档位文字区定宽：四档文案宽度差 13pt（「拉完了」39.6 / 「飘了」26.4），
+    /// 不锁宽就会看见左侧「备注」被顶得抖一下。
+    private let gradeLabelWidth: CGFloat = 46
+    private let gradeBadgeSide: CGFloat = 22
+    private let gradeSlotSide: CGFloat = 21
+
+    private var gradePill: some View {
+        HStack(spacing: 12) {
+            DashedRule()
+                .stroke(Palette.dividerDash, style: StrokeStyle(lineWidth: 1.2, dash: [3, 3]))
+                .frame(width: 1.2, height: 30)
+
+            Button(action: tapGrade) {
+                HStack(spacing: 6) {
+                    gradeBadge
+                    gradeLabel
+                }
+                .frame(height: 44)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("消费评分")
+            .accessibilityValue(vm.grade?.entryTitle ?? "未评分")
+            .accessibilityHint("点一下开始评分，再点切换档位")
+        }
+    }
+
+    @ViewBuilder
+    private var gradeBadge: some View {
+        ZStack {
+            // 空位：只在「还没评分」或「首次评分的 300ms 退场」里存在
+            if vm.grade == nil || gradeFrameExiting {
+                gradeSlot
+                    .scaleEffect(gradeFrameScale)
+                    .opacity(gradeFrameOpacity)
+            }
+            if let grade = vm.grade {
+                Image(grade.assetName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: gradeBadgeSide, height: gradeBadgeSide)
+                    // 首次落位：0.72 → 1，spring 自带 6% 过冲，和 `keyframeAnimator` 的果冻
+                    // 是相乘关系（果冻此时停在静止帧，不参与）
+                    .scaleEffect(gradeIconShown ? 1 : 0.72)
+                    .opacity(gradeIconShown ? 1 : 0)
+                    .modifier(GradeJelly(tick: gradeIconTick))
+            }
+        }
+        .frame(width: gradeBadgeSide, height: gradeBadgeSide)
+    }
+
+    /// 空位中央的加号。用 `Shape` 而不是 `Path` 视图：`Path` 作为 View 时尺寸跟着路径走，
+    /// 居中会偏；`Shape` 一定铺满交给它的 21×21 frame。
+    private struct GradePlus: Shape {
+        func path(in rect: CGRect) -> Path {
+            var path = Path()
+            let c = CGPoint(x: rect.midX, y: rect.midY)
+            let half = min(rect.width, rect.height) * 0.171  // 臂长 7.2pt / 边长 21pt
+            path.move(to: CGPoint(x: c.x, y: c.y - half))
+            path.addLine(to: CGPoint(x: c.x, y: c.y + half))
+            path.move(to: CGPoint(x: c.x - half, y: c.y))
+            path.addLine(to: CGPoint(x: c.x + half, y: c.y))
+            return path
+        }
+    }
+
+    /// 21pt 的空位：虚线圆角框 + 加号。两个都只出 44%/52% 的灰，
+    /// 因为它表达的是「这里可以填」，不是「已经选了 NPC」。
+    private var gradeSlot: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                .strokeBorder(
+                    Palette.gradeVacant.opacity(0.44),
+                    style: StrokeStyle(lineWidth: 1.05, dash: [2.9, 2.6])
+                )
+            GradePlus()
+                .stroke(
+                    Palette.gradeVacant.opacity(0.52),
+                    style: StrokeStyle(lineWidth: 1.35, lineCap: .round)
+                )
+                // 退场一开始就让加号先走（它比框更「细」，留到最后会显脏）
+                .opacity(vm.grade == nil ? 1 : 0)
+        }
+        .frame(width: gradeSlotSide, height: gradeSlotSide)
+    }
+
+    @ViewBuilder
+    private var gradeLabel: some View {
+        if let grade = vm.grade {
+            Text(grade.entryTitle)
+                .font(.system(size: 13, weight: .semibold))
+                .tracking(0.2)
+                .foregroundStyle(Palette.gradeTint(grade))
+                .lineLimit(1)
+                .frame(width: gradeLabelWidth, alignment: .leading)
+                .opacity(gradeTextShown ? 1 : 0)
+                .modifier(GradeTextJelly(tick: gradeTextTick))
+        } else {
+            Color.clear
+                .frame(width: gradeLabelWidth, height: 16)
+        }
+    }
+
+    /// 点评分位。
+    ///
+    /// - 空位 → 首次评分：加号消失 + 空位框收到 0.18 硬消失（130ms），
+    ///   100ms 后徽章从 0.72 弹入，140ms 后文字弹入。两者在时间上错开，
+    ///   **不存在「框和徽章各占一半」的叠加帧**。
+    /// - 已有档位 → 四档顺次循环，只播果冻。
+    private func tapGrade() {
+        guard vm.type == .expense else { return }
+
+        if let current = vm.grade {
+            // 连点时退场还没播完，先把它收干净再换档（否则框会跟着果冻一起缩）
+            if gradeFrameExiting { finishGradeFrameExit() }
+            vm.grade = nextGrade(after: current)
+            gradeIconTick += 1
+            gradeTextTick += 1
+            return
+        }
+
+        // 顺序不能反：先置「退场中」，再改档位——否则 `onChange(of: vm.grade)` 会把
+        // 图标当成「分类带出的档位」直接立起来，交接动画就没了。
+        gradeFrameExiting = true
+        gradeIconShown = false
+        gradeTextShown = false
+
+        // 加号 70ms 先走，框紧接着 130ms 收到 0.18 消失
+        withAnimation(.easeIn(duration: 0.07)) {
+            vm.grade = .hang
+        }
+        withAnimation(.easeIn(duration: 0.13)) {
+            gradeFrameScale = 0.18
+            gradeFrameOpacity = 0
+        }
+
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(100))
+            withAnimation(.spring(response: 0.26, dampingFraction: 0.66)) {
+                gradeIconShown = true
+            }
+            try? await Task.sleep(for: .milliseconds(40))
+            // tick 必须在这里加、不能跟 `vm.grade` 同一批改：那一刻文字视图才刚被创建，
+            // `keyframeAnimator` 初始化的 trigger 就等于新值，看不到变化就不播。
+            withAnimation(.easeOut(duration: 0.12)) {
+                gradeTextShown = true
+            }
+            gradeTextTick += 1
+            try? await Task.sleep(for: .milliseconds(240))
+            finishGradeFrameExit()
+        }
+    }
+
+    private func finishGradeFrameExit() {
+        // 用无动画赋值：框已经不可见，再补一段过渡只会让它在回来的路上闪一下
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            gradeFrameExiting = false
+            gradeFrameScale = 1
+            gradeFrameOpacity = 1
+        }
+    }
+
+    private func nextGrade(after grade: SpendGrade) -> SpendGrade {
+        switch grade {
+        case .hang: .piao
+        case .piao: .la
+        case .la: .npc
+        case .npc: .hang
+        }
     }
 
     // MARK: - 备注
 
     private var noteRow: some View {
-        HStack {
+        HStack(spacing: 10) {
             TextField("备注", text: $vm.note)
                 .font(.system(size: 14))
                 .foregroundStyle(Palette.ink)
@@ -663,9 +843,15 @@ struct EntryView: View {
                 }
                 .buttonStyle(.plain)
             }
+            // 评分位只在支出时挂在备注卡里（还款/转账的备注卡不长这条虚线）
+            if vm.type == .expense {
+                gradePill
+            }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 13)
+        .padding(.leading, 16)
+        .padding(.trailing, 14)
+        .padding(.vertical, 11)
+        .frame(minHeight: 64)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(Palette.card)
@@ -882,6 +1068,81 @@ struct EntryView: View {
     /// 转入一个账户时该用哪个词：储蓄/现金是「到账」，信用/借款是「还款」。
     private func transferInWord(_ account: Account) -> String {
         account.kind.isLiability ? "还款" : "到账"
+    }
+
+    // MARK: - 果冻动画（S1，2026-11-16 定案）
+
+    /// 果冻的插值状态。属性一律用 `Double`：`KeyframeTrack` 对 `Double` 的支持最确定。
+    private struct GradeMotionState {
+        var scaleX: Double = 1
+        var scaleY: Double = 1
+        var rotation: Double = 0
+    }
+
+    private struct GradeTextMotionState {
+        var scaleX: Double = 1
+        var scaleY: Double = 1
+    }
+
+    /// 档位徽章的果冻：压扁 → 拉长 → 回正，带 ±8° 的轻微旋转。
+    ///
+    /// 用 `keyframeAnimator` 而不是 `phaseAnimator`：前者在 trigger 变化时**播一遍就停**，
+    /// 后者按 phase 循环播放，图标会一直抖。440ms 是四段之和；
+    /// 「灵动」全靠 1.18 那一帧的过冲，别把峰值削平。
+    private struct GradeJelly: ViewModifier {
+        var tick: Int
+
+        func body(content: Content) -> some View {
+            content.keyframeAnimator(initialValue: GradeMotionState(), trigger: tick) { view, motion in
+                view
+                    .scaleEffect(x: CGFloat(motion.scaleX), y: CGFloat(motion.scaleY))
+                    .rotationEffect(.degrees(motion.rotation))
+            } keyframes: { _ in
+                KeyframeTrack(\GradeMotionState.scaleX) {
+                    CubicKeyframe(0.80, duration: 0.09)
+                    CubicKeyframe(1.18, duration: 0.13)
+                    CubicKeyframe(0.95, duration: 0.11)
+                    CubicKeyframe(1.00, duration: 0.11)
+                }
+                KeyframeTrack(\GradeMotionState.scaleY) {
+                    CubicKeyframe(0.90, duration: 0.09)
+                    CubicKeyframe(1.08, duration: 0.13)
+                    CubicKeyframe(1.02, duration: 0.11)
+                    CubicKeyframe(1.00, duration: 0.11)
+                }
+                KeyframeTrack(\GradeMotionState.rotation) {
+                    CubicKeyframe(-8, duration: 0.09)
+                    CubicKeyframe(5, duration: 0.13)
+                    CubicKeyframe(-2, duration: 0.11)
+                    CubicKeyframe(0, duration: 0.11)
+                }
+            }
+        }
+    }
+
+    /// 档位文字的果冻：同一条节奏，幅度收到徽章的一半以下（文字大幅缩放会读不清）。
+    /// 锚点固定在 **leading**——中文左对齐，从中心缩放会让第一个字往左爬出图标。
+    private struct GradeTextJelly: ViewModifier {
+        var tick: Int
+
+        func body(content: Content) -> some View {
+            content.keyframeAnimator(initialValue: GradeTextMotionState(), trigger: tick) { view, motion in
+                view.scaleEffect(x: CGFloat(motion.scaleX), y: CGFloat(motion.scaleY), anchor: .leading)
+            } keyframes: { _ in
+                KeyframeTrack(\GradeTextMotionState.scaleX) {
+                    CubicKeyframe(0.84, duration: 0.118)
+                    CubicKeyframe(1.035, duration: 0.078)
+                    CubicKeyframe(0.99, duration: 0.084)
+                    CubicKeyframe(1.00, duration: 0.084)
+                }
+                KeyframeTrack(\GradeTextMotionState.scaleY) {
+                    CubicKeyframe(1.08, duration: 0.118)
+                    CubicKeyframe(0.985, duration: 0.078)
+                    CubicKeyframe(1.012, duration: 0.084)
+                    CubicKeyframe(1.00, duration: 0.084)
+                }
+            }
+        }
     }
 
     // MARK: - 底部
