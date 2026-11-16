@@ -1,15 +1,20 @@
 import SwiftUI
 import SwiftData
 
-/// 卡详情（`账户详情页规格冻结-v1.0.md` 的最小落地，PROGRESS M3-8）。
+/// 账户详情（`账户详情页规格冻结-v1.0.md`；规格第十一节 3 把「储蓄 / 现金 / 借款
+/// 账户的详情页形态」列为未锁定，本文件按 2026-11-16 用户定案补齐三种形态）。
 ///
 /// **形态是 sheet，不是 push**。原因是资产页还没有导航栈：点卡堆先出的是组浮层，
 /// 详情从浮层里再开一层。等 M4 把 tab 换成 NavigationStack 时，这层 sheet 内容
-/// 可以整块搬进 `AccountDetailView`——规格 10.1 的结构本来就是
-/// 「卡面 → 指标区 → 走势图 → 往期账单 → 分期 → 流水」，这里先把
-/// **指标区 / 往期账单 / 分期**三块做出来，走势图与流水留到有数据源之后。
+/// 可以整块搬进 `AccountDetailView`。
 ///
-/// 数值全部走 `Math/` 的纯函数（`CardDebt` / `DetailMath` / `DueMath`），这里只摆位置。
+/// 三种形态（用户 2026-11-16 定案）：
+/// - **信用**：三列 + 额度条 + 本月要还白条 → 欠款走势 → 往期账单 → 分期 → 流水
+/// - **借款**：欠款 + 走势。**没有**往期账单 / 分期 / 流水——借款没有账单周期，
+///   用户原话「这是不需要的」
+/// - **储蓄 / 现金**：余额 + 本月收支 + 余额走势 + 流水
+///
+/// 数值全部走 `Math/` 的纯函数（`CreditDebt` / `DetailMath` / `DueMath`），这里只摆位置。
 struct AccountDetailSheet: View {
     let account: Account
 
@@ -22,9 +27,8 @@ struct AccountDetailSheet: View {
 
     @State private var route: DetailRoute?
     @State private var editingAccount: Account?
-    /// 流水区块的分段：本月 / 全部（规格第七节）。
-    @State private var txScope: TxScope = .month
-    /// 走势图的区间，默认 1 年（规格第四节）。
+    /// 走势图的区间，默认 1 年（规格第四节）。放在这里而不是走势组件内部：
+    /// 换区间要重算 `trendPoints`，状态藏在组件里外面就拿不到新数据。
     @State private var trendRange: NetWorthRange = .year
     /// 本月还款：选扣款卡。
     @State private var showingRepayPicker = false
@@ -33,14 +37,10 @@ struct AccountDetailSheet: View {
     var body: some View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
-                let m = metrics
                 VStack(alignment: .leading, spacing: 20) {
-                    header(m)
-                    metricsBlock(m)
-                    trendSection
-                    pastBillsSection
-                    installmentsSection
-                    transactionsSection
+                    let m = metrics
+                    header(m.overdueDays)
+                    content(m)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
@@ -190,39 +190,166 @@ struct AccountDetailSheet: View {
 
     // MARK: - 区块
 
-    private func header(_ m: DetailMetrics) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            CardFace(account: account, size: .detail)
-
-            VStack(alignment: .leading, spacing: 5) {
-                Text(account.name)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Palette.ink)
-                    .lineLimit(1)
-
-                Text(subtitle)
-                    .font(.system(size: 10.5))
-                    .foregroundStyle(Palette.sub)
-                    .lineLimit(1)
-
-                if m.overdueDays > 0 {
-                    Text("逾期 \(m.overdueDays) 天")
-                        .font(.system(size: 10.5, weight: .semibold))
-                        .foregroundStyle(Palette.overdraft)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(Capsule().fill(Palette.overdraftBed))
-                }
+    /// 顶部只有卡面，居中。
+    ///
+    /// 2026-11-16 用户第 3 条：删掉卡面右边那串「招商 / 信用卡」。
+    /// 卡面本身已经画了品牌名、类型、卡组织与尾号，右边那栏是同一个名字的第三次出现
+    /// （toolbar 中间还有一次）。名字交给卡面，位置让给卡面居中。
+    private func header(_ overdueDays: Int) -> some View {
+        DetailHeroCard(account: account) {
+            if overdueDays > 0 {
+                DetailOverdueBadge(days: overdueDays)
             }
-            .padding(.top, 2)
-
-            Spacer(minLength: 0)
         }
     }
 
-    private var subtitle: String {
-        let masked = account.maskedNumber
-        return masked.isEmpty ? account.typeLabel : "\(account.typeLabel) · \(masked)"
+    // MARK: - 按账户类型分发
+
+    @ViewBuilder
+    private func content(_ m: DetailMetrics) -> some View {
+        switch account.kind {
+        case .credit:
+            creditContent(m)
+        case .loan:
+            loanContent(m)
+        case .savings, .cash:
+            savingsContent
+        }
+    }
+
+    /// 信用：三列 + 额度条 + 白条 → 走势 → 往期账单 → 分期 → 流水（规格第二至七节）。
+    @ViewBuilder
+    private func creditContent(_ m: DetailMetrics) -> some View {
+        metricsBlock(m)
+        DetailTrendBlock(
+            title: "欠款走势",
+            caption: "按流水折算的月末欠款。分期与账单不在曲线上——顶部欠款 = 曲线末点 + 未记账单与分期。",
+            points: trendPoints,
+            range: $trendRange
+        )
+        pastBillsSection
+        installmentsSection
+        flowBlock(
+            note: "按时间倒序 · 还款不计入消费统计",
+            emptyMonth: "这个月这张卡没有流水",
+            emptyAll: "这张卡还没有流水"
+        )
+    }
+
+    /// 借款：**只有欠款 + 走势**。
+    ///
+    /// 2026-11-16 用户原话：「亲友借款的详情页还存在往期账单、流水、分期。这是不需要的。」
+    /// 借款没有账单周期（账期是信用卡的概念），也没有「本期消费」——钱是整笔借进来、
+    /// 一笔笔还回去的，一个欠款数就是全部答案。
+    ///
+    /// **已知代价**：`.loan` 这个 kind 同时装着 e招贷这类**真带分期**的机构借款，
+    /// 它的分期计划在本页看不到了（设置 → 分期的备用入口仍在）。
+    /// 要真正区分「机构借款 / 亲友借款」，得先给 `Account` 加一个来源字段，
+    /// 不能再靠 kind 猜——这轮按用户定案执行，不做。
+    @ViewBuilder
+    private func loanContent(_ m: DetailMetrics) -> some View {
+        DetailHeroAmount(
+            caption: "欠款",
+            amount: m.owe,
+            note: "含利息待还",
+            tone: Palette.expense
+        )
+        DetailTrendBlock(
+            title: "欠款走势",
+            caption: "按流水折算的月末欠款余额。借入会让曲线升高，还款会让它下降。",
+            points: trendPoints,
+            range: $trendRange
+        )
+    }
+
+    /// 储蓄 / 现金：余额 → 本月收支 → 余额走势 → 流水。
+    ///
+    /// 这条路径在 2026-11-16 之前根本不存在——资产页对储蓄组直接把点击接到编辑表单上
+    /// （`AssetsView.onSelect` 里 `if group.isLiability` 的另一半）。
+    @ViewBuilder
+    private var savingsContent: some View {
+        DetailHeroAmount(
+            caption: "余额",
+            amount: account.currentBalance,
+            note: account.kind == .cash ? "手里的现金" : "可随时转出"
+        )
+        savingsMonthColumns
+        DetailTrendBlock(
+            title: "余额走势",
+            caption: "按流水折算的月末余额，含转入、收款与还款。",
+            points: trendPoints,
+            range: $trendRange
+        )
+        flowBlock(
+            note: "按时间倒序 · 转入与还款不计入本月支出",
+            emptyMonth: "这个月这个账户没有流水",
+            emptyAll: "这个账户还没有流水"
+        )
+    }
+
+    /// 储蓄页的两列：这个月花掉多少、进账多少。
+    ///
+    /// **支出只数 `.expense`、收入只数 `.income`**：转账与还款是账户之间搬钱，
+    /// 既不是花掉也不是赚到。把它们算进支出一边，同一个月的消费总额会因为
+    /// 「工资卡转日常卡」翻倍，还会和首页日卡的支出合计对不上。
+    private var savingsMonthColumns: some View {
+        let month = savingsMonth
+        return HStack(alignment: .top, spacing: 8) {
+            metricColumn(
+                title: "本月支出",
+                value: MoneyMath.money(month.expense),
+                note: "不含转账与还款",
+                tone: month.expense > 0 ? Palette.ink : Palette.faint
+            )
+            metricColumn(
+                title: "本月收入",
+                value: MoneyMath.money(month.income),
+                note: month.count > 0 ? "\(month.count) 笔流水" : "本月没有",
+                tone: month.income > 0 ? Palette.income : Palette.faint
+            )
+        }
+    }
+
+    private var savingsMonth: (expense: Decimal, income: Decimal, count: Int) {
+        let calendar = Calendar.current
+        let monthly = flowTransactions.filter { tx in
+            tx.deletedAt == nil && calendar.isDate(tx.date, equalTo: .now, toGranularity: .month)
+        }
+        let expense = monthly
+            .filter { $0.kind == .expense }
+            .reduce(Decimal.zero) { $0 + $1.amount }
+        let income = monthly
+            .filter { $0.kind == .income }
+            .reduce(Decimal.zero) { $0 + $1.amount }
+        return (expense, income, monthly.count)
+    }
+
+    /// 该账户视角的全部流水。
+    ///
+    /// 信用页沿用 `account.transactions`——它的还款流水挂在付款卡那一侧，
+    /// 本页只关心「这张卡花了多少」，合并进来会动规格第七节的脚注口径。
+    /// 储蓄 / 现金必须把 `incomingTransactions` 一并算上，否则**转入的钱在流水里
+    /// 根本不存在**（别人转进来、信用卡还款入账都走 toAccount 那一侧）。
+    private var flowTransactions: [Transaction] {
+        let own = account.transactions
+        guard !account.kind.isLiability else { return own }
+        let incoming = account.incomingTransactions
+        guard !incoming.isEmpty else { return own }
+        var seen = Set(own.map(\.persistentModelID))
+        var merged = own
+        for tx in incoming where seen.insert(tx.persistentModelID).inserted {
+            merged.append(tx)
+        }
+        return merged
+    }
+
+    private func flowBlock(note: String, emptyMonth: String, emptyAll: String) -> some View {
+        DetailFlowBlock(
+            transactions: flowTransactions,
+            footnote: note,
+            emptyMonthText: emptyMonth,
+            emptyAllText: emptyAll
+        )
     }
 
     private func metricsBlock(_ m: DetailMetrics) -> some View {
@@ -432,15 +559,18 @@ struct AccountDetailSheet: View {
         }
     }
 
-    // MARK: - 欠款走势（规格第四节）
+    // MARK: - 走势（规格第四节）
 
     /// 曲线用**流水**口径（规格原文：派生值，来自流水）。
-    /// 所以它的末点通常小于顶部那个欠款——差额是未记账单与分期，图注里已经写明。
+    /// 所以信用页的末点通常小于顶部那个欠款——差额是未记账单与分期，图注里已经写明。
+    ///
+    /// 走 `flowTransactions` 而不是 `account.transactions`：储蓄账户的转入在
+    /// `toAccount` 那一侧，只看付款方会让曲线一路往下掉，而余额是涨的。
     private var trendPoints: [DebtTrendPoint] {
-        let entries: [LedgerPoint] = account.transactions
+        let entries: [LedgerPoint] = flowTransactions
             .filter { $0.deletedAt == nil }
             .map { tx in
-                LedgerPoint(date: tx.date, delta: LedgerService.effect(of: tx))
+                LedgerPoint(date: tx.date, delta: LedgerService.effect(of: tx, for: account))
             }
         let ledger = AccountLedger(
             kind: account.kind,
@@ -448,54 +578,6 @@ struct AccountDetailSheet: View {
             entries: entries
         )
         return DebtTrend.points(ledger: ledger, at: NetWorthSeries.dates(for: trendRange))
-    }
-
-    private var trendSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Text("欠款走势")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Palette.ink)
-
-                Spacer(minLength: 8)
-
-                trendRangePicker
-            }
-
-            if trendPoints.isEmpty {
-                emptyRow("流水还不够画出一条线")
-            } else {
-                DebtTrendChart(points: trendPoints)
-            }
-
-            Text("按流水折算的月末欠款。分期与账单不在曲线上——顶部欠款 = 曲线末点 + 未记账单与分期。")
-                .font(.system(size: 10))
-                .foregroundStyle(Palette.faint)
-                .fixedSize(horizontal: false, vertical: true)
-                .lineSpacing(2)
-        }
-    }
-
-    private var trendRangePicker: some View {
-        HStack(spacing: 2) {
-            ForEach(NetWorthRange.allCases) { range in
-                Button {
-                    trendRange = range
-                } label: {
-                    Text(range.title)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(trendRange == range ? Palette.ink : Palette.sub)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 4)
-                        .background(
-                            Capsule().fill(trendRange == range ? Palette.pillOn : Color.clear)
-                        )
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(2)
-        .background(Capsule().fill(Palette.tabBed))
     }
 
     // MARK: - 往期账单
@@ -537,7 +619,7 @@ struct AccountDetailSheet: View {
             }
 
             if pastBills.isEmpty {
-                emptyRow("还没录过往期账单")
+                DetailEmptyRow(text: "还没录过往期账单")
             } else {
                 VStack(spacing: 0) {
                     ForEach(pastBills) { bill in
@@ -627,7 +709,7 @@ struct AccountDetailSheet: View {
             }
 
             if installments.isEmpty {
-                emptyRow("这张卡没有分期")
+                DetailEmptyRow(text: "这张卡没有分期")
             } else {
                 VStack(spacing: 0) {
                     ForEach(installments) { plan in
@@ -719,115 +801,6 @@ struct AccountDetailSheet: View {
         periods(of: plan)
             .filter { $0.paidAt == nil && DueMath.isDueInThisMonth($0.dueDate, today: .now) }
             .reduce(Decimal.zero) { $0 + $1.amount }
-    }
-
-    // MARK: - 流水（规格第七节）
-
-    /// 流水区块的分段。规格第七节只有两个：本月 / 全部，默认本月。
-    private enum TxScope: String, CaseIterable, Identifiable {
-        case month = "本月"
-        case all = "全部"
-        var id: String { rawValue }
-    }
-
-    private var allCardTransactions: [Transaction] {
-        account.transactions
-            .filter { $0.deletedAt == nil }
-            .sorted { $0.date > $1.date }
-    }
-
-    private var shownTransactions: [Transaction] {
-        guard txScope == .month else { return allCardTransactions }
-        let calendar = Calendar.current
-        return allCardTransactions.filter { tx in
-            calendar.isDate(tx.date, equalTo: Date.now, toGranularity: .month)
-        }
-    }
-
-    /// 汇总行只是列表摘要，不参与任何账务计算——
-    /// 真正的欠款口径在 `CardDebt`，别把这里的支出合计当成欠款去对。
-    private var transactionSummary: String {
-        let list = shownTransactions
-        guard txScope == .month else { return "共 \(list.count) 笔" }
-        let spend = list
-            .filter { $0.kind == .expense }
-            .reduce(Decimal.zero) { $0 + $1.amount }
-        return "\(list.count) 笔 · 支出 \(MoneyMath.money(spend))"
-    }
-
-    private var transactionsSection: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            HStack(spacing: 8) {
-                Text("流水")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Palette.ink)
-
-                Text(transactionSummary)
-                    .font(.system(size: 10.5))
-                    .foregroundStyle(Palette.sub)
-
-                Spacer(minLength: 8)
-
-                scopePicker
-            }
-
-            if shownTransactions.isEmpty {
-                emptyRow(txScope == .month ? "这个月这张卡没有流水" : "这张卡还没有流水")
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(shownTransactions) { tx in
-                        TxRowView(transaction: tx)
-                        if tx.id != shownTransactions.last?.id {
-                            Divider().overlay(Palette.line)
-                        }
-                    }
-                }
-                .padding(.horizontal, 14)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Palette.card)
-                )
-            }
-
-            Text("按时间倒序 · 还款不计入消费统计")
-                .font(.system(size: 9.5))
-                .foregroundStyle(Palette.faint)
-        }
-    }
-
-    private var scopePicker: some View {
-        HStack(spacing: 2) {
-            ForEach(TxScope.allCases) { scope in
-                Button {
-                    txScope = scope
-                } label: {
-                    Text(scope.rawValue)
-                        .font(.system(size: 10.5, weight: .medium))
-                        .foregroundStyle(txScope == scope ? Palette.ink : Palette.sub)
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 4)
-                        .background(
-                            Capsule().fill(txScope == scope ? Palette.pillOn : Color.clear)
-                        )
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(2)
-        .background(Capsule().fill(Palette.tabBed))
-    }
-
-    private func emptyRow(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 11))
-            .foregroundStyle(Palette.faint)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 14)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Palette.card)
-            )
     }
 }
 

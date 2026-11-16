@@ -169,6 +169,22 @@ enum LedgerService {
         flow(of: transaction).from
     }
 
+    /// 单笔流水对**指定账户**的影响——不管它在 `account` 还是 `toAccount` 那一侧。
+    ///
+    /// 为什么不能拿 `effect` 取负代替：带手续费的转账 `from = −到账额`、`to = +到账额`，
+    /// 两者绝对值相等但**手续费流水是另一条**，取负能凑对；可 `.expense` 的 `to` 是 0，
+    /// 取负会凭空多出一笔收入。所以必须按账户落在哪一侧去取对应那个值。
+    ///
+    /// 储蓄详情页的余额走势靠它：只看 `account.transactions` 会漏掉转入与收款，
+    /// 曲线会一直往下掉，而余额是涨的。
+    static func effect(of transaction: Transaction, for account: Account) -> Decimal {
+        let flow = flow(of: transaction)
+        let id = account.persistentModelID
+        if transaction.account?.persistentModelID == id { return flow.from }
+        if transaction.toAccount?.persistentModelID == id { return flow.to }
+        return 0
+    }
+
     /// 把一笔流水的影响写进两个账户（增量重算的核心）。
     private static func apply(_ flow: AccountFlow, from: Account?, to: Account?) {
         if flow.from != 0, let from {

@@ -60,7 +60,6 @@ struct AssetsView: View {
 
     @State private var openGroup: AssetGroup?
     @State private var range: NetWorthRange = .year
-    @State private var editingAccount: Account?
     @State private var creatingGroup: AssetGroup?
     /// 卡详情 sheet（account-detail-v1.0 的最小落地，见 PROGRESS M3-8）。
     @State private var detailAccount: Account?
@@ -104,12 +103,11 @@ struct AssetsView: View {
                     oweByAccount: oweByAccount,
                     onClose: { withAnimation(.easeOut(duration: 0.2)) { openGroup = nil } },
                     onSelect: { account in
-                        // 负债卡点进详情页；储蓄/现金仍走编辑（规格第十一节 3：详情页只覆盖信用账户）。
-                        if group.isLiability {
-                            detailAccount = account
-                        } else {
-                            editingAccount = account
-                        }
+                        // 2026-11-16 起**四类账户都进详情页**。此前储蓄/现金这一半
+                        // 直接弹编辑表单（引规格第十一节 3「详情页只覆盖信用账户」），
+                        // 用户回传「储蓄账户的详情页还没做」——那条未锁定项已按类型补齐，
+                        // 编辑入口改由详情页左上角「编辑」承担。
+                        detailAccount = account
                     }
                 )
             }
@@ -123,9 +121,6 @@ struct AssetsView: View {
         // body 的类型检查压垮（CI run 57~59 一直报 102 行 unable to type-check）。
         // 指纹覆盖账本、分期、账单、区间与开关，任何一项变了就重算。
         .onChange(of: dataFingerprint) { refresh() }
-        .sheet(item: $editingAccount) { account in
-            AccountEditor(account: account, defaultKind: account.kind)
-        }
         .sheet(item: $detailAccount) { account in
             AccountDetailSheet(account: account)
         }

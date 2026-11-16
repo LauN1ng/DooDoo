@@ -13,17 +13,24 @@ import SwiftUI
 /// 版式照 `assets/brands/cards/*.svg`（设计稿）：左下品牌名 + 类型，右下卡组织 + 尾号，
 /// 左上留给芯片或放大的行徽。
 ///
-/// 四档尺寸：
+/// 五档尺寸：
 /// - `.deck` 132×82（资产页卡堆）
 /// - `.detail` 144×96（资产页浮层明细行）
 /// - `.entry` 158×100（记一笔的账户横滑）
 /// - `.entryCompact` 112×72（记一笔还款的扣款卡）
+/// - `.hero` 240×151（账户详情页顶部，**居中独占一行**）
+///
+/// `.hero` 是 2026-11-16 用户反馈「详情页卡片居中、删掉右边那串招商/信用卡」时加的：
+/// 详情页原先用 `.detail` 靠左摆，右边用 16pt 再写一遍账户名与类型，
+/// 而卡面自己已经画了「招商银行 / 信用卡 / UNIONPAY / •••• 8857」——
+/// 同一屏同一个名字出现三次。名字交给卡面，位置让给卡面居中。
 struct CardFace: View {
     enum Size {
         case deck
         case detail
         case entry
         case entryCompact
+        case hero
     }
 
     let account: Account
@@ -73,6 +80,12 @@ struct CardFace: View {
             .init(width: 112, height: 72, radius: 13, padding: 9,
                   titleSize: 10.5, subSize: 8, numberSize: 7.5, networkSize: 6,
                   showsNetwork: false)
+        case .hero:
+            // 宽 240 ≈ 屏宽（393）− 左右各 60，居中后两侧留白均匀。
+            // 比例 240/151 = 1.589，贴近真实卡片 1.586，芯片不会被拉扁。
+            .init(width: 240, height: 151, radius: 18, padding: 15,
+                  titleSize: 17, subSize: 11.5, numberSize: 11, networkSize: 8.5,
+                  showsNetwork: true)
         }
     }
 
