@@ -1,34 +1,44 @@
 import SwiftUI
 import UIKit
 
-/// 分类选择：一级色块横滑 + 二级浮层（记一笔规格冻结 v1.0 第六节）。
+/// 分类选择：一级贴纸行 + 二级浮层（记一笔规格冻结 **v2.2** 第六节）。
 ///
-/// - 一级：52×52 圆角 16，选中主色实底；
-/// - 二级：白色卡片圆角 20，5 列 × 2 行，圆底 42，选中主色 12% 底 + 1.5pt 描边；
-/// - 浮层**覆盖**下方内容（用 ZStack + offset），不推挤布局。
-/// - 图标：**Fluent3D PNG**（`Category.iconName`），`Category.emoji` 只在缺图时兜底。
-///   2026-11-11 补齐——此前这里渲染的是系统 emoji，与流水行（`TxRowView` 早已用 PNG）
-///   形成两套图标语言。
+/// 2026-11-16 第二次重画，四条改动：
+/// 1. **一级去掉 52pt 色槽**，图标 32 → 36 直接落在纸面上，带 `0 1 1.5 .10` 微影
+///    （贴纸要「放在纸上」，少了这层影就变成「印在纸上」的平面图标）。
+///    槽宽 44 仍保留为布局框与命中区，只是不再绘制。
+/// 2. **选中 = 抬起**：`scale 1.12` + 上移 2pt + 投影加重，另加一圈**弱档散射**
+///    （图标主色径向光晕 `.28`，色表见 `CategoryGlow`）。不用描边、不用主色底。
+/// 3. **选完二级后，一级行里被选中那一格直接换成二级的图标和名字**——
+///    选「咖啡」，「吃」这一格就显示咖啡图标 + 「咖啡」。原来那行「已选 吃 › 早餐」删掉，
+///    它是在替一个本可以直接呈现的结果做旁白。
+/// 4. 二级浮层去掉 42pt 圆底，图标 26 → 30，选中 `scale 1.16` + 标签转墨 600；
+///    行距 10 → 14（省下来的 14pt 还回行距，八个抽屉不挤在一起更好点）。
+///
+/// 语言分工（为什么分类和账户不能共用一套选中态，见 `m4-selection-2026-11-16.html`）：
+/// - 分类：**光**——同屏只有一个选中，可以用光指示；
+/// - 账户：**层次**——卡面自带品牌色，再叠光会脏，改用亮度与前后关系；
+/// - 二级：**字**——同屏 8~10 个一起亮会像彩纸屑，所以只放大 + 加粗。
 struct CategoryPicker: View {
     let tops: [Category]
     let subs: [Category]
     let topKey: String
     let subKey: String?
     let showingSub: Bool
-    let accent: Color
-    let accentWash: Color
 
     let onSelectTop: (Category) -> Void
     let onSelectSub: (Category) -> Void
     let onCollapse: () -> Void
 
-    private let tile: CGFloat = 52
-    private let subTile: CGFloat = 42
-    /// 图标在槽里的边长。Fluent3D 每张 PNG 自带约 6% 透明边距（内容占画布 87.5%），
-    /// 所以这里的数值要略大于旧 emoji 的字号，视觉重量才对得上
-    /// （32 × 0.875 ≈ 28，原 emoji 24pt 实际渲染约 28）。
-    private let topIconSize: CGFloat = 32
-    private let subIconSize: CGFloat = 26
+    /// 一级格子的布局框 / 命中区。图标 36 居中，四周留 4——44 是 HIG 的命中下限。
+    private let topTile: CGFloat = 44
+    /// 一级列宽。比布局框宽 8，让相邻贴纸之间留出「散落」的呼吸，不至于连成一条。
+    private let topWidth: CGFloat = 52
+    private let topIconSize: CGFloat = 36
+    private let subIconSize: CGFloat = 30
+
+    /// 浮层相对一级行顶部的偏移。一级行高 = 44 + 5 + 13 + 上下各 2，浮层再压 6pt。
+    private let subPanelOffset: CGFloat = 72
 
     /// 分类图标：Fluent3D PNG 优先，缺图退回 `emoji` 字符。
     ///
@@ -49,42 +59,21 @@ struct CategoryPicker: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            VStack(spacing: 0) {
-                topRow
-                selectedHint
-            }
+            topRow
 
             if showingSub, !subs.isEmpty {
                 subPanel
-                    .offset(y: tile + 26)
+                    .offset(y: subPanelOffset)
                     .zIndex(3)
             }
         }
         .zIndex(showingSub ? 5 : 0)
     }
 
-    /// 分类选中回显（2026-11-09 真机反馈 #7）：一级色块不随二级变化，
-    /// 选完浮层收起后全屏原本没有任何地方能看出选了「咖啡」。
-    private var selectedHint: some View {
-        HStack(spacing: 5) {
-            Text("已选")
-                .font(.system(size: 10))
-                .foregroundStyle(Palette.faint)
-            Text(selectedPath)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(Palette.ink)
-                .lineLimit(1)
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 18)
-        .padding(.top, 3)
-    }
-
-    private var selectedPath: String {
-        guard let subKey, let sub = subs.first(where: { $0.key == subKey }) else {
-            return topName
-        }
-        return "\(topName) › \(sub.name)"
+    /// 当前选中的二级。`subs` 已经是当前一级下的集合，所以查得到就必然属于这一格。
+    private var selectedSub: Category? {
+        guard let subKey else { return nil }
+        return subs.first { $0.key == subKey }
     }
 
     // MARK: - 一级
@@ -99,36 +88,75 @@ struct CategoryPicker: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 2)
         }
+        // 70pt 的散射光晕比 44pt 的格子大，默认会被滚动视图裁成一条边。
+        // 这里只放开裁剪、不动布局（iOS 17+），溢出的部分正是「光渗到纸面上」的效果。
+        .scrollClipDisabled()
     }
 
     private func topItem(_ category: Category) -> some View {
         let selected = category.key == topKey
-        return VStack(spacing: 5) {
-            categoryIcon(category, size: topIconSize)
-                .scaleEffect(selected ? 1.06 : 1)
-                .frame(width: tile, height: tile)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        // 2026-11-16：选中不再用主色实底（原来实底+白图标压成一块黑/色块），
-                        // 改成"12% 浅底 + 1.5pt 主色描边 + 图标微放大"，跟二级选择器同一套语言。
-                        .fill(selected ? accentWash : Palette.slot)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(selected ? accent : .clear, lineWidth: 1.5)
-                )
+        // v2.2：选中的那一格显示二级结果；没选二级（或不是当前一级）就还显示大类自己。
+        let shown = (selected ? selectedSub : nil) ?? category
 
-            Text(category.name)
-                .font(.system(size: 10.5))
-                .foregroundStyle(selected ? Palette.ink : Palette.sub)
-                .fontWeight(selected ? .semibold : .regular)
-                .lineLimit(1)
+        return VStack(spacing: 5) {
+            ZStack {
+                if selected {
+                    // 散射色取**一级**的 key，不取 shown——二级图标色相五花八门，
+                    // 跟着换会让同一格的光每次切二级就跳一次色。
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [
+                                    CategoryGlow.color(for: category.key).opacity(0.85),
+                                    CategoryGlow.color(for: category.key).opacity(0),
+                                ],
+                                center: .center,
+                                startRadius: 0,
+                                endRadius: CategoryGlow.fadeRadius
+                            )
+                        )
+                        .frame(width: CategoryGlow.diameter, height: CategoryGlow.diameter)
+                        .opacity(CategoryGlow.opacity)
+                        .transition(.opacity)
+                }
+
+                categoryIcon(shown, size: topIconSize)
+                    .shadow(
+                        color: .black.opacity(selected ? 0.22 : 0.10),
+                        radius: selected ? 4.5 : 0.75,
+                        x: 0,
+                        y: selected ? 3 : 0.5
+                    )
+                    .id(shown.key)
+                    .transition(.opacity.combined(with: .scale(scale: 0.82)))
+            }
+            .frame(width: topTile, height: topTile)
+            .scaleEffect(selected ? 1.12 : 1)
+            .offset(y: selected ? -2 : 0)
+            // 内容替换（大类 ⇄ 二级）单独走一条动画，不跟选中态的弹簧混在一起。
+            .animation(.easeOut(duration: 0.20), value: shown.key)
+
+            ZStack {
+                Text(shown.name)
+                    .font(.system(size: 11))
+                    .foregroundStyle(selected ? Palette.ink : Palette.sub)
+                    .fontWeight(selected ? .semibold : .regular)
+                    .lineLimit(1)
+                    .id(shown.key)
+                    .transition(.opacity)
+            }
+            .frame(height: 13)
+            .animation(.easeOut(duration: 0.20), value: shown.key)
         }
-        .frame(width: 56)
+        .frame(width: topWidth)
         .contentShape(Rectangle())
         .onTapGesture { onSelectTop(category) }
-        .animation(.easeOut(duration: 0.16), value: selected)
+        .animation(.easeOut(duration: 0.18), value: selected)
+        .accessibilityElement(children: .combine)
         .accessibilityAddTraits(selected ? [.isSelected] : [])
+        // 读屏时把「属于哪一类」补回去——格子换字之后，视觉上靠位置记得住，读屏记不住。
+        .accessibilityLabel(shown.key == category.key ? shown.name
+                                                      : "\(category.name)，\(shown.name)")
     }
 
     // MARK: - 二级
@@ -150,14 +178,14 @@ struct CategoryPicker: View {
 
             LazyVGrid(
                 columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 5),
-                spacing: 10
+                spacing: 14
             ) {
                 ForEach(subs) { category in
                     subItem(category)
                 }
             }
             .padding(.horizontal, 10)
-            .padding(.bottom, 12)
+            .padding(.bottom, 14)
         }
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -175,13 +203,14 @@ struct CategoryPicker: View {
         let selected = category.key == subKey
         return VStack(spacing: 5) {
             categoryIcon(category, size: subIconSize)
-                .frame(width: subTile, height: subTile)
-                .background(
-                    Circle().fill(selected ? accentWash : Palette.slot)
+                .shadow(
+                    color: .black.opacity(selected ? 0.16 : 0.08),
+                    radius: selected ? 3.5 : 0.6,
+                    x: 0,
+                    y: selected ? 2 : 0.4
                 )
-                .overlay(
-                    Circle().strokeBorder(selected ? accent : .clear, lineWidth: 1.5)
-                )
+                .frame(height: subIconSize)
+                .scaleEffect(selected ? 1.16 : 1)
 
             Text(category.name)
                 .font(.system(size: 10))
@@ -189,9 +218,11 @@ struct CategoryPicker: View {
                 .fontWeight(selected ? .semibold : .regular)
                 .lineLimit(1)
         }
-        .frame(maxWidth: .infinity)
+        // 没有圆底了，热区全靠这一层：整格 60×48 都能点，不必精确戳到图标。
+        .frame(maxWidth: .infinity, minHeight: 48)
         .contentShape(Rectangle())
         .onTapGesture { onSelectSub(category) }
+        .animation(.easeOut(duration: 0.18), value: selected)
         .accessibilityAddTraits(selected ? [.isSelected] : [])
     }
 }

@@ -86,20 +86,18 @@ struct DayCardView: View {
         }
     }
 
-    /// 记账行（B2 空分类位）：42 空槽 + 「记一笔」，与流水行同构。
+    /// 记账行（B2 空分类位）：42 空位 + 「记一笔」，与流水行同构。
     ///
-    /// 每张日卡都带这一行——翻到 11/6 点它，记的就是 11/6 的账（补记历史日）。
+    /// 2026-11-16：**去掉了 42pt 浅色方块**。有内容的那一行是「贴纸落在纸上」，
+    /// 空位如果画一块灰底，就成了「纸上贴了一张纸」——两行不是同一种物质。
+    /// 现在靠 42pt 的列宽维持左对齐节奏，空位感由 ＋ 本身表达。
     private var addRow: some View {
         Button { onAdd(day) } label: {
             HStack(spacing: 12) {
                 Text("＋")
-                    .font(.system(size: 17, weight: .medium))
+                    .font(.system(size: 19, weight: .regular))
                     .foregroundStyle(Palette.sub)
                     .frame(width: 42, height: 42)
-                    .background(
-                        RoundedRectangle(cornerRadius: 13, style: .continuous)
-                            .fill(Palette.pillOn)
-                    )
 
                 Text("记一笔")
                     .font(.system(size: 14, weight: .medium))

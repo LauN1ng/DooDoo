@@ -273,8 +273,6 @@ struct EntryView: View {
                 topKey: vm.topKey,
                 subKey: vm.subKey,
                 showingSub: vm.showingSub,
-                accent: accent,
-                accentWash: accentWash,
                 onSelectTop: { vm.selectTop($0) },
                 onSelectSub: { vm.selectSub($0) },
                 onCollapse: { vm.showingSub = false }

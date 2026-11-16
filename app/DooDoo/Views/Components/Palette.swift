@@ -2,28 +2,37 @@ import SwiftUI
 
 /// 全局取色表。
 ///
-/// **M4 2026-11-16 重校**：底色从暖白 `#F7F5F1` 改为**完全中性灰白 `#F6F6F6`**，
-/// 依据用户提供的 Copilot Money / HeyCost 实机截图取色（`research/refs/ref-copilot-*` 页面底
-/// `#F8FAFA`、`ref-realapp-03/-04` 为 `#F4F4F4`，三家共同点是 R=G=B 中性）。
-/// 旧的 `sub #A8A39A` 在白卡上只有 2.51:1，达不到 WCAG AA，这次一并拉到 4.5:1 以上。
+/// **M4 2026-11-16 第三次重校**：底色回到规格原本的**暖白 `#F7F5F1`**。
+///
+/// 上一版（同日）为对齐 Copilot Money / HeyCost 实机截图，把底改成中性灰白 `#F6F6F6`。
+/// 用户看真机后连否两轮（「灰白背景但主题色不确定」→「换成灰白色首页看着更不对了」），
+/// 根因是 `#F6F6F6` 与白卡只差 3.1 L*，等于没换；同时把 `#F7F5F1` 这套「纸 / 卡 / 玻璃 / 线」
+/// 的材质语言换成了四档互相撞车的冷灰（`#F6F6F6` / `#E9E9E9` / `#F0F0F2` / `#EFEFF1`）。
+///
+/// 现在的规则（`资产页规格冻结-v1.0` 第 47 行、`美术资源交付-11-06` 第 40 行原本就这么写）：
+/// - 层次靠**叠**（描边 + 投影 + 层厚），不靠灰阶；全屏只留一种浅色底；
+/// - 灰色只承担文字，不再用来当容器底（`slot` 收窄到输入框一类真正需要一个「坑」的地方）。
 enum Palette {
-    static let page = Color(hex: 0xF6F6F6)
+    static let page = Color(hex: 0xF7F5F1)
     static let card = Color.white
     static let ink = Color(hex: 0x1D1D1F)
     static let ink2 = Color(hex: 0x5F5F66)
-    static let sub = Color(hex: 0x6E6E76)     // 白卡 5.05:1 / 页底 4.52:1
+    static let sub = Color(hex: 0x6E6E76)     // 白卡 5.05:1 / 页底 4.62:1
     static let faint = Color(hex: 0x9A9AA2)   // 只用于装饰，不承载信息
-    static let line = Color(hex: 0xE8E8E8)
+    /// 白卡描边（纸的边）。不是分隔线——分隔线见 `Palette.hairline`。
+    static let line = Color(hex: 0xECE7DE)
+    /// 列表 / 卡片内部的 1px 分隔。比 `line` 淡，避免每行都像一道刻痕。
+    static let hairline = Color(hex: 0x1D1C1A).opacity(0.06)
     static let expense = Color(hex: 0xC0392B)
     static let income = Color(hex: 0x2E9E6B)
-    static let tabBed = Color(hex: 0xE9E9E9)
+    static let tabBed = Color(hex: 0xEDE9E1)
 
-    /// 卡内图标槽 / 选中块的共用底色（第 1 条：两个界面的图标底统一成一个）。
-    /// 与白卡色差 6.4%，高于「浅色容器叠白卡 低于 5% 必糊」的规格下限。
-    static let slot = Color(hex: 0xF0F0F2)
+    /// **不再是图标槽底色**（2026-11-16 第二次定案：贴纸不垫纸）。
+    /// 只留给真正需要「凹下去」的容器：输入框、进度条轨道、tab 段底。
+    static let slot = Color(hex: 0xF0EDE6)
 
     // 资产页
-    static let pillOn = Color(hex: 0xF0F0F2)
+    static let pillOn = Color(hex: 0xF0EDE6)
     static let mine = Color(hex: 0x4C8DF6)   // 「我有」曲线
     static let owe = Color(hex: 0xE8734A)    // 「我欠」曲线
     static let mineDot = Color(hex: 0x3A9E6B)

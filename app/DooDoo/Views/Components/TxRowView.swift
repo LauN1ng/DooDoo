@@ -95,20 +95,20 @@ struct TxRowView: View {
         return nil
     }
 
-    /// Fluent3D 图标 27×27（原型尺寸），落在 42×42 的分类色槽里。
+    /// Fluent3D 图标 32×32，**直接落在纸面上，不垫底槽**（2026-11-16 第二次定案）。
     ///
     /// **必须走 `UIImage`**：`Image("Croissant")` 只查 asset catalog，
-    /// 对 bundle 根目录的 PNG 会画成空白（槽里既没图也没 emoji 兜底，就是这个原因）。
+    /// 对 bundle 根目录的 PNG 会画成空白（既没图也没 emoji 兜底，就是这个原因）。
     @ViewBuilder
-    private var slot: some View {
+    private var iconView: some View {
         if let icon {
             Image(uiImage: icon)
                 .resizable()
                 .scaledToFit()
-                .frame(width: 27, height: 27)
+                .frame(width: 32, height: 32)
         } else {
             Text(transaction.category?.emoji ?? "•")
-                .font(.system(size: 20))
+                .font(.system(size: 24))
         }
     }
 
@@ -134,15 +134,11 @@ struct TxRowView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            slot
+            iconView
                 .frame(width: 42, height: 42)
-                .background(
-                    // 2026-11-16：图标槽从「每类一个色底」改为与记一笔选择器共用的
-                    // 中性槽（`Palette.slot`）。彩色改由 Fluent 3D emoji 自身提供，
-                    // 否则一屏八种粉彩底会把灰白体系的层次压没。
-                    RoundedRectangle(cornerRadius: 13, style: .continuous)
-                        .fill(Palette.slot)
-                )
+                // 42 只作为列宽与命中区保留（左侧对齐节奏不因去槽而变窄），
+                // 但不再绘制底色：贴纸贴在纸上，不需要再垫一张纸。
+                .shadow(color: .black.opacity(0.10), radius: 0.75, x: 0, y: 0.5)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
