@@ -7,7 +7,7 @@ import SwiftUI
 /// ② 亲友借款详情页还在显示往期账单、分期、流水，「这是不需要的」；
 /// ③ 详情页顶部卡片右边那串「招商 / 信用卡」要去掉，卡片居中。
 ///
-/// 根因是 `AccountDetailSheet` 只有一套信用卡区块，对所有 `AccountKind` 都渲染同一份。
+/// 根因是 `AccountDetailView` 只有一套信用卡区块，对所有 `AccountKind` 都渲染同一份。
 /// 现在按类型分发内容，但**卡面 / 大字金额 / 走势 / 流水**这四块三种页面都要，
 /// 必须一份实现——复制三遍，以后改一次要改三处，三处必然走偏。
 
@@ -17,24 +17,31 @@ import SwiftUI
 ///
 /// **不写账户名、不写类型**：卡面自己已经画了「招商银行 / 信用卡」。
 /// 原先右边那一栏是本文件的删除对象（用户 2026-11-16 第 3 条）。
+///
+/// `cardSpace` 是浮层明细行卡面与这块卡面共用的命名空间：点行时同一个 id 从
+/// 144×96 长到 240×151（用户原话「卡片逐渐放大」），中间不换视图、不闪。
 struct DetailHeroCard<Accessory: View>: View {
     let account: Account
+    let cardSpace: Namespace.ID
     let accessory: Accessory
 
     /// 没有附带内容（逾期提示只在真有逾期时才出现）。
-    init(account: Account) where Accessory == EmptyView {
+    init(account: Account, cardSpace: Namespace.ID) where Accessory == EmptyView {
         self.account = account
+        self.cardSpace = cardSpace
         self.accessory = EmptyView()
     }
 
-    init(account: Account, @ViewBuilder accessory: () -> Accessory) {
+    init(account: Account, cardSpace: Namespace.ID, @ViewBuilder accessory: () -> Accessory) {
         self.account = account
+        self.cardSpace = cardSpace
         self.accessory = accessory()
     }
 
     var body: some View {
         VStack(spacing: 9) {
             CardFace(account: account, size: .hero)
+                .matchedGeometryEffect(id: account.persistentModelID, in: cardSpace)
                 // 卡面自带一层 3.5pt 近影；240pt 宽的卡浮在 #F6F6F6 上还需要一层远影托底，
                 // 否则看起来像贴纸贴在页面上。
                 .shadow(color: .black.opacity(0.13), radius: 16, x: 0, y: 8)
@@ -262,7 +269,7 @@ struct DetailFlowBlock: View {
 
 // MARK: - 空态
 
-/// 区块空态的统一卡片。原先 `AccountDetailSheet` 里有一份私有 `emptyRow`，
+/// 区块空态的统一卡片。原先 `AccountDetailView` 里有一份私有 `emptyRow`，
 /// 抽出后三个页面共用一张。
 struct DetailEmptyRow: View {
     let text: String

@@ -8,14 +8,36 @@ import SwiftUI
 struct RootView: View {
     @State private var tab: RootTab = .flow
 
+    /// 卡面 hero 的命名空间：资产页浮层里的明细行卡面与详情页顶部卡面共用，
+    /// 点行时同一张卡从 144×96 长到 240×151。
+    @Namespace private var cardSpace
+
+    /// 账户详情全屏层（2026-11-16 用户定案：卡面放大，不再是 sheet）。
+    ///
+    /// **状态必须住在 RootView**：资产页在 `VStack { 页头; 内容 }` 的内容区里，
+    /// 挂在它内部的层到不了页头与状态栏，卡面就飞不到屏幕顶部。
+    @State private var detailAccount: Account?
+
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            content
+        ZStack {
+            VStack(spacing: 0) {
+                header
+                content
+            }
+            // 页头与状态栏必须是页面底色。原来这里是系统默认白，
+            // 和白色卡片连成一片，真机上看起来像"顶上多了一块白"。
+            .background(Palette.page.ignoresSafeArea())
+
+            if let account = detailAccount {
+                // 关闭由这里出：置空这个状态，明细行卡面在同一个事务里接手，
+                // 卡面就沿原路飞回那一行——不是 dismiss 一个面板。
+                AccountDetailView(account: account, cardSpace: cardSpace) {
+                    withAnimation(.spring(response: 0.38, dampingFraction: 0.9)) {
+                        detailAccount = nil
+                    }
+                }
+            }
         }
-        // 页头与状态栏必须是页面底色。原来这里是系统默认白，
-        // 和白色卡片连成一片，真机上看起来像"顶上多了一块白"。
-        .background(Palette.page.ignoresSafeArea())
     }
 
     private var header: some View {
@@ -69,7 +91,7 @@ struct RootView: View {
     private var content: some View {
         switch tab {
         case .flow: FlowView()
-        case .assets: AssetsView()
+        case .assets: AssetsView(detailAccount: $detailAccount, cardSpace: cardSpace)
         case .settings: SettingsView()
         }
     }

@@ -4,9 +4,13 @@ import SwiftData
 /// 账户详情（`账户详情页规格冻结-v1.0.md`；规格第十一节 3 把「储蓄 / 现金 / 借款
 /// 账户的详情页形态」列为未锁定，本文件按 2026-11-16 用户定案补齐三种形态）。
 ///
-/// **形态是 sheet，不是 push**。原因是资产页还没有导航栈：点卡堆先出的是组浮层，
-/// 详情从浮层里再开一层。等 M4 把 tab 换成 NavigationStack 时，这层 sheet 内容
-/// 可以整块搬进 `AccountDetailView`。
+/// **形态：全屏层 + 卡面放大，不是 sheet**（2026-11-16 用户定案，对应
+/// `docs/design/pending/M4九条视觉反馈-2026-11-16.md` 第 8 条 / 4.2）：
+/// 点浮层明细行的卡面 → 同一张卡靠 `matchedGeometryEffect` 长到顶部居中位，
+/// 卡片落定后其余区块依次淡入；关闭是沿原路飞回，不是 dismiss。
+///
+/// **这一层必须挂在 `RootView` 的 ZStack 里**：资产页在 `VStack { 页头; 内容 }` 的
+/// 内容区，挂在它内部的浮层到不了页头与状态栏，卡面就飞不到屏幕顶部。
 ///
 /// 三种形态（用户 2026-11-16 定案）：
 /// - **信用**：三列 + 额度条 + 本月要还白条 → 欠款走势 → 往期账单 → 分期 → 流水
@@ -15,10 +19,13 @@ import SwiftData
 /// - **储蓄 / 现金**：余额 + 本月收支 + 余额走势 + 流水
 ///
 /// 数值全部走 `Math/` 的纯函数（`CreditDebt` / `DetailMath` / `DueMath`），这里只摆位置。
-struct AccountDetailSheet: View {
+struct AccountDetailView: View {
     let account: Account
+    /// 与浮层明细行卡面共用的命名空间。卡面从行内长到顶部，靠的就是同一个 id + 这个空间。
+    let cardSpace: Namespace.ID
+    /// 点返回：由调用方摘掉这一层，卡面在同一事务里飞回明细行。
+    let onClose: () -> Void
 
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
     @Query private var allBills: [BillStatement]
     @Query private var allInstallments: [Installment]
@@ -34,8 +41,20 @@ struct AccountDetailSheet: View {
     @State private var showingRepayPicker = false
     @State private var repayError: String?
 
+    /// 两段式入场：卡面先飞（①），落定后其余区块才展开（②）。
+    /// 分开两个状态，是因为「卡片放大」和「信息展开」是两件事——
+    /// 同时开始会退化成普通淡入，用户就看不到「卡片先过去」这一下。
+    @State private var backdropIn = false
+    @State private var revealed = false
+
     var body: some View {
-        NavigationStack {
+        ZStack(alignment: .top) {
+            // 页面底先淡入：卡面飞行的那 0.4 秒里，底下还留着浮层，
+            // 卡片落定后本页才真正接管整屏。直接不透明会出现「卡片跳到一个已经换掉的背景上」。
+            Palette.page
+                .opacity(backdropIn ? 1 : 0)
+                .ignoresSafeArea()
+
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 20) {
                     let m = metrics
@@ -43,58 +62,73 @@ struct AccountDetailSheet: View {
                     content(m)
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 28)
+                // 顶部 52：让开左上角的返回按钮。卡面居中，两者不抢位置。
+                .padding(.top, 52)
+                .padding(.bottom, 40)
             }
-            .background(Palette.page)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text(account.name)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Palette.ink)
-                }
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("编辑") { editingAccount = account }
-                        .font(.system(size: 15))
-                        .foregroundStyle(Palette.ink2)
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("完成") { dismiss() }
-                        .font(.system(size: 15))
-                        .foregroundStyle(Palette.ink2)
-                }
-            }
-            .sheet(item: $route) { route in
-                switch route {
-                case .billEntry:
-                    BillEntrySheet(account: account)
-                case .periods(let installment):
-                    PeriodEditorSheet(installment: installment)
-                case .newInstallment:
-                    InstallmentEntryView(preferredAccount: account)
-                }
-            }
-            .sheet(item: $editingAccount) { account in
-                AccountEditor(account: account, defaultKind: account.kind)
-            }
-            .confirmationDialog("从哪里扣款？", isPresented: $showingRepayPicker, titleVisibility: .visible) {
-                ForEach(payerAccounts) { payer in
-                    Button(payer.name) { payCurrentMonth(from: payer) }
-                }
-                Button("取消", role: .cancel) {}
-            } message: {
-                Text("还 \(MoneyMath.money(repayAmount))：本月 \(repayablePeriods.count) 笔分期一起结清。")
-            }
-            .alert("记还款失败", isPresented: Binding(
-                get: { repayError != nil },
-                set: { if !$0 { repayError = nil } }
-            )) {
-                Button("知道了", role: .cancel) { repayError = nil }
-            } message: {
-                Text(repayError ?? "")
+
+            closeButton
+        }
+        .task {
+            withAnimation(.easeOut(duration: 0.20)) { backdropIn = true }
+            // 卡面 spring 0.42 到位，300ms 后让其余信息接上（第 8 条第 4.2 节）。
+            try? await Task.sleep(for: .milliseconds(300))
+            revealed = true
+        }
+        .sheet(item: $route) { route in
+            switch route {
+            case .billEntry:
+                BillEntrySheet(account: account)
+            case .periods(let installment):
+                PeriodEditorSheet(installment: installment)
+            case .newInstallment:
+                InstallmentEntryView(preferredAccount: account)
             }
         }
+        .sheet(item: $editingAccount) { account in
+            AccountEditor(account: account, defaultKind: account.kind)
+        }
+        .confirmationDialog("从哪里扣款？", isPresented: $showingRepayPicker, titleVisibility: .visible) {
+            ForEach(payerAccounts) { payer in
+                Button(payer.name) { payCurrentMonth(from: payer) }
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("还 \(MoneyMath.money(repayAmount))：本月 \(repayablePeriods.count) 笔分期一起结清。")
+        }
+        .alert("记还款失败", isPresented: Binding(
+            get: { repayError != nil },
+            set: { if !$0 { repayError = nil } }
+        )) {
+            Button("知道了", role: .cancel) { repayError = nil }
+        } message: {
+            Text(repayError ?? "")
+        }
+    }
+
+    /// 返回：卡面沿原路飞回明细行。
+    ///
+    /// 不用「完成」两个字——全屏层没有导航栏，左上角箭头是 iOS 唯一的返回语法。
+    /// 关闭时不做淡出：`detailAccount` 一置空，卡面就在同一个事务里往回飞，
+    /// 底下的浮层随即露出来，用户能看清它飞回了哪一行。
+    private var closeButton: some View {
+        // 用 HStack + Spacer 把它推到左边，**不是**给 Button 加 `.frame(maxWidth: .infinity)`：
+        // 后者会把整条顶栏都变成命中区，点空白也会把详情关掉。
+        HStack(spacing: 0) {
+            Button(action: onClose) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Palette.ink2)
+                    .frame(width: 34, height: 34)
+                    .background(Circle().fill(Palette.ink.opacity(0.07)))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("返回账户列表")
+
+            Spacer(minLength: 0)
+        }
+        .padding(.leading, 16)
+        .padding(.top, 6)
     }
 
     // MARK: - 数据
@@ -193,13 +227,38 @@ struct AccountDetailSheet: View {
     /// 顶部只有卡面，居中。
     ///
     /// 2026-11-16 用户第 3 条：删掉卡面右边那串「招商 / 信用卡」。
-    /// 卡面本身已经画了品牌名、类型、卡组织与尾号，右边那栏是同一个名字的第三次出现
-    /// （toolbar 中间还有一次）。名字交给卡面，位置让给卡面居中。
+    /// 卡面本身已经画了品牌名、类型、卡组织与尾号，右边那栏是同一个名字的第三次出现。
+    ///
+    /// 卡面下方那行是**账户名 + 编辑**：去掉了导航栏，账户名不能跟着 toolbar 一起消失
+    /// （卡面写的是品牌全名「招商银行」，不是用户起的「招行 8857」），
+    /// 「编辑」也就近降级成 11.5pt 文字按钮——这一层不再挂任何 bar。
     private func header(_ overdueDays: Int) -> some View {
-        DetailHeroCard(account: account) {
-            if overdueDays > 0 {
-                DetailOverdueBadge(days: overdueDays)
+        VStack(spacing: 10) {
+            DetailHeroCard(account: account, cardSpace: cardSpace) {
+                if overdueDays > 0 {
+                    DetailOverdueBadge(days: overdueDays)
+                }
             }
+
+            HStack(spacing: 7) {
+                Text(account.name)
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(Palette.ink2)
+                    .lineLimit(1)
+
+                Text("·")
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(Palette.faint)
+
+                Button("编辑") { editingAccount = account }
+                    .font(.system(size: 11.5, weight: .medium))
+                    .foregroundStyle(Palette.ink)
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("编辑账户")
+            }
+            // 外层 VStack 是 `.leading`，不给满宽这一行会贴着左边，和居中的卡面对不齐。
+            .frame(maxWidth: .infinity)
+            .reveal(revealed, index: 0)
         }
     }
 
@@ -218,22 +277,30 @@ struct AccountDetailSheet: View {
     }
 
     /// 信用：三列 + 额度条 + 白条 → 走势 → 往期账单 → 分期 → 流水（规格第二至七节）。
+    ///
+    /// 每块带 `reveal(index:)`：卡面落定后从 0 起依次展开，间隔 40ms。
+    /// 顺序就是阅读顺序——先看清欠多少，再看曲线和明细。
     @ViewBuilder
     private func creditContent(_ m: DetailMetrics) -> some View {
         metricsBlock(m)
+            .reveal(revealed, index: 1)
         DetailTrendBlock(
             title: "欠款走势",
             caption: "按流水折算的月末欠款。分期与账单不在曲线上——顶部欠款 = 曲线末点 + 未记账单与分期。",
             points: trendPoints,
             range: $trendRange
         )
+        .reveal(revealed, index: 2)
         pastBillsSection
+            .reveal(revealed, index: 3)
         installmentsSection
+            .reveal(revealed, index: 4)
         flowBlock(
             note: "按时间倒序 · 还款不计入消费统计",
             emptyMonth: "这个月这张卡没有流水",
             emptyAll: "这张卡还没有流水"
         )
+        .reveal(revealed, index: 5)
     }
 
     /// 借款：**只有欠款 + 走势**。
@@ -254,12 +321,14 @@ struct AccountDetailSheet: View {
             note: "含利息待还",
             tone: Palette.expense
         )
+        .reveal(revealed, index: 1)
         DetailTrendBlock(
             title: "欠款走势",
             caption: "按流水折算的月末欠款余额。借入会让曲线升高，还款会让它下降。",
             points: trendPoints,
             range: $trendRange
         )
+        .reveal(revealed, index: 2)
     }
 
     /// 储蓄 / 现金：余额 → 本月收支 → 余额走势 → 流水。
@@ -273,18 +342,22 @@ struct AccountDetailSheet: View {
             amount: account.currentBalance,
             note: account.kind == .cash ? "手里的现金" : "可随时转出"
         )
+        .reveal(revealed, index: 1)
         savingsMonthColumns
+            .reveal(revealed, index: 2)
         DetailTrendBlock(
             title: "余额走势",
             caption: "按流水折算的月末余额，含转入、收款与还款。",
             points: trendPoints,
             range: $trendRange
         )
+        .reveal(revealed, index: 3)
         flowBlock(
             note: "按时间倒序 · 转入与还款不计入本月支出",
             emptyMonth: "这个月这个账户没有流水",
             emptyAll: "这个账户还没有流水"
         )
+        .reveal(revealed, index: 4)
     }
 
     /// 储蓄页的两列：这个月花掉多少、进账多少。
@@ -801,6 +874,28 @@ struct AccountDetailSheet: View {
         periods(of: plan)
             .filter { $0.paidAt == nil && DueMath.isDueInThisMonth($0.dueDate, today: .now) }
             .reduce(Decimal.zero) { $0 + $1.amount }
+    }
+}
+
+/// 第二段入场：卡面落定后，区块按 `index` 依次淡入 + 上浮 14pt。
+///
+/// 用 `.animation(_:value:)` 而不是在 `.task` 里 `withAnimation`：这样每块各带自己的
+/// 延迟，切换区间、切流水范围这类重绘不会把动画重放一遍（`value` 只在 `shown` 变化时触发）。
+private struct Reveal: ViewModifier {
+    let shown: Bool
+    let index: Int
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown ? 1 : 0)
+            .offset(y: shown ? 0 : 14)
+            .animation(.easeOut(duration: 0.30).delay(Double(index) * 0.04), value: shown)
+    }
+}
+
+private extension View {
+    func reveal(_ shown: Bool, index: Int) -> some View {
+        modifier(Reveal(shown: shown, index: index))
     }
 }
 

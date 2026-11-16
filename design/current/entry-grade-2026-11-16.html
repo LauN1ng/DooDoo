@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>记一笔 · 评分控件三版 · 2026-11-16</title>
+<style>
+  :root{
+    --page:#F7F5F1; --card:#FFFFFF; --ink:#1D1D1F; --ink2:#5F5F66;
+    --sub:#6E6E76; --faint:#9A9AA2; --line:#ECE7DE; --slot:#F0EDE6;
+    --hang:#E23A61; --piao:#3E96F0; --la:#7A4FDF; --npc:#8C8C8C;
+    --hangT:#B01D42; --piaoT:#1A64B8; --laT:#5A31C0; --npcT:#6A6A70;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{
+    margin:0; padding:30px 26px 48px; background:#EAE7E1;
+    font-family:-apple-system,"SF Pro Text","PingFang SC","Helvetica Neue",sans-serif;
+    color:var(--ink);
+  }
+  h1{font-size:19px; margin:0 0 6px; letter-spacing:.2px;}
+  .lede{font-size:12.5px; color:#6B6863; margin:0 0 26px; line-height:1.65; max-width:900px;}
+  .lede b{color:#2E2C29;}
+
+  .row{display:flex; gap:22px; align-items:flex-start; flex-wrap:wrap;}
+  .col{width:352px;}
+  .cap{margin:0 0 10px; font-size:12px; color:#4A4744;}
+  .cap b{font-size:13px;}
+  .cap span{display:block; font-size:11.5px; color:#787570; margin-top:4px; line-height:1.5;}
+
+  /* ---------- 手机 ---------- */
+  .phone{
+    width:352px; height:596px; background:var(--page); border-radius:34px;
+    padding:0; overflow:hidden; position:relative;
+    box-shadow:0 1px 0 rgba(0,0,0,.05), 0 18px 40px rgba(60,50,40,.14);
+    display:flex; flex-direction:column;
+  }
+  .sheet{
+    flex:1; background:var(--page); border-radius:26px 26px 0 0;
+    padding:10px 0 0; display:flex; flex-direction:column; overflow:hidden;
+    margin-top:16px;
+  }
+  .grab{width:36px; height:4px; border-radius:2px; background:#D8D3C9; margin:0 auto 12px;}
+  .title{font-size:19px; font-weight:700; padding:0 16px 11px; letter-spacing:.3px;}
+
+  .types{display:flex; margin:0 14px 13px; background:var(--slot); border-radius:11px; padding:3px;}
+  .types div{flex:1; text-align:center; font-size:12.5px; color:var(--ink2); padding:7px 0; border-radius:9px;}
+  .types .on{background:var(--card); color:var(--ink); font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.07);}
+
+  .strip{display:flex; gap:8px; padding:0 14px 11px; overflow:hidden;}
+  .accard{
+    min-width:108px; height:70px; border-radius:13px; padding:9px 10px; color:#fff;
+    background:linear-gradient(145deg,#3FBE6A,#2E9E55); display:flex; flex-direction:column; justify-content:flex-end;
+  }
+  .accard .nm{font-size:12px; font-weight:600;}
+  .accard .kd{font-size:9px; opacity:.75; margin-top:2px;}
+  .accard.alt{background:linear-gradient(145deg,#8E8E8E,#6F6F6F);}
+
+  .cats{display:grid; grid-template-columns:repeat(7,1fr); gap:5px; padding:5px 12px 12px;}
+  .cat{display:flex; flex-direction:column; align-items:center; gap:5px;}
+  .cat img{width:30px; height:30px; object-fit:contain;}
+  .cat span{font-size:10px; color:var(--ink2);}
+
+  .amount{display:flex; justify-content:flex-end; align-items:center; gap:4px; padding:2px 20px 10px;}
+  .amount i{font-style:normal; font-size:15px; color:var(--faint);}
+  .amount b{font-size:35px; font-weight:700; letter-spacing:-.5px; color:#C7C2B9; font-variant-numeric:tabular-nums;}
+
+  /* ---------- 评分行：核心 ---------- */
+  .grade{
+    display:flex; align-items:center; gap:9px;
+    margin:0 12px; padding:0 4px; min-height:46px;
+    cursor:pointer; user-select:none;
+    border-radius:10px;
+  }
+  .grade:active{opacity:.85;}
+  .glabel{font-size:10.5px; color:var(--faint); flex:none;}
+  .slotwrap{display:flex; align-items:center; gap:7px; height:46px;}
+  .badge{display:block; object-fit:contain;}
+  .word{font-weight:600; letter-spacing:.2px; white-space:nowrap;}
+
+  /* 变体 A */
+  .vA .badge{width:22px; height:22px;}
+  .vA .word{font-size:14px;}
+
+  /* 变体 B */
+  .vB .badge{width:17px; height:17px;}
+  .vB .word{font-size:13px; font-weight:500; color:var(--ink2) !important;}
+
+  /* 变体 C */
+  .vC .badge{width:31px; height:31px;}
+  .vC .word{font-size:15px; font-weight:650;}
+
+  /* ---- 动画 A：盖章 + 文字化开 ---- */
+  @keyframes stampIn{
+    0%{transform:scale(.45) rotate(-14deg); opacity:0;}
+    55%{transform:scale(1.1) rotate(2deg); opacity:1;}
+    100%{transform:scale(1) rotate(0deg); opacity:1;}
+  }
+  @keyframes wordIn{
+    0%{opacity:0; filter:blur(5px); transform:translateY(5px);}
+    100%{opacity:1; filter:blur(0); transform:translateY(0);}
+  }
+  .a.anim .badge{animation:stampIn .34s cubic-bezier(.34,1.42,.5,1) both;}
+  .a.anim .word{animation:wordIn .22s ease-out both;}
+
+  /* ---- 动画 B：翻牌 ---- */
+  @keyframes flipIn{
+    0%{transform:perspective(220px) rotateY(-88deg); opacity:.2;}
+    70%{transform:perspective(220px) rotateY(8deg); opacity:1;}
+    100%{transform:perspective(220px) rotateY(0deg); opacity:1;}
+  }
+  @keyframes flipWord{
+    0%{opacity:0; transform:translateX(-4px);}
+    100%{opacity:1; transform:translateX(0);}
+  }
+  .b.anim .badge{animation:flipIn .3s cubic-bezier(.3,1.2,.5,1) both;}
+  .b.anim .word{animation:flipWord .2s ease-out .05s both;}
+
+  /* ---- 动画 C：落下 ---- */
+  @keyframes dropIn{
+    0%{transform:translateY(-18px) scale(.62); opacity:0;}
+    62%{transform:translateY(2px) scale(1.06); opacity:1;}
+    100%{transform:translateY(0) scale(1); opacity:1;}
+  }
+  @keyframes riseIn{
+    0%{opacity:0; transform:translateY(7px);}
+    100%{opacity:1; transform:translateY(0);}
+  }
+  .c.anim .badge{animation:dropIn .38s cubic-bezier(.28,1.3,.45,1) both;}
+  .c.anim .word{animation:riseIn .2s ease-out .04s both;}
+
+  .note{
+    margin:10px 14px 0; padding:12px 14px; border-radius:13px; background:var(--card);
+    font-size:13px; color:var(--faint); box-shadow:0 1px 2px rgba(0,0,0,.04);
+  }
+  .owner{
+    margin:10px 14px 0; padding:11px 14px; border-radius:13px; background:var(--card);
+    display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--ink2);
+    box-shadow:0 1px 2px rgba(0,0,0,.04);
+  }
+  .owner b{font-weight:600; color:var(--ink);}
+  .ownerdot{width:4px; height:4px; border-radius:2px; background:#C9C4BA;}
+  .pad{margin-top:auto; padding:12px 16px 18px;}
+  .padline{width:36px; height:4px; border-radius:2px; background:#D8D3C9; margin:0 auto 8px;}
+  .padhint{text-align:center; font-size:10.5px; color:var(--sub);}
+
+  .hintbar{font-size:11px; color:#8A867F; text-align:center; padding:12px 16px 0;}
+  .seq{display:flex; gap:6px; align-items:center; justify-content:center; font-size:11px; color:#6B6863; margin-top:8px;}
+  .seq i{font-style:normal; padding:2px 7px; border-radius:6px; background:#DFDAD1; color:#4A4744;}
+
+  table{margin-top:34px; border-collapse:collapse; font-size:12px; background:#fff; border-radius:12px; overflow:hidden;}
+  th,td{padding:9px 13px; text-align:left; border-bottom:1px solid #EEE9E1; vertical-align:top;}
+  th{background:#F3F0EA; font-weight:600; font-size:11.5px; color:#3A3835;}
+  td b{color:#2E2C29;}
+  tr:last-child td{border-bottom:none;}
+</style>
+</head>
+<body>
+
+<h1>记一笔 · 评分控件三版（2026-11-16）</h1>
+<p class="lede">
+  三版共同前提：<b>单档显示</b>、<b>无底槽无描边</b>、<b>不用主色</b>；默认显示 NPC 但值是 <b>nil</b>；
+  点一下往下一档循环 <b>NPC → 夯 → 飘 → 拉 → NPC</b>；整行 46pt 高，命中区不靠视觉撑。<br>
+  <b>直接点下面三张里的徽章/词就能看动画。</b>
+</p>
+
+<div class="row">
+
+  <!-- ================= A ================= -->
+  <div class="col">
+    <p class="cap"><b>A · 盖章</b><span>徽章 22 + 彩色词 14pt；左侧留「值不值」当语义锚点。词色取徽章同色系深一档（对比度 ≥5.5:1）。</span></p>
+    <div class="phone vA">
+      <div class="sheet">
+        <div class="grab"></div>
+        <div class="title">记一笔</div>
+        <div class="types"><div class="on">支出</div><div>收入</div><div>还款</div><div>转账</div></div>
+        <div class="strip">
+          <div class="accard"><div class="nm">微信支付</div><div class="kd">储蓄卡</div></div>
+          <div class="accard alt"><div class="nm">现金</div><div class="kd">现金</div></div>
+        </div>
+        <div class="cats">
+          <div class="cat"><img src="../../assets/emoji/fluent3d/GreenSalad.png"><span>吃</span></div>
+          <div class="cat"><img src="../../assets/emoji/fluent3d/PersonInSuitLevitating.png"><span>穿</span></div>
+          <div class="cat"><img src="../../assets/emoji/fluent3d/Houses.png"><span>住</span></div>
+          <div class="cat"><img src="../../assets/emoji/fluent3d/HighSpeedTrain.png"><span>行</span></div>
+          <div class="cat"><img src="../../assets/emoji/fluent3d/PartyPopper.png"><span>乐</span></div>
+          <div class="cat"><img src="../../assets/emoji/fluent3d/Hospital.png"><span>医</span></div>
+          <div class="cat"><img src="../../assets/emoji/fluent3d/CatFace.png"><span>情</span></div>
+        </div>
+        <div class="amount"><i>¥</i><b>0.00</b></div>
+
+        <div class="grade a" data-variant="A">
+          <span class="glabel">值不值</span>
+          <div class="slotwrap">
+            <img class="badge" src="../../assets/grade/final/grade-npc-40@2x.png" alt="">
+            <span class="word" style="color:var(--npcT)">NPC</span>
+          </div>
+        </div>
+
+        <div class="note">备注</div>
+        <div class="owner"><span>账单期</span><b>10/15–11/14</b><span class="ownerdot"></span><span>计入 11 月</span></div>
+        <div class="pad">
+          <div class="padline"></div>
+          <div class="padhint">上滑输入金额</div>
+        </div>
+      </div>
+    </div>
+    <div class="seq"><i>NPC</i>→<i>夯</i>→<i>飘</i>→<i>拉</i>→<i>NPC</i></div>
+  </div>
+
+  <!-- ================= B ================= -->
+  <div class="col">
+    <p class="cap"><b>B · 最轻</b><span>徽章 17 + 灰词 13pt，去掉左侧标签。评分退成一行注脚，不参与视觉竞争；可点性靠「点哪都能换」的 46pt 行。</span></p>
+    <div class="phone vB">
+      <div class="sheet">
+        <div class="grab"></div>
+        <div class="title">记一笔</div>
+        <div class="types"><div class="on">支出</div><div>收入</div><div>还款</div><div>转账</div></div>
+        <div class="strip">
+          <div class="accard"><div class="nm">微信支付</div><div class="kd">储蓄卡</div></div>
+          <div class="accard alt"><div class="nm">现金</div><div class="kd">现金</div></div>
+        </div>
+        <div class="cats">
+          <div class="cat"><img src="../../assets/emoji/fluent3d/GreenSalad.png"><span>吃</span></div>
+          <div class="cat"><img src="../../assets/emoji/fluent3d/PersonInSuitLevitating.png"><span>穿</span></div>
+          <div class="cat"><img src="../../assets/emoji/fluent3d/Houses.png"><span>住</span></div>
+          <div class="cat"><img src="../../assets/emoji/fluent3d/HighSpeedTrain.png"><span>行</span></div>
+          <div class="cat"><img src="../../assets/emoji/fluent3d/PartyPopper.png"><span>乐</span></div>
+          <div class="cat"><img src="../../assets/emoji/fluent3d/Hospital.png"><span>医</span></div>
+          <div class="cat"><img src="../../assets/emoji/fluent3d/CatFace.png"><span>情</span></div>
+        </div>
+        <div class="amount"><i>¥</i><b>0.00</b></div>
+
+        <div class="grade b" data-variant="B" style="padding-left:10px">
+          <div class="slotwrap">
+            <img class="badge" src="../../assets/grade/final/grade-npc-40@2x.png" alt="">
+            <span class="word" style="color:var(--npcT)">NPC</span>
+          </div>
+        </div>
+
+        <div class="note">备注</div>
+        <div class="owner"><span>账单期</span><b>10/15–11/14</b><span class="ownerdot"></span><span>计入 11 月</span></div>
+        <div class="pad">
+          <div class="padline"></div>
+          <div class="padhint">上滑输入金额</div>
+        </div>
+      </div>
+    </div>
+    <div class="seq"><i>NPC</i>→<i>夯</i>→<i>飘</i>→<i>拉</i>→<i>NPC</i></div>
+  </div>
+
+  <!-- ================= C ================= -->
+  <div class="col">
+    <p class="cap"><b>C · 有声量</b><span>徽章 31 + 彩色词 15pt：徽章本身当主视觉（素材是 3D 字块，放大才看得出立体），词做补语。</span></p>
+    <div class="phone vC">
+      <div class="sheet">
+        <div class="grab"></div>
+        <div class="title">记一笔</div>
+        <div class="types"><div class="on">支出</div><div>收入</div><div>还款</div><div>转账</div></div>
+        <div class="strip">
+          <div class="accard"><div class="nm">微信支付</div><div class="kd">储蓄卡</div></div>
+          <div class="accard alt"><div class="nm">现金</div><div class="kd">现金</div></div>
+        </div>
+        <div class="cats">
+          <div class="cat"><img src="../../assets/emoji/fluent3d/GreenSalad.png"><span>吃</span></div>
+          <div class="cat"><img src="../../assets/emoji/fluent3d/PersonInSuitLevitating.png"><span>穿</span></div>
+          <div class="cat"><img src="../../assets/emoji/fluent3d/Houses.png"><span>住</span></div>
+          <div class="cat"><img src="../../assets/emoji/fluent3d/HighSpeedTrain.png"><span>行</span></div>
+          <div class="cat"><img src="../../assets/emoji/fluent3d/PartyPopper.png"><span>乐</span></div>
+          <div class="cat"><img src="../../assets/emoji/fluent3d/Hospital.png"><span>医</span></div>
+          <div class="cat"><img src="../../assets/emoji/fluent3d/CatFace.png"><span>情</span></div>
+        </div>
+        <div class="amount"><i>¥</i><b>0.00</b></div>
+
+        <div class="grade c" data-variant="C">
+          <span class="glabel">值不值</span>
+          <div class="slotwrap">
+            <img class="badge" src="../../assets/grade/final/grade-npc-40@2x.png" alt="">
+            <span class="word" style="color:var(--npcT)">NPC</span>
+          </div>
+        </div>
+
+        <div class="note">备注</div>
+        <div class="owner"><span>账单期</span><b>10/15–11/14</b><span class="ownerdot"></span><span>计入 11 月</span></div>
+        <div class="pad">
+          <div class="padline"></div>
+          <div class="padhint">上滑输入金额</div>
+        </div>
+      </div>
+    </div>
+    <div class="seq"><i>NPC</i>→<i>夯</i>→<i>飘</i>→<i>拉</i>→<i>NPC</i></div>
+  </div>
+
+</div>
+
+<table>
+  <tr><th style="width:74px">对比项</th><th>A · 盖章</th><th>B · 最轻</th><th>C · 有声量</th></tr>
+  <tr><td><b>徽章尺寸</b></td><td>22pt</td><td>17pt</td><td>31pt</td></tr>
+  <tr><td><b>词</b></td><td>14pt / 600 / 档位色</td><td>13pt / 500 / ink2</td><td>15pt / 650 / 档位色</td></tr>
+  <tr><td><b>左标签</b></td><td>「值不值」留着</td><td>不要</td><td>「值不值」留着</td></tr>
+  <tr><td><b>动画</b></td><td>盖章回弹 + 词化开 340ms</td><td>翻牌 300ms</td><td>落下回弹 380ms</td></tr>
+  <tr><td><b>风险</b></td><td>彩色词离「重点色」很近，容易被读成强调</td><td>17pt 徽章立体感弱，靠灰词撑不起「可点」</td><td>评分区抢分类的视线，可能是「太响」的反面翻车</td></tr>
+</table>
+
+<script>
+  const GRADES = [
+    {key:'npc',  img:'../../assets/grade/final/grade-npc-40@2x.png',  word:'NPC',   color:'var(--npcT)'},
+    {key:'hang', img:'../../assets/grade/final/grade-hang-40@2x.png', word:'夯爆了', color:'var(--hangT)'},
+    {key:'piao', img:'../../assets/grade/final/grade-piao-40@2x.png', word:'飘了',   color:'var(--piaoT)'},
+    {key:'la',   img:'../../assets/grade/final/grade-la-40@2x.png',   word:'拉完了', color:'var(--laT)'}
+  ];
+
+  document.querySelectorAll('.grade').forEach(row => {
+    let i = 0;
+    const badge = row.querySelector('.badge');
+    const word  = row.querySelector('.word');
+
+    row.addEventListener('click', () => {
+      i = (i + 1) % GRADES.length;
+      const g = GRADES[i];
+
+      // 清掉动画类，强制 reflow 再挂回去，保证连点也能重播
+      row.classList.remove('anim');
+      void badge.offsetWidth;
+
+      badge.src = g.img;
+      word.textContent = g.word;
+      word.style.color = g.color;
+
+      row.classList.add('anim');
+    });
+  });
+</script>
+</body>
+</html>

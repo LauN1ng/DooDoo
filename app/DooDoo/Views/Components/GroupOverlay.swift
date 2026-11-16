@@ -4,10 +4,18 @@ import SwiftData
 /// 整屏磨砂明细浮层（规格 4.x / 6.1）。
 ///
 /// **不是 sheet**：无圆角、无把手、不从底部位移，只淡入；底下的资产页不重建、不位移。
+///
+/// 每行的卡面是「卡面放大」的起点：它挂着 `matchedGeometryEffect`，点行时同一个 id
+/// 在 `AccountDetailView` 顶部的 `.hero` 卡面上接管（2026-11-16 第 8 条）。
 struct GroupOverlay: View {
     let title: String
     let accounts: [Account]
     let isLiability: Bool
+    /// 卡面 hero 的命名空间：明细行卡面与详情页顶部卡面共用。
+    let cardSpace: Namespace.ID
+    /// 已经放大成详情页的那个账户。这一行的卡面让位给同尺寸空位——
+    /// 同一个 id 不能同时挂两个 `matchedGeometryEffect`，否则会互相拽。
+    var selectedID: PersistentIdentifier?
     /// 账户 → 逾期天数。有值的那个把「较上月」换成「逾期 N 天」——
     /// 「较上月」现在是写死的 `—`（环比还没做），拿它换真数据比多塞一列干净。
     var overdueDays: [PersistentIdentifier: Int] = [:]
@@ -96,7 +104,14 @@ struct GroupOverlay: View {
             onSelect(account)
         } label: {
             HStack(spacing: 13) {
-                CardFace(account: account, large: true)
+                if selectedID == account.persistentModelID {
+                    // 卡面已飞到详情页顶部，这里留同尺寸空位：行高与两列位置都不动，
+                    // 关闭时卡面沿原路飞回这一个坑。
+                    Color.clear.frame(width: 144, height: 96)
+                } else {
+                    CardFace(account: account, size: .detail)
+                        .matchedGeometryEffect(id: account.persistentModelID, in: cardSpace)
+                }
 
                 HStack(spacing: 8) {
                     field(

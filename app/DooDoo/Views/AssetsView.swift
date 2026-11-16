@@ -50,6 +50,12 @@ enum AssetGroup: String, Identifiable, CaseIterable {
 /// 数值全部来自 SwiftData 与 `Math/` 的纯函数；这里只负责摆位置。
 /// 聚合结果缓存在 `@State`，`body` 不遍历流水（AGENTS 7.5）。
 struct AssetsView: View {
+    /// 详情全屏层由 `RootView` 持有：资产页在 `VStack { 页头; 内容 }` 的内容区里，
+    /// 挂在它内部的层到不了页头与状态栏，卡面就飞不到屏幕顶部。
+    @Binding var detailAccount: Account?
+    /// 与详情页顶部卡面共用的命名空间（`matchedGeometryEffect`）。
+    let cardSpace: Namespace.ID
+
     @Environment(\.modelContext) private var context
     @Query(sort: [SortDescriptor(\Account.sortOrder)]) private var accounts: [Account]
     /// 分期计划与期表、「本月要还」的账单侧数据源（PRD 9.12）。
@@ -61,8 +67,6 @@ struct AssetsView: View {
     @State private var openGroup: AssetGroup?
     @State private var range: NetWorthRange = .year
     @State private var creatingGroup: AssetGroup?
-    /// 卡详情 sheet（account-detail-v1.0 的最小落地，见 PROGRESS M3-8）。
-    @State private var detailAccount: Account?
 
     @State private var mine: Decimal = 0
     @State private var series: [NetWorthPoint] = []
@@ -96,6 +100,8 @@ struct AssetsView: View {
                     title: group.title,
                     accounts: accounts(in: group),
                     isLiability: group.isLiability,
+                    cardSpace: cardSpace,
+                    selectedID: detailAccount?.persistentModelID,
                     overdueDays: overdueDays,
                     // 浮层每行的「欠款」与组头合计、顶部「我欠」同一口径（`CardDebt`）。
                     // 之前这里显示 `currentBalance`，信用卡没记流水时永远是 0.00，
@@ -106,8 +112,13 @@ struct AssetsView: View {
                         // 2026-11-16 起**四类账户都进详情页**。此前储蓄/现金这一半
                         // 直接弹编辑表单（引规格第十一节 3「详情页只覆盖信用账户」），
                         // 用户回传「储蓄账户的详情页还没做」——那条未锁定项已按类型补齐，
-                        // 编辑入口改由详情页左上角「编辑」承担。
-                        detailAccount = account
+                        // 编辑入口改由详情页卡面下方那行「编辑」承担。
+                        //
+                        // 同一个事务里换状态：明细行卡面让位、详情页卡面接管，
+                        // 中间那一帧才连得上（`matchedGeometryEffect`）。
+                        withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                            detailAccount = account
+                        }
                     }
                 )
             }
@@ -121,9 +132,8 @@ struct AssetsView: View {
         // body 的类型检查压垮（CI run 57~59 一直报 102 行 unable to type-check）。
         // 指纹覆盖账本、分期、账单、区间与开关，任何一项变了就重算。
         .onChange(of: dataFingerprint) { refresh() }
-        .sheet(item: $detailAccount) { account in
-            AccountDetailSheet(account: account)
-        }
+        // 详情不再走 `.sheet`（2026-11-16 用户定案）：全屏层挂在 `RootView`，
+        // 卡面靠 `matchedGeometryEffect` 长到屏幕顶部。这里只剩「新建账户」还弹面板。
         .sheet(item: $creatingGroup) { group in
             AccountEditor(account: nil, defaultKind: group.defaultKind)
         }
@@ -271,6 +281,16 @@ struct AssetsView: View {
 }
 
 #Preview {
-    AssetsView()
+    AssetsPreviewHost()
         .modelContainer(for: [Account.self, Category.self, Transaction.self, Installment.self, InstallmentPeriod.self, BillStatement.self, AppSettings.self], inMemory: true)
+}
+
+/// 预览宿主：`AssetsView` 的详情状态与命名空间改由上层持有，预览里补一份。
+private struct AssetsPreviewHost: View {
+    @Namespace private var cardSpace
+    @State private var detail: Account?
+
+    var body: some View {
+        AssetsView(detailAccount: $detail, cardSpace: cardSpace)
+    }
 }
