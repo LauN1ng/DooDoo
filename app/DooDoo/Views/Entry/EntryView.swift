@@ -807,12 +807,12 @@ struct EntryView: View {
 
     private func finishGradeFrameExit() {
         // 用无动画赋值：框已经不可见，再补一段过渡只会让它在回来的路上闪一下。
-        // 这里必须写 `Transaction(animation: nil)` 而不是 `Transaction()`——
-        // 后者在本项目的 SDK 上会解析到带 `backingData` 的内部构造器，报
-        // "missing argument for parameter 'backingData'"（CI run #84 即此）。
-        var transaction = Transaction(animation: nil)
-        transaction.disablesAnimations = true
-        withTransaction(transaction) {
+        //
+        // 这里**不能**自己构造 `Transaction`：本项目 SDK 的 `Transaction` 只暴露
+        // `init(backingData:)` 这个内部入口，`Transaction()` 与 `Transaction(animation:)`
+        // 都会挂（CI #84 / #85 连续两次报的就是这个）。`withAnimation(nil)` 是公开 API，
+        // 语义等价且不会碰内部构造器。
+        withAnimation(nil) {
             gradeFrameExiting = false
             gradeFrameScale = 1
             gradeFrameOpacity = 1
