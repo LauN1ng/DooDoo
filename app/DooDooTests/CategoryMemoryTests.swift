@@ -29,22 +29,25 @@ struct CategoryMemoryTests {
 
     /// 只造够用的分类：两个支出一级（各带一个二级）+ 一个收入一级。
     /// 全量 51 个在这里没有额外价值，反而让断言看不出重点。
+    ///
+    /// 类型名一律写全 `DooDoo.Category`：测试模块里这个名字有二义性，裸写
+    /// 只在部分位置（返回类型、泛型参数）才报错，先例见 `EntryFlowTests.swift:163`。
     private func seed(in context: ModelContext) throws {
-        let rows: [Category] = [
-            Category(key: "food", parentKey: nil, name: "吃", iconName: "ForkAndKnifeWithPlate",
-                     emoji: "🍰", sortOrder: 0, isIncome: false, tintHex: "#FFF1E6"),
-            Category(key: "food.coffee", parentKey: "food", name: "咖啡", iconName: "HotBeverage",
-                     emoji: "☕️", sortOrder: 100, isIncome: false, tintHex: "#FFF1E6"),
-            Category(key: "food.lunch", parentKey: "food", name: "午餐", iconName: "CookedRice",
-                     emoji: "🍱", sortOrder: 101, isIncome: false, tintHex: "#FFF1E6"),
+        let rows: [DooDoo.Category] = [
+            DooDoo.Category(key: "food", parentKey: nil, name: "吃", iconName: "ForkAndKnifeWithPlate",
+                            emoji: "🍰", sortOrder: 0, isIncome: false, tintHex: "#FFF1E6"),
+            DooDoo.Category(key: "food.coffee", parentKey: "food", name: "咖啡", iconName: "HotBeverage",
+                            emoji: "☕️", sortOrder: 100, isIncome: false, tintHex: "#FFF1E6"),
+            DooDoo.Category(key: "food.lunch", parentKey: "food", name: "午餐", iconName: "CookedRice",
+                            emoji: "🍱", sortOrder: 101, isIncome: false, tintHex: "#FFF1E6"),
 
-            Category(key: "wear", parentKey: nil, name: "穿", iconName: "Necktie",
-                     emoji: "👕", sortOrder: 1, isIncome: false, tintHex: "#FDF1EA"),
-            Category(key: "wear.top", parentKey: "wear", name: "上衣", iconName: "TShirt",
-                     emoji: "👕", sortOrder: 110, isIncome: false, tintHex: "#FDF1EA"),
+            DooDoo.Category(key: "wear", parentKey: nil, name: "穿", iconName: "Necktie",
+                            emoji: "👕", sortOrder: 1, isIncome: false, tintHex: "#FDF1EA"),
+            DooDoo.Category(key: "wear.top", parentKey: "wear", name: "上衣", iconName: "TShirt",
+                            emoji: "👕", sortOrder: 110, isIncome: false, tintHex: "#FDF1EA"),
 
-            Category(key: "salary", parentKey: nil, name: "工资", iconName: "MoneyBag",
-                     emoji: "💰", sortOrder: 10, isIncome: true, tintHex: "#EAF6F1"),
+            DooDoo.Category(key: "salary", parentKey: nil, name: "工资", iconName: "MoneyBag",
+                            emoji: "💰", sortOrder: 10, isIncome: true, tintHex: "#EAF6F1"),
         ]
         rows.forEach { context.insert($0) }
         context.insert(Account(name: "钱包", kind: .savings, initialBalance: 0))
@@ -59,7 +62,7 @@ struct CategoryMemoryTests {
         return (vm, context)
     }
 
-    private func category(_ key: String, in vm: EntryViewModel) throws -> Category {
+    private func category(_ key: String, in vm: EntryViewModel) throws -> DooDoo.Category {
         try #require(vm.categories.first { $0.key == key })
     }
 
