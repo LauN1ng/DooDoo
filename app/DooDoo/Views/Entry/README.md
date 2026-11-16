@@ -1,6 +1,6 @@
 # Views/Entry · 记一笔
 
-> 依据：`docs/design/spec/记一笔规格冻结-v2.4.md`（1.x 只改第九节未锁定项；v1.0 / v2.0 / v2.1 / v2.2 / v2.3 已废止）。
+> 依据：`docs/design/spec/记一笔规格冻结-v2.5.md`（1.x 只改第九节未锁定项；v1.0 / v2.0 / v2.1 / v2.2 / v2.3 / v2.4 已废止）。
 > 原型：`design/current/entry-types.html`（快照 `entry-types-v1.0.html`）。
 
 ## 职责

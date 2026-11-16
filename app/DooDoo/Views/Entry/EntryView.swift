@@ -719,14 +719,33 @@ struct EntryView: View {
         }
     }
 
+    /// 空位虚线的 `[段长, 间隔]`。**必须让周长能整除周期**。
+    ///
+    /// 旧值是写死的 `2.9 + 2.6 = 5.5`，而 21pt 方框（圆角 2.5）的路径周长是
+    /// `4×(21−5) + 2π×2.5 ≈ 79.71`——79.71 ÷ 5.5 = 14.49，除不尽。于是虚线绕回起点时
+    /// 相位错开，接缝那一处并成一根 8pt 的长划线：下边看着比上边粗、左边比右边少一段。
+    /// 真机反馈「虚线框左右两边不对称」就是这个，跟圆角、跟素材都无关。
+    ///
+    /// 现在取 **14 个周期等分周长**，并且半周长正好 7 个周期——旋转 180° 后图案与自身重合，
+    /// 左右两边镜像对称。段长固定 3.0、间隔由周长算出来，改线宽或尺寸都不会再错位。
+    private var slotDash: [CGFloat] {
+        let radius: CGFloat = 2.5
+        let perimeter = 4 * (gradeSlotSide - 2 * radius) + 2 * .pi * radius
+        let period = perimeter / 14
+        return [3.0, period - 3.0]
+    }
+
     /// 21pt 的空位：虚线圆角框 + 加号。两个都只出 44%/52% 的灰，
     /// 因为它表达的是「这里可以填」，不是「已经选了 NPC」。
     private var gradeSlot: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 2.5, style: .continuous)
-                .strokeBorder(
+                // 用 `stroke` 不用 `strokeBorder`：后者会把路径按半个线宽内缩，
+                // 周长就跟着线宽变，`slotDash` 的等分算不准。描边外溢的 0.5pt 仍在
+                // 22pt 的徽章框里，看不见。
+                .stroke(
                     Palette.gradeVacant.opacity(0.44),
-                    style: StrokeStyle(lineWidth: 1.05, dash: [2.9, 2.6])
+                    style: StrokeStyle(lineWidth: 1.05, dash: slotDash)
                 )
             GradePlus()
                 .stroke(

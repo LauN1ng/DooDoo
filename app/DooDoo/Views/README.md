@@ -4,15 +4,16 @@
 > 首页：`FlowView` + `DeckView` / `DayCardView` / `TxRowView`；
 > 资产页：`AssetsView` + `NetWorthCard` / `AccountGroupView` / `AccountDeck` / `CardFace` / `GroupOverlay` / `AccountEditor`；
 > 记一笔：`Entry/EntryView` + `AccountCardStrip` / `CategoryPicker`；
-> 详情：`Detail/AccountDetailSheet` / `BillEntrySheet` / `PeriodEditorSheet` / `DebtTrendChart`。设置页仍是最简版本。
+> 详情：`Detail/AccountDetailView`（全屏层，卡面 `matchedGeometryEffect` 放大，**不是 sheet**）/ `DetailParts` / `BillEntrySheet` / `PeriodEditorSheet` / `DebtTrendChart`。设置页仍是最简版本。
 
 | 视图 | 里程碑 | 对应规格 |
 |---|---|---|
 | `FlowView` | M1 | `docs/design/spec/首页规格冻结-v1.0.md` |
 | `AssetsView` | M2 | `docs/design/spec/资产页规格冻结-v1.0.md`（正文 v1.1） |
-| `Entry/EntryView` | M1b / M2b / M3-10 | `docs/design/spec/记一笔规格冻结-v2.4.md`（四类型、二级分类按大类记忆、内联分期、账期归属、自绘键盘默认收起、评分位单徽章） |
+| `Entry/EntryView` | M1b / M2b / M3-10 | `docs/design/spec/记一笔规格冻结-v2.5.md`（四类型、二级分类按大类记忆、内联分期、账期归属、自绘键盘默认收起、账户卡双层投影、评分位单徽章） |
 | `Components/NumberPad` | M4 第 5 条 | 规格「五·补」：`NumberPad` 键位 + `NumberPadDock` 键盘坞（默认收起 44pt，点数值行 / 上滑抓条展开） |
 | `CardFace` | M2b → 11-09 换资源 | 规格第三节四档尺寸；**底图走 `Assets.xcassets/Card` 资源 + `Texture` 纹理，文字层实时画**（原「六层代码画」已废弃） |
+| `Detail/AccountDetailView` | M3-8；**11-16 形态改为卡面放大** | `docs/design/spec/账户详情页规格冻结-v1.0.md`（三列 / 白条 / 往期账单 / 分期）；**进入方式**见第十一节与 `docs/design/pending/M4九条视觉反馈-2026-11-16.md` 4.2 |
 | `SettingsView` | M0 起可用；M3-2 加分期入口 | PRD 9.15 + M5 验收清单 |
 | `Components/TxRowView` | M1；**11-11 改成「转账 + 手续费」一行** | 金额不带符号、手续费小标签、转账借 `CurrencyExchange` 图标 |
 
