@@ -230,6 +230,7 @@ account/
 - 每个纯函数在注释里写清：输入、输出、边界情况（0 期、首末期不同、退款超过剩余、除不尽）。
 - 金额计算必须有单元测试，用例**取自 PRD 附录的真实账单**（招行 8857 / 白条序列 / e招贷 / 中移金科），不得自己编数字。
 - 校准基准：e招贷 9,000 元 24 期反算年化应 ≈16.4%，与招行公布的 16.43% 相差 < 0.5%。
+- **测试里写分类类型必须带模块名 `DooDoo.Category`**（2026-11-16 第二次踩）：测试目标里 `Category` 有二义性，裸写在 `let rows: [Category]`、`-> Category`、`FetchDescriptor<Category>` 这类**类型位置**才报 `'Category' is ambiguous for type lookup in this context`，写在 `ModelContainer(for: Category.self)` 参数里反而不报——所以本地看代码像没问题，CI 才炸。同日先例见 `EntryFlowTests.swift:163` 的注释。
 
 ### 7.4 分层
 
