@@ -3,7 +3,7 @@ import SwiftUI
 
 /// 记一笔（M1b）。四类型共用一套骨架，按 `type` 换字段。
 ///
-/// 依据 `docs/design/spec/记一笔规格冻结-v1.0.md`：
+/// 依据 `docs/design/spec/记一笔规格冻结-v2.1.md`：
 /// 标题 → 类型分段 → 卡 → 归属 → 金额 → 类型专属字段 → 备注 → 余额预览 → 主按钮。
 ///
 /// M2b 起包含还款与转账；**M3-10 起含内联分期开关与账期归属**
@@ -23,6 +23,10 @@ struct EntryView: View {
     /// 当前由自绘键盘编辑的数值字段（M4 第 5 条：系统键盘割裂，改自绘）。
     /// 不是 `@FocusState`——这些字段已经不是 `TextField` 了，聚焦由我们自己管。
     @State private var activeField: NumberField = .amount
+    /// 键盘是否展开。**默认收起**（v2.1，用户 2026-11-16 定案）：
+    /// 一块 242pt 的键盘常驻会把分类网格、评分、备注全推出屏幕。
+    /// 收起后只占约 44pt，点金额（或上滑抓条）才拉上来。
+    @State private var padOpen = false
     /// 备注仍在用系统键盘（它是文本，不是数）。它一聚焦就把自绘键盘收起来，
     /// 两块键盘同时在场会把输入区挤成一条缝。
     @FocusState private var noteFocused: Bool
@@ -32,6 +36,16 @@ struct EntryView: View {
     /// 面板里需要数字键盘的字段。备注不在其中。
     private enum NumberField: Hashable {
         case amount, received, fee, perPeriod
+
+        /// 收起时提示「上滑输入 ×」用的名字，跟界面上那一行标签一致。
+        var title: String {
+            switch self {
+            case .amount: return "金额"
+            case .received: return "到账"
+            case .fee: return "手续费"
+            case .perPeriod: return "每期金额"
+            }
+        }
     }
 
     init(initialType: TransactionKind = .expense, initialDate: Date = .now) {
@@ -65,6 +79,10 @@ struct EntryView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) { footer }
         .safeAreaInset(edge: .bottom, spacing: 0) { numberPadArea }
         .overlay { receiptBanner }
+        // 备注一聚焦就把数字键盘收掉：系统键盘要占底部，两块键盘不能叠。
+        .onChange(of: noteFocused) { _, focused in
+            if focused, padOpen { setPad(open: false) }
+        }
         .task(id: receipt) {
             // 有回执就停一下再关，没有就由保存处直接 dismiss。
             guard receipt != nil else { return }
@@ -83,25 +101,34 @@ struct EntryView: View {
 
     // MARK: - 自绘键盘
 
-    /// 键盘常驻底部。只在一个时机收起：用户点「备注」调起系统键盘时。
+    /// 键盘坞。默认收起；点金额行、或上滑抓条把键盘拉上来，下滑 / 点抓条收起。
+    ///
+    /// 收起态底部只有约 44pt（抓条 + 「上滑输入金额」），把 242pt 还给内容——
+    /// 分类网格、评分、备注重新回到一屏内。
     @ViewBuilder
     private var numberPadArea: some View {
+        // 备注键盘在场时整块坞一起让开：只收键盘留根抓条，抓条会浮在系统键盘上，
+        // 想点它还会在系统键盘上方再开一块——两块键盘同屏，正是 v2.0 想避免的。
         if !noteFocused {
-            VStack(spacing: 0) {
-                Rectangle()
-                    .fill(Palette.line)
-                    .frame(height: 0.5)
+            NumberPadDock(
+                isOpen: padOpen,
+                hint: "上滑输入\(activeField.title)",
+                onToggle: { setPad(open: $0) }
+            ) {
                 NumberPad(
                     text: activeBinding,
                     accent: accent,
                     accentWash: accentWash
                 )
-                .padding(.horizontal, 8)
-                .padding(.top, 8)
-                .padding(.bottom, 8)
             }
-            .background(Palette.page)
-            .transition(.opacity)
+        }
+    }
+
+    /// 展开 / 收起。动画写在这一处，`safeAreaInset` 的高度跟着它一起变，
+    /// 页面内容是被"推"上来的，不是跳一下。
+    private func setPad(open: Bool) {
+        withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) {
+            padOpen = open
         }
     }
 
@@ -123,10 +150,16 @@ struct EntryView: View {
         }
     }
 
-    /// 切换正在编辑的字段。备注键盘还在的话先收掉。
+    /// 切换正在编辑的字段，并把键盘拉上来。
+    /// 备注键盘还在的话先收掉——两块键盘永不同屏。
     private func activate(_ field: NumberField) {
-        if noteFocused { noteFocused = false }
         activeField = field
+        // 解备注焦点与开键盘放进同一个事务：坞是从"隐藏"变成"展开"整块插进来的，
+        // 分两次改会先看见抓条闪一下再长出键盘。
+        withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) {
+            if noteFocused { noteFocused = false }
+            padOpen = true
+        }
     }
 
     // MARK: - 保存回执
@@ -152,9 +185,9 @@ struct EntryView: View {
                         .fill(Palette.ink.opacity(0.92))
                 )
                 .padding(.horizontal, 24)
-                // 自绘键盘（约 242）+ 页脚（约 80）都挂在底部，回执必须让开它们，
-                // 否则「已记下」会被键盘盖住——1.1 秒的确认窗口就白给了。
-                .padding(.bottom, 330)
+                // 回执必须让开底部那两块：键盘展开时 = 坞 254（抓条 20 + 键盘 226 + 下内距 8）
+                // + 页脚 72；收起时只剩坞 44 + 页脚 72。写死一个值必然有一边被盖住。
+                .padding(.bottom, padOpen ? 344 : 130)
                 .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
             .allowsHitTesting(false)
@@ -194,7 +227,10 @@ struct EntryView: View {
                 let selected = vm.type == kind
                 Button {
                     vm.setType(kind)
-                    activate(.amount)
+                    // 切类型只是把默认字段换回金额，**不弹键盘**：
+                    // 用户可能只是想看看还款/转账要填什么，不该被键盘挡一眼。
+                    if noteFocused { noteFocused = false }
+                    activeField = .amount
                 } label: {
                     Text(kind.title)
                         .font(.system(size: 13.5, weight: selected ? .semibold : .regular))
@@ -365,7 +401,7 @@ struct EntryView: View {
                 placeholder: "0.00",
                 size: 46,
                 weight: .bold,
-                active: activeField == .amount,
+                active: padOpen && activeField == .amount,
                 accent: accent
             )
             .frame(maxWidth: 260, alignment: .trailing)
@@ -484,7 +520,7 @@ struct EntryView: View {
                 placeholder: "自动 " + MoneyMath.money(vm.installmentAutoPerPeriod),
                 size: 17,
                 weight: .semibold,
-                active: activeField == .perPeriod,
+                active: padOpen && activeField == .perPeriod,
                 accent: accent
             )
             .frame(maxWidth: 150, alignment: .trailing)
@@ -548,7 +584,7 @@ struct EntryView: View {
                 placeholder: "与转出相同",
                 size: 26,
                 weight: .semibold,
-                active: activeField == .received,
+                active: padOpen && activeField == .received,
                 accent: accent
             )
             .frame(maxWidth: 200, alignment: .trailing)
@@ -749,7 +785,7 @@ struct EntryView: View {
                     placeholder: "0.00",
                     size: 17,
                     weight: .semibold,
-                    active: activeField == .fee,
+                    active: padOpen && activeField == .fee,
                     accent: accent
                 )
                 .frame(maxWidth: 160, alignment: .trailing)

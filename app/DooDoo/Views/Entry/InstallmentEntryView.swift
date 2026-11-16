@@ -38,6 +38,10 @@ struct InstallmentEntryView: View {
     @State private var vm = InstallmentEntryViewModel()
     /// 当前由自绘键盘编辑的数值字段（M4 第 5 条，与记一笔共用 `NumberPad`）。
     @State private var activeField: NumericField = .due
+    /// 键盘是否展开。**默认收起**（v2.1）：这个面板字段最密，
+    /// 常驻键盘会把「剩余期数 / 每期 / 末期 / 含利息」整段压在屏幕外，
+    /// 而存量录入是连录 58 笔的动作，看不见全貌就等于每次都要盲填。
+    @State private var padOpen = false
     /// 名称是文本，仍用系统键盘；它一聚焦就把自绘键盘收起。
     @FocusState private var nameFocused: Bool
     /// 存完的短回执（「已录 · 还差 57 笔」）。非 nil 时挡住主按钮 1.1 秒，防连点记两笔。
@@ -48,6 +52,19 @@ struct InstallmentEntryView: View {
     /// 面板里所有要用数字键盘的字段。名称不在其中。
     private enum NumericField: Hashable {
         case due, principal, interestPart, remaining, total, interest, last
+
+        /// 收起时提示「上滑输入 ×」用的名字，与界面上那一行标签一致。
+        var title: String {
+            switch self {
+            case .due: return "剩余应还"
+            case .principal: return "本金"
+            case .interestPart: return "利息"
+            case .remaining: return "剩余期数"
+            case .total: return "总共几期"
+            case .interest: return "含利息"
+            case .last: return "末期金额"
+            }
+        }
     }
 
     private var accentStyle: AccentStyle { settingsList.first?.accent ?? .ink }
@@ -84,6 +101,10 @@ struct InstallmentEntryView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) { footer }
         .safeAreaInset(edge: .bottom, spacing: 0) { numberPadArea }
         .overlay(alignment: .top) { receiptBanner }
+        .onChange(of: nameFocused) { _, focused in
+            // 名称一聚焦就把数字键盘收掉，系统键盘要占底部。
+            if focused, padOpen { setPad(open: false) }
+        }
         .task {
             vm.load(context: context)
             if let preferredAccount { vm.selectAccount(preferredAccount) }
@@ -104,27 +125,32 @@ struct InstallmentEntryView: View {
 
     // MARK: - 自绘键盘
 
-    /// 与记一笔共用的同一块键盘（`NumberPad`）。期数与「总共几期」只收整数，
+    /// 与记一笔共用的同一块键盘（`NumberPad`），共用同一个键盘坞 `NumberPadDock`：
+    /// 默认收起，点某个数（或上滑抓条）才拉上来。期数与「总共几期」只收整数，
     /// 那边的小数点格留空。
     @ViewBuilder
     private var numberPadArea: some View {
+        // 名称键盘在场时整块坞让开，理由同记一笔：抓条浮在系统键盘上，
+        // 一点还会在它上方再开一块数字键盘。
         if !nameFocused {
-            VStack(spacing: 0) {
-                Rectangle()
-                    .fill(Palette.line)
-                    .frame(height: 0.5)
+            NumberPadDock(
+                isOpen: padOpen,
+                hint: "上滑输入\(activeField.title)",
+                onToggle: { setPad(open: $0) }
+            ) {
                 NumberPad(
                     text: activeBinding,
                     accent: accent,
                     accentWash: Palette.accentWash(accentStyle),
                     allowsDecimal: activeField != .remaining && activeField != .total
                 )
-                .padding(.horizontal, 8)
-                .padding(.top, 8)
-                .padding(.bottom, 8)
             }
-            .background(Palette.page)
-            .transition(.opacity)
+        }
+    }
+
+    private func setPad(open: Bool) {
+        withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) {
+            padOpen = open
         }
     }
 
@@ -142,9 +168,13 @@ struct InstallmentEntryView: View {
         }
     }
 
+    /// 切换正在编辑的字段，并把键盘拉上来。
     private func activate(_ field: NumericField) {
-        if nameFocused { nameFocused = false }
         activeField = field
+        withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) {
+            if nameFocused { nameFocused = false }
+            padOpen = true
+        }
     }
 
     // MARK: - 顶部
@@ -315,7 +345,7 @@ struct InstallmentEntryView: View {
                     placeholder: "9",
                     size: 20,
                     weight: .semibold,
-                    active: activeField == .remaining,
+                    active: padOpen && activeField == .remaining,
                     accent: accent
                 )
                 .frame(maxWidth: 80, alignment: .trailing)
@@ -329,8 +359,9 @@ struct InstallmentEntryView: View {
             HStack(spacing: 6) {
                 ForEach(periodPresets, id: \.self) { value in
                     presetChip(String(value), selected: vm.remainingText == String(value)) {
+                        // 芯片只负责填值，不切焦点：键盘展开时正在改的可能是「剩余应还」，
+                        // 点一下 12 期就把焦点偷走，用户接着敲数字会填进期数里。
                         vm.remainingText = String(value)
-                        activeField = .remaining
                     }
                 }
                 presetChip("其他", selected: !periodPresets.map(String.init).contains(vm.remainingText) && !vm.remainingText.isEmpty) {
@@ -381,7 +412,7 @@ struct InstallmentEntryView: View {
                     placeholder: "0.00",
                     size: 15,
                     weight: .medium,
-                    active: activeField == .last,
+                    active: padOpen && activeField == .last,
                     accent: accent
                 )
                 .frame(maxWidth: 130, alignment: .trailing)
@@ -413,7 +444,7 @@ struct InstallmentEntryView: View {
                     placeholder: "0.00",
                     size: 30,
                     weight: .bold,
-                    active: activeField == .due,
+                    active: padOpen && activeField == .due,
                     accent: accent
                 )
                 .frame(maxWidth: 200, alignment: .trailing)
@@ -474,7 +505,7 @@ struct InstallmentEntryView: View {
                 placeholder: placeholder,
                 size: 17,
                 weight: .semibold,
-                active: activeField == field,
+                active: padOpen && activeField == field,
                 accent: accent
             )
             .frame(maxWidth: 180, alignment: .trailing)
@@ -569,7 +600,7 @@ struct InstallmentEntryView: View {
                     placeholder: "12",
                     size: 15,
                     weight: .medium,
-                    active: activeField == .total,
+                    active: padOpen && activeField == .total,
                     accent: accent
                 )
                 .frame(maxWidth: 90, alignment: .trailing)
@@ -604,7 +635,7 @@ struct InstallmentEntryView: View {
                         placeholder: "176.99",
                         size: 15,
                         weight: .medium,
-                        active: activeField == .interest,
+                        active: padOpen && activeField == .interest,
                         accent: accent
                     )
                     .frame(maxWidth: 130, alignment: .trailing)

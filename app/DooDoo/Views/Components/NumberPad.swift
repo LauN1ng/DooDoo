@@ -191,6 +191,88 @@ struct NumberPad: View {
     }
 }
 
+/// 底部键盘坞（v2.1）：键盘**默认收起**成一条抓条，点金额或上滑才拉上来。
+///
+/// 为什么要收：键盘 242 + 页脚 80 ≈ 322pt 常驻，占掉约 38% 屏高。
+/// 记一笔顶部有账户卡，下面还有分类网格、评分、备注，全被推到屏幕外；
+/// 分期录入更糟，一屏只剩「剩余应还」一个数。键盘是**输入那一刻**才需要的东西，
+/// 不是常驻家具——收起后底部只留约 44pt，面板里所有字段重新回到一屏。
+///
+/// 状态由调用方持有（`isOpen` + `onToggle`），组件只管画：
+/// 收起 = 抓条 + 一行提示，展开 = 抓条 + 键盘。抓条在两种状态下位置不变，
+/// 所以展开时只有键盘从它下面长出来，不会出现「两条把手的错位感」。
+struct NumberPadDock<Pad: View>: View {
+    /// 键盘是否展开。
+    var isOpen: Bool
+    /// 收起时抓条下面那行提示，说明上滑能干什么。
+    var hint: String
+    /// 展开 / 收起请求。**动画由调用方的 `withAnimation` 负责**，
+    /// 组件不加自己的 `.animation`——否则 `safeAreaInset` 的高度变化会被两套动画撕开。
+    var onToggle: (Bool) -> Void
+    @ViewBuilder var pad: () -> Pad
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Rectangle()
+                .fill(Palette.line)
+                .frame(height: 0.5)
+            handle
+            if isOpen {
+                pad()
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 8)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .background(Palette.page)
+    }
+
+    /// 抓条。收起时连提示一起，高度约 44pt（≥ 44pt 命中区）；展开时只剩 4pt 细条。
+    private var handle: some View {
+        VStack(spacing: 5) {
+            Capsule()
+                .fill(Palette.line)
+                .frame(width: 38, height: 4)
+            if !isOpen {
+                Text(hint)
+                    .font(.system(size: 10.5))
+                    // 用 `sub` 不用 `faint`：这行字是「怎么用」的说明，承载信息。
+                    // `faint` 在页底只有 2.4:1，按本表注释只能当装饰。
+                    .foregroundStyle(Palette.sub)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, isOpen ? 8 : 10)
+        .padding(.bottom, isOpen ? 8 : 12)
+        .contentShape(Rectangle())
+        .onTapGesture { request(!isOpen) }
+        .gesture(
+            // 上滑展开、下滑收起。只在抓条上收手势——铺到键盘上会把按键的按下态吃掉。
+            DragGesture(minimumDistance: 8)
+                .onEnded { value in
+                    if value.translation.height < -12 {
+                        request(true)
+                    } else if value.translation.height > 12 {
+                        request(false)
+                    }
+                }
+        )
+        .accessibilityElement()
+        .accessibilityLabel(isOpen ? "收起数字键盘" : "展开数字键盘")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { request(!isOpen) }
+    }
+
+    private func request(_ open: Bool) {
+        guard open != isOpen else { return }
+        // 和键盘按键一样给一次轻震：这两处是同一类"机械"动作。
+        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+        onToggle(open)
+    }
+}
+
 /// 数字键的按下态：浅主色底 + 缩到 0.97，120ms。
 ///
 /// 不用系统默认的高亮（整块变灰），那套材质是为系统键盘准备的，
