@@ -68,7 +68,6 @@ struct InstallmentEntryView: View {
                     }
                     mainCard
                     extraCard
-                    advancedCard
                     previewBox
                 }
                 .padding(.horizontal, 16)
@@ -495,9 +494,6 @@ struct InstallmentEntryView: View {
                 .font(.system(size: 14))
                 .foregroundStyle(Palette.ink)
                 .focused($focus, equals: .name)
-            Text("留空就叫「\(vm.resolvedName)」")
-                .font(.system(size: 10))
-                .foregroundStyle(Palette.faint)
 
             Divider().overlay(Palette.line)
 
@@ -519,18 +515,18 @@ struct InstallmentEntryView: View {
                     .font(.system(size: 12))
                     .foregroundStyle(Palette.sub)
             }
-            Text(periodBreakdown)
-                .font(.system(size: 10))
-                .foregroundStyle(Palette.faint)
+            // 只剩真正有信息量的那一行（第几期起、还剩几期）；
+            // 原来填完之前还会显示一句解释「填了才能显示…」，属于用户点名的无关信息。
+            if !periodBreakdown.isEmpty {
+                Text(periodBreakdown)
+                    .font(.system(size: 10))
+                    .foregroundStyle(Palette.faint)
+            }
 
             Divider().overlay(Palette.line)
 
             // 含利息 —— 年化的唯一输入。拆两栏时它已经在上面的「利息」格里，不重复问
-            if vm.splitsInterest {
-                Text("「含利息」取上面那格利息，年化会自动算")
-                    .font(.system(size: 10))
-                    .foregroundStyle(Palette.faint)
-            } else {
+            if !vm.splitsInterest {
                 HStack(spacing: 6) {
                     Text("含利息")
                         .font(.system(size: 13))
@@ -548,23 +544,15 @@ struct InstallmentEntryView: View {
                         .focused($focus, equals: .interest)
                         .frame(maxWidth: 120)
                 }
-                Text("账单上「含利息」那一栏，不是每期利息×期数")
-                    .font(.system(size: 10))
-                    .foregroundStyle(Palette.faint)
             }
 
             Divider().overlay(Palette.line)
 
             // 下一期还款日
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("下一期还款日")
-                        .font(.system(size: 13))
-                        .foregroundStyle(Palette.sub)
-                    Text("账户的还款日自动带出，可以改")
-                        .font(.system(size: 10))
-                        .foregroundStyle(Palette.faint)
-                }
+                Text("下一期还款日")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Palette.sub)
                 Spacer(minLength: 8)
                 DatePicker("", selection: $vm.dueDate, displayedComponents: .date)
                     .labelsHidden()
@@ -575,45 +563,18 @@ struct InstallmentEntryView: View {
     }
 
     private var periodBreakdown: String {
-        guard vm.totalPeriods != nil else {
-            return "填了才能显示「第 4/12 期」，也是算年化需要的分母"
-        }
+        guard vm.totalPeriods != nil else { return "" }
         let p = vm.periods
         return "第 \(p.paid + 1)/\(p.total) 期起 · 未来 \(p.remaining) 期"
     }
 
     // MARK: - 高级
-
-    private var advancedCard: some View {
-        card {
-            Button {
-                withAnimation(.easeOut(duration: 0.18)) { vm.showingAdvanced.toggle() }
-            } label: {
-                HStack {
-                    Text("已享减免")
-                        .font(.system(size: 12.5))
-                        .foregroundStyle(Palette.ink2)
-                    Spacer(minLength: 8)
-                    Text("选填")
-                        .font(.system(size: 9.5, weight: .semibold))
-                        .foregroundStyle(Palette.faint)
-                    Image(systemName: vm.showingAdvanced ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Palette.faint)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
-            if vm.showingAdvanced {
-                Divider().overlay(Palette.line)
-                moneyRow("国家贴息等", placeholder: "如 12.22", text: $vm.rebateText, field: .rebate)
-                Text("只是记下来，不从每期金额里扣——那是已经优惠掉的，不是还要还的钱。")
-                    .font(.system(size: 10))
-                    .foregroundStyle(Palette.faint)
-            }
-        }
-    }
+    //
+    // 2026-11-16 用户定案：「已享减免不要」。整块（含「国家贴息等」输入与说明文字）
+    // 已从界面移除——分期录入只回答"还欠多少、分几期、每期多少"，
+    // 减免是已优惠掉的钱，记进来只会增加录入负担。
+    // 数据模型 `Installment.totalRebate` 与 ViewModel 的 `rebateText` 保留不动：
+    // 已存数据要能读出来，未来若要恢复也不必改 schema。
 
     private func moneyRow(
         _ title: String,

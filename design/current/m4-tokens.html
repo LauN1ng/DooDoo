@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DooDoo · M4 配色与 design token · 六版底色对照</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:#EDEAE4;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",sans-serif;color:#1D1C1A;padding:0 0 40px}
+.top{background:#F4F1EC;border-bottom:1px solid #E2DFD9;padding:20px 28px 18px}
+.top h1{font-size:19px;font-weight:650;margin:0 0 6px;letter-spacing:-.01em}
+.top p{font-size:12.5px;color:#6B6862;margin:0;line-height:1.65}
+.top b{color:#1D1C1A;font-weight:600}
+.wrap{display:grid;grid-template-columns:repeat(3,330px);gap:20px;justify-content:center;padding:24px 20px 0}
+.panel{background:#FFFFFF;border:1px solid #E2DFD9;border-radius:16px;overflow:hidden}
+.ph{display:flex;align-items:baseline;gap:8px;padding:13px 16px 11px;border-bottom:1px solid #EFECE5}
+.ph .k{font-size:20px;font-weight:700;line-height:1;color:#3ABF58}
+.ph .n{font-size:13px;font-weight:600}
+.ph .hx{margin-left:auto;font-size:11px;color:#8A867D;font-variant-numeric:tabular-nums}
+.stage{padding:14px 14px 10px;background:#EDEAE4}
+.screen{background:var(--page);border-radius:20px;padding:10px 11px 13px;box-shadow:0 0 0 1px rgba(29,28,26,.10)}
+.status{display:flex;justify-content:space-between;align-items:center;height:20px;font-size:10px;font-weight:600;padding:0 5px;color:var(--ink)}
+.batt{display:inline-block;width:16px;height:8px;border:1px solid var(--ink);border-radius:2px;position:relative}
+.batt:after{content:"";position:absolute;inset:1px;background:var(--ink);border-radius:1px}
+.head{display:flex;align-items:center;justify-content:space-between;margin:8px 2px 12px}
+.logo{font-size:17px;font-weight:700;letter-spacing:-.02em;color:var(--ink)}
+.tab{width:100px;height:30px;border-radius:15px;background:var(--slot);display:flex;align-items:center;gap:1px;padding:2px}
+.tab i{flex:1;height:26px;border-radius:13px;display:grid;place-items:center;font-style:normal;font-size:11px;color:var(--ink2)}
+.tab i.on{background:var(--card);box-shadow:0 1px 3px rgba(29,28,26,.12);color:var(--ink)}
+.card{background:var(--card);border-radius:18px;box-shadow:var(--shadow),var(--edge);padding:12px 13px;margin-bottom:10px}
+.daytop{display:flex;justify-content:space-between;align-items:baseline}
+.day{font-size:14px;font-weight:600;color:var(--ink)}
+.wk{font-size:10.5px;color:var(--sub);margin-left:5px;font-weight:400}
+.tot{font-size:11px;color:var(--sub)}
+.tot b{font-size:14px;color:#C0392B;font-weight:650;font-variant-numeric:tabular-nums}
+.hr{height:1px;background:var(--line);margin:10px 0 2px}
+.tx{display:flex;align-items:center;gap:9px;padding:8px 0}
+.ic{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;flex:0 0 34px;background:#F3F0EA}
+.ic img{width:25px;height:25px;display:block}
+.tt{font-size:12.5px;font-weight:500;color:var(--ink)}
+.ts{font-size:10.5px;color:var(--sub);margin-top:2px}
+.am{margin-left:auto;font-size:12.5px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.ovlbl{font-size:10.5px;color:var(--sub);margin-bottom:6px}
+.ovnums{display:flex;gap:16px;align-items:baseline;margin-bottom:4px}
+.ovnums div span{font-size:10px;color:var(--sub);display:block}
+.ovnums div b{font-size:15px;font-weight:650;font-variant-numeric:tabular-nums}
+.ovnums .mine b{color:#4C8DF6}
+.ovnums .owe b{color:#E8734A}
+.spark{width:100%;height:26px;display:block}
+.debt{background:#2F6CB4;color:#fff;border-radius:13px;padding:10px 12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.debt .bn{font-size:11.5px;font-weight:500;opacity:.9}
+.debt .bv{font-size:14px;font-weight:650;font-variant-numeric:tabular-nums}
+.cta{height:36px;border-radius:18px;background:#3ABF58;color:#fff;display:grid;place-items:center;font-size:12.5px;font-weight:600}
+.pf{padding:11px 16px 14px}
+.sw{display:flex;gap:0;margin-bottom:22px;border-radius:6px;border:1px solid #EFECE5}
+.sw div{flex:1;height:22px;position:relative}
+.sw div span{position:absolute;bottom:-15px;left:3px;font-size:8px;color:#8A867D;white-space:nowrap}
+.metrics{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+.metrics span{font-size:10px;padding:3px 7px;border-radius:5px;background:#F4F1EC;color:#5F5C55;font-variant-numeric:tabular-nums}
+.metrics span.bad{background:#FDECEC;color:#A32D2D}
+.metrics span.ok{background:#EAF6EC;color:#2E7D45}
+.vd{margin-top:9px;font-size:11.5px;line-height:1.5;color:#5F5C55}
+.vd b{color:#1D1C1A;font-weight:600}
+.foot{max-width:1030px;margin:24px auto 0;background:#fff;border:1px solid #E2DFD9;border-radius:14px;padding:18px 22px}
+.foot h2{font-size:14px;font-weight:650;margin:0 0 10px}
+.foot h2:not(:first-child){margin-top:18px}
+.foot table{width:100%;border-collapse:collapse;font-size:12px}
+.foot td,.foot th{border-bottom:1px solid #EFECE5;padding:6px 8px;text-align:left}
+.foot th{font-weight:600;color:#5F5C55;font-size:11px}
+.foot code{font-size:11px;background:#F4F1EC;padding:1px 5px;border-radius:4px}
+.rule{font-size:12px;line-height:1.75;color:#5F5C55;margin:8px 0 0}
+.rule b{color:#1D1C1A}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>M4 第 1 步 · 整体配色与设计 token｜六版底色对照</h1>
+  <p>同一屏组件样本（顶部 tab / 日卡 / 流水行 / 总览卡 / 负债卡 / 记一笔按钮），只动 <b>页面底色 · 卡片白 · 灰字层级 · 阴影描边</b> 四个变量。
+  判据：文本 ≥ <b>4.5:1</b>、tab 槽比页底更深且色差 ≥ <b>5%</b>、触摸目标 <b>44pt</b>。
+  A = 代码现值（暖白 #F7F5F1，非纯白）；B = 用户要的纯白对照基线。<b>状态：待定案，不得据此写代码。</b></p>
+</div>
+<div class="wrap" id="wrap"></div>
+<div class="foot">
+  <h2>共通 token（不随底色变）</h2>
+  <table>
+    <tr><th>组</th><th>值</th></tr>
+    <tr><td>固定色</td><td><code>ink #1D1C1A</code> · <code>品牌绿 #3ABF58</code>（交互/功能）· <code>支出 #C0392B</code> · <code>收入 #2E9E6B</code> · <code>曲线 我有 #4C8DF6 / 我欠 #E8734A</code> · 卡面彩色（内容层）</td></tr>
+    <tr><td>字阶</td><td>大数字 32 / 金额 22 / 标题 21 / 正文 14–17 / 次文字 12–13 / 辅助 11（<b>下限 11pt</b>，现状 9.5pt 逾期红字待修）</td></tr>
+    <tr><td>间距 · 圆角 · 层厚</td><td>4/8/12/16/20/24；卡左右内距 20、卡内文字 18；屏幕 44 / 日卡 24 / tab 17 / 图标槽 13；首页卡堆 10pt、资产卡 16pt</td></tr>
+    <tr><td>触摸 · 动效</td><td>44 × 44pt（tab 段现 36×30，用 <code>contentShape</code> 扩命中区不改视觉）；150–300ms，尊重 <code>prefers-reduced-motion</code></td></tr>
+  </table>
+  <h2>三条连带影响（实测，非目测）</h2>
+  <p class="rule"><b>① B 纯白</b>：页底与白卡色差 <b>0%</b>，卡片边界只能靠 <code>inset 描边 + 阴影</code> 撑起来；这也是规格第 226 行「白页头 + 白卡片连成一片」的风险点。<br>
+  <b>② F 深暖灰</b>：若沿用旧 tab 槽 <code>#EBE7E0</code>，与页底色差只有 <b>3.7%</b>，直接踩中「浅色容器浮白卡色差 &lt;5% 必然糊」→ 槽色必须同步加深到 <code>#DFD9CD</code>（16.3%）。<br>
+  <b>③ A 现状</b>：<code>sub #A8A39A</code> 在白卡上只有 <b>2.51:1</b>；<code>faint #C6C2B9</code> 1.78:1 只能降级为装饰色。B–F 已把辅助文字全部拉到 ≥4.5:1，视觉上灰字会明显变深。</p>
+  <h2>技能与优先级</h2>
+  <p class="rule">本轮调用 <code>ui-ux-pro-max</code>（color / style / ux / swiftui）与 <code>ios-hig-design</code>（44pt / 4.5:1 / 11pt / Dynamic Type），只取可用性规则与两个中性底色候选；其 Web 专属结论（落地页结构、Claymorphism、Google Fonts、禁 emoji 图标、hover/cursor/多断点、系统语义色替代硬编码）一律不采用。优先级：<b>AGENTS.md &gt; PRD v2.3 &gt; 四份冻结规格 &gt; skill 通用建议</b>。</p>
+</div>
+<script>
+const V=[
+ {k:'A',n:'现状 · 暖白',page:'#F7F5F1',ink2:'#6B6862',sub:'#A8A39A',line:'#EFECE5',slot:'#EBE7E0',shadow:'0 10px 28px rgba(29,28,26,.045)',edge:'0 0 0 0 rgba(0,0,0,0)',gp:'8.6%',gs:'12.3%',subcr:'2.51:1',vd:'<b>基线</b>：代码现值。辅助文字 2.51:1 不达标，保留只为对照。',bad:true},
+ {k:'B',n:'纯白 · 对照基线',page:'#FFFFFF',ink2:'#6B6862',sub:'#7A766E',line:'#EFECE5',slot:'#EBE7E0',shadow:'0 2px 14px rgba(29,28,26,.10)',edge:'inset 0 0 0 1px #E8E4DC',gp:'0.0%',gs:'19.8%',subcr:'4.52:1',vd:'<b>零色差</b>：最干净，但白卡边界全靠描边与阴影，风险最高。'},
+ {k:'C',n:'更暖 · 米白',page:'#F5F1E8',ink2:'#6B6862',sub:'#7A766E',line:'#EFE7D6',slot:'#E8E2D3',shadow:'0 10px 28px rgba(29,28,26,.06)',edge:'0 0 0 0 rgba(0,0,0,0)',gp:'11.9%',gs:'13.5%',subcr:'4.52:1',vd:'暖调更强，卡片浮起最自然；检验是否发黄、与品牌绿是否打架。'},
+ {k:'D',n:'中性 · 灰白',page:'#F5F5F7',ink2:'#63636B',sub:'#737379',line:'#E7E7EB',slot:'#E7E7EB',shadow:'0 10px 28px rgba(29,28,26,.06)',edge:'0 0 0 0 rgba(0,0,0,0)',gp:'8.6%',gs:'12.4%',subcr:'4.71:1',vd:'去掉黄调（skill 的 Bento / Apple 底）；灰字改中性冷灰，最「系统感」。'},
+ {k:'E',n:'微绿 · 白',page:'#F2F7F2',ink2:'#5F6B60',sub:'#6B776B',line:'#E1EBE1',slot:'#E2EBE2',shadow:'0 10px 28px rgba(29,28,26,.06)',edge:'0 0 0 0 rgba(0,0,0,0)',gp:'8.2%',gs:'11.7%',subcr:'4.69:1',vd:'呼应品牌绿但不铺满；检验白卡是否显得发青、金额色是否被带偏。'},
+ {k:'F',n:'深一档 · 暖灰',page:'#EFEBE3',ink2:'#5F5C55',sub:'#76736C',line:'#E2DDD3',slot:'#DFD9CD',shadow:'0 8px 22px rgba(29,28,26,.04)',edge:'0 0 0 0 rgba(0,0,0,0)',gp:'16.7%',gs:'16.3%',subcr:'4.73:1',vd:'<b>层级最清晰</b>：底色够深，白卡自浮、阴影可减。槽色必须同步加深，沿用旧色只有 3.7% 必糊。'}
+];
+const spark='<svg class="spark" viewBox="0 0 240 26" preserveAspectRatio="none"><polyline points="0,20 30,17 60,19 90,12 120,14 150,8 180,11 210,5 240,7" fill="none" stroke="#4C8DF6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><polyline points="0,9 30,11 60,8 90,13 120,11 150,16 180,14 210,19 240,17" fill="none" stroke="#E8734A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function screenHTML(v){return `
+<div class="screen" style="--page:${v.page};--card:#FFFFFF;--ink:#1D1C1A;--ink2:${v.ink2};--sub:${v.sub};--line:${v.line};--slot:${v.slot};--shadow:${v.shadow};--edge:${v.edge}">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="head"><span class="logo">DooDoo</span>
+    <div class="tab"><i class="on">☰</i><i>▣</i><i>⚙</i></div>
+  </div>
+  <div class="card">
+    <div class="daytop"><div><span class="day">11月14日</span><span class="wk">星期五</span></div><div class="tot">支出 <b>¥128.50</b></div></div>
+    <div class="hr"></div>
+    <div class="tx"><div class="ic"><img src="../../assets/emoji/picked/CookedRice.png" alt=""></div><div><div class="tt">午饭</div><div class="ts">吃 › 正餐 · 12:20</div></div><div class="am">−38.00</div></div>
+    <div class="tx"><div class="ic"><img src="../../assets/emoji/picked/Bus.png" alt=""></div><div><div class="tt">地铁</div><div class="ts">行 › 公共交通 · 09:05</div></div><div class="am">−4.50</div></div>
+  </div>
+  <div class="card" style="padding:10px 13px">
+    <div class="ovlbl">资产 · 近 30 天</div>
+    <div class="ovnums"><div class="mine"><span>我有</span><b>3,120.00</b></div><div class="owe"><span>我欠</span><b>48,466.00</b></div></div>
+    ${spark}
+  </div>
+  <div class="debt"><span class="bn">招商银行 · 信用卡</span><span class="bv">22,772.69</span></div>
+  <div class="cta">＋ 记一笔</div>
+</div>`}
+document.getElementById('wrap').innerHTML=V.map(v=>`
+<div class="panel">
+  <div class="ph"><span class="k">${v.k}</span><span class="n">${v.n}</span><span class="hx">page ${v.page}</span></div>
+  <div class="stage">${screenHTML(v)}</div>
+  <div class="pf">
+    <div class="sw">
+      <div style="background:${v.page}"><span>page</span></div>
+      <div style="background:#FFFFFF"><span>card</span></div>
+      <div style="background:${v.ink2}"><span>ink2</span></div>
+      <div style="background:${v.sub}"><span>sub</span></div>
+      <div style="background:${v.line}"><span>line</span></div>
+      <div style="background:${v.slot}"><span>slot</span></div>
+    </div>
+    <div class="metrics">
+      <span class="${v.gp==='0.0%'?'bad':'ok'}">页底色差 ${v.gp}</span>
+      <span class="ok">槽色差 ${v.gs}</span>
+      <span class="${v.bad?'bad':'ok'}">sub ${v.subcr}</span>
+    </div>
+    <div class="vd">${v.vd}</div>
+  </div>
+</div>`).join('');
+</script>
+</body>
+</html>

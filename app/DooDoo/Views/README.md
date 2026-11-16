@@ -1,6 +1,6 @@
 # Views · SwiftUI 视图
 
-> 状态：**M3-10**。首页、资产页、记一笔（含内联分期 + 账期归属）、存量分期录入、卡片详情都可用。
+> 状态：**M3 全闭合**（11-13 真机复看通过），主线转 M4 视觉。首页、资产页、记一笔（含内联分期 + 账期归属）、存量分期录入、卡片详情都可用；M4 只改外壳，不动口径与交互结构。
 > 首页：`FlowView` + `DeckView` / `DayCardView` / `TxRowView`；
 > 资产页：`AssetsView` + `NetWorthCard` / `AccountGroupView` / `AccountDeck` / `CardFace` / `GroupOverlay` / `AccountEditor`；
 > 记一笔：`Entry/EntryView` + `AccountCardStrip` / `CategoryPicker`；

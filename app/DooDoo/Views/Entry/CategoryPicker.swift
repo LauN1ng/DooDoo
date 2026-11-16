@@ -105,17 +105,18 @@ struct CategoryPicker: View {
         let selected = category.key == topKey
         return VStack(spacing: 5) {
             categoryIcon(category, size: topIconSize)
+                .scaleEffect(selected ? 1.06 : 1)
                 .frame(width: tile, height: tile)
                 .background(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(selected ? accent : Palette.card)
+                        // 2026-11-16：选中不再用主色实底（原来实底+白图标压成一块黑/色块），
+                        // 改成"12% 浅底 + 1.5pt 主色描边 + 图标微放大"，跟二级选择器同一套语言。
+                        .fill(selected ? accentWash : Palette.slot)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(selected ? .clear : Palette.line, lineWidth: 1)
+                        .strokeBorder(selected ? accent : .clear, lineWidth: 1.5)
                 )
-                .shadow(color: selected ? accent.opacity(0.28) : .black.opacity(0.04),
-                        radius: selected ? 7 : 2, x: 0, y: selected ? 4 : 1)
 
             Text(category.name)
                 .font(.system(size: 10.5))
@@ -126,6 +127,7 @@ struct CategoryPicker: View {
         .frame(width: 56)
         .contentShape(Rectangle())
         .onTapGesture { onSelectTop(category) }
+        .animation(.easeOut(duration: 0.16), value: selected)
         .accessibilityAddTraits(selected ? [.isSelected] : [])
     }
 
@@ -175,7 +177,7 @@ struct CategoryPicker: View {
             categoryIcon(category, size: subIconSize)
                 .frame(width: subTile, height: subTile)
                 .background(
-                    Circle().fill(selected ? accentWash : Palette.page)
+                    Circle().fill(selected ? accentWash : Palette.slot)
                 )
                 .overlay(
                     Circle().strokeBorder(selected ? accent : .clear, lineWidth: 1.5)

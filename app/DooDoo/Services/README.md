@@ -1,6 +1,6 @@
 # Services · 领域服务
 
-> 状态：**M3-11**——`LedgerService` 已有 `insert` / `softDelete` / `recalculateAll` / `adjustAccountBalance`；`SeedService` 按 `seedVersion` 重建演示数据；`InstallmentService` 建分期计划并展开未来期（存量录入与记一笔内联分期共用，后者带 `createdFromEntry`）；`AssetSummaryService` 做资产页聚合。
+> 状态：**M3 全闭合（11-13 真机复看通过）**——`LedgerService` 已有 `insert` / `softDelete` / `recalculateAll` / `adjustAccountBalance`；`SeedService` 按 `seedVersion` 重建演示数据；`InstallmentService` 建分期计划并展开未来期（存量录入与记一笔内联分期共用，后者带 `createdFromEntry`）；`AssetSummaryService` 做资产页聚合。
 
 | 入口 | 职责 |
 |---|---|

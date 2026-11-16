@@ -1,6 +1,6 @@
 # ViewModels · 状态与输入校验
 
-> 状态：**M3-10**——`EntryViewModel.swift`（记一笔四类型，含内联分期与账期归属）+ `InstallmentEntryViewModel.swift`（存量分期快速连录，手填 3 个数）。
+> 状态：**M3 全闭合（11-13 真机复看通过）**——`EntryViewModel.swift`（记一笔四类型，含内联分期与账期归属）+ `InstallmentEntryViewModel.swift`（存量分期快速连录，手填 3 个数）。
 > **不是空目录。** 本文件此前写「M0 空目录」，那是 2026-11-08 的快照，已过期（2026-11-10 核准）。
 
 ## 入口

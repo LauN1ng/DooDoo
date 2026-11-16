@@ -137,8 +137,11 @@ struct TxRowView: View {
             slot
                 .frame(width: 42, height: 42)
                 .background(
+                    // 2026-11-16：图标槽从「每类一个色底」改为与记一笔选择器共用的
+                    // 中性槽（`Palette.slot`）。彩色改由 Fluent 3D emoji 自身提供，
+                    // 否则一屏八种粉彩底会把灰白体系的层次压没。
                     RoundedRectangle(cornerRadius: 13, style: .continuous)
-                        .fill(Color(hexString: transaction.category?.tintHex ?? "#F2F1ED"))
+                        .fill(Palette.slot)
                 )
 
             VStack(alignment: .leading, spacing: 2) {

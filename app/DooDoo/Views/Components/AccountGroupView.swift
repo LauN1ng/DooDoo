@@ -37,7 +37,9 @@ struct AccountGroupView: View {
             Text(title)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(Palette.ink)
-            Text("\(accounts.count) 个 · \(MoneyMath.money(total))")
+            // 2026-11-16：原来这里是「3 个 · -23,623.69」，金额与右侧「欠款合计」
+            // 完全重复，用户点名多余。只留账户数量。
+            Text("\(accounts.count) 个")
                 .font(.system(size: 11))
                 .foregroundStyle(Palette.sub)
                 .lineLimit(1)

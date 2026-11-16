@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// 根视图：页头（字标 + 顶部 tab）与三个页面容器。
+/// 根视图：页头（顶部 tab）与三个页面容器。
 ///
-/// **M0 范围内只保证结构正确**：三段等宽、选中态可切换、内容随 tab 换。
-/// 材质、精确尺寸（112×34 / 36×30 / 圆角 17 / `#EBE7E0`）留给 M4，
-/// 依据 `docs/design/spec/首页规格冻结-v1.0.md` 第二节。
+/// **M4 2026-11-16 落地**：按用户定案去掉左侧「DooDoo」字样，页头只留居中 tab；
+/// 槽体视觉仍是 34 高胶囊（规格第二节 112×34 / 段 36×30 / 圆角 17），
+/// 但材质改走 `Palette.tabBed`、命中区扩到 40×44（36×30 低于 44pt 推荐触摸尺寸）。
 struct RootView: View {
     @State private var tab: RootTab = .flow
 
@@ -19,12 +19,9 @@ struct RootView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .center, spacing: 0) {
-            Text("DooDoo")
-                .font(.system(size: 19, weight: .semibold))
-                .kerning(-0.4)
-
-            Spacer(minLength: 12)
+        // 2026-11-16 用户定案：去掉左侧「DooDoo」字样，页头只留 tab，居中。
+        HStack(spacing: 0) {
+            Spacer(minLength: 0)
 
             HStack(spacing: 0) {
                 ForEach(RootTab.allCases) { item in
@@ -32,15 +29,19 @@ struct RootView: View {
                         tab = item
                     } label: {
                         Image(systemName: item.icon)
-                            .font(.system(size: 17, weight: tab == item ? .semibold : .regular))
+                            .font(.system(size: 16, weight: tab == item ? .medium : .regular))
                             .frame(width: 36, height: 30)
-                            .foregroundStyle(tab == item ? Color.primary : Color.secondary.opacity(0.6))
+                            .foregroundStyle(tab == item ? Palette.ink : Palette.sub)
                             .background {
                                 if tab == item {
-                                    RoundedRectangle(cornerRadius: 15, style: .continuous)
-                                        .fill(Color(.systemBackground))
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .fill(Palette.card)
+                                        .shadow(color: Palette.ink.opacity(0.09), radius: 2, x: 0, y: 1)
                                 }
                             }
+                            // 视觉尺寸仍是 36×30（规格第二节），命中区扩到 40×44：
+                            // 36×30 低于 44pt 推荐触摸尺寸，是 PROGRESS 里挂着的未闭合项。
+                            .frame(width: 40, height: 44)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -48,16 +49,20 @@ struct RootView: View {
                     .accessibilityAddTraits(tab == item ? [.isSelected] : [])
                 }
             }
-            .padding(2)
-            .background {
+            // 槽体视觉仍是 34 高的胶囊（规格第二节），120×34；
+            // 上下多出的 5pt 是命中区，透明不着色。
+            .background(alignment: .center) {
                 RoundedRectangle(cornerRadius: 17, style: .continuous)
-                    .fill(Color(.systemGray5))
+                    .fill(Palette.tabBed)
+                    .frame(width: 120, height: 34)
             }
+
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, 20)
-        .padding(.top, 6)
+        .padding(.top, 4)
         // 规格里页头底到卡堆顶是 30（卡顶 116 − 页头底 86）。原来 12 太挤，卡片像贴着 tab。
-        .padding(.bottom, 24)
+        .padding(.bottom, 22)
     }
 
     @ViewBuilder

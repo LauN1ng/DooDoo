@@ -23,7 +23,7 @@ struct GroupOverlay: View {
             // material 必须挂在 Color.clear 的 background 上，才能糊到身后的兄弟视图
             Color.clear
                 .background(.ultraThinMaterial)
-                .overlay(Color(hex: 0xF7F5F1).opacity(0.42))
+                .overlay(Palette.page.opacity(0.42))
                 .ignoresSafeArea()
                 .onTapGesture(perform: onClose)
 

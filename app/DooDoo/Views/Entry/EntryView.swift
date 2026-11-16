@@ -389,7 +389,7 @@ struct EntryView: View {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
                         .background(
-                            Capsule().fill(selected ? accent : Palette.tabBed)
+                            Capsule().fill(selected ? Palette.accentFill(accentStyle) : Palette.tabBed)
                         )
                 }
                 .buttonStyle(.plain)
@@ -508,16 +508,19 @@ struct EntryView: View {
                             .frame(width: 18, height: 18)
                         Text(grade.title)
                             .font(.system(size: 11.5, weight: selected ? .semibold : .regular))
-                            .foregroundStyle(selected ? Palette.card : Palette.ink2)
+                            .foregroundStyle(selected ? Palette.ink : Palette.ink2)
                     }
                     .padding(.leading, 7)
                     .padding(.trailing, 10)
                     .padding(.vertical, 6)
                     .background(
-                        Capsule().fill(selected ? accent : Palette.card)
+                        // 2026-11-16：评分选中从实底黑块改为浅底 + 主色描边，
+                        // 与分类/账户的选中语言统一；一屏里不再出现第三个黑块。
+                        Capsule().fill(selected ? accentWash : Palette.card)
                     )
                     .overlay(
-                        Capsule().strokeBorder(selected ? .clear : Palette.line, lineWidth: 1)
+                        Capsule().strokeBorder(selected ? accent : Palette.line,
+                                               lineWidth: selected ? 1.5 : 1)
                     )
                 }
                 .buttonStyle(.plain)
@@ -801,7 +804,7 @@ struct EntryView: View {
                     .frame(height: 54)
                     .background(
                         RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(accent)
+                            .fill(Palette.accentFill(accentStyle))
                     )
             }
             .buttonStyle(.plain)

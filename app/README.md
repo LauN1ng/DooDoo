@@ -1,7 +1,7 @@
 # app/ · DooDoo iOS 工程
 
-> 状态：**M2b 收口中**（2026-11-10 核准）。M0 工程搭建、M1 记一笔+流水、M2a 账户+资产页均已闭合；M2b 还款/转账的 11-09 真机缺陷已修完，CI run `42648536927` 全绿（`DooDooTests/` 55 条单测）。
-> **M2a / M2b 都还差一步：真机复判。没在 iPhone 上复看前不得算完成**。M3 分期尚未动工。
+> 状态：**M3 已全闭合**（2026-11-13 真机复看通过核准），主线转入 M4 视觉。M0 / M1 / M2a / M2b / M3 全部完成，最新提交 `e21df3e`、CI run **#74 全绿**（`DooDooTests/` **179 条单测**）。
+> M2a 老库升级、M2b #13、M3-10/11/12 的真机复判均已通过；工程侧当前无待复判门禁。
 > 进度一律以仓库根的 `PROGRESS.md` 为准，本文件只记工程事实，不记进度。
 > 开发机是 **Windows + PowerShell，没有 Mac、没有 Xcode，只有一台 iPhone**——每次改代码只能靠 CI 编译、靠 iPhone 真机验收，本地只能说"写完了"。
 
@@ -18,7 +18,7 @@
 | 数据 | SwiftData，纯本地，无 CloudKit、无账号 |
 | 网络 | 零请求、零分析 SDK |
 | 并发 | `SWIFT_VERSION = 6.0`，`SWIFT_STRICT_CONCURRENCY = complete` |
-| CI | `.github/workflows/ios.yml` 两个 job，**串行**：`build`（XcodeGen → 模拟器 Debug 构建 → 55 条单测）→ `ipa`（真机 Release 构建 → 压 `Payload/` → 出未签名 IPA）。`build` 在 push 与 PR 都跑；`ipa` 只在 `push`（仅 main）或手动触发时跑。仓库 public，分钟不计费 |
+| CI | `.github/workflows/ios.yml` 两个 job，**串行**：`build`（XcodeGen → 模拟器 Debug 构建 → 179 条单测）→ `ipa`（真机 Release 构建 → 压 `Payload/` → 出未签名 IPA）。`build` 在 push 与 PR 都跑；`ipa` 只在 `push`（仅 main）或手动触发时跑。仓库 public，分钟不计费 |
 
 ## 二、目录（实际，不是设想）
 
@@ -41,7 +41,7 @@ app/
 │   │   └── Components/            # 日卡 / 卡面 / 层叠 / 净值卡 / 账户编辑器
 │   ├── Resources/Assets.xcassets  # AppIcon / AccentColor
 │   └── Resources/Emoji            # 3D 图标（bundle 根 PNG，必须用 Image(uiImage:) 加载）
-├── DooDooTests/                   # 6 个文件 55 条 @Test（1002 行）
+├── DooDooTests/                   # 16 个文件 179 条 @Test
 └── README.md
 ```
 
@@ -86,7 +86,7 @@ app/
 
 | 门禁 | 怎么验 | 结果 |
 |---|---|---|
-| 单测能过 | 当时 3 条冒烟（tab 定义 / 默认值 / 内存容器读写） | ✅ 现已扩到 55 条 |
+| 单测能过 | 当时 3 条冒烟（tab 定义 / 默认值 / 内存容器读写） | ✅ 现已扩到 179 条（CI #74 全绿） |
 | CI 能出未签名产物 | `DooDoo-unsigned-app`，5.8 MB，sha256 `a082958c…` | ✅ run `42423907280` |
 | CI 能出未签名 IPA | 手动 `Run workflow` → `ipa` job → artifact `DooDoo-unsigned-ipa` | ✅ 已多次出包，11-09 装上真机 |
 | iPhone 能装上并打开 | Sideloadly 自签 → 首页出得来 | ✅ 11-09 已装 |
@@ -98,8 +98,8 @@ app/
 
 ## 五、不要做的事
 
-- 不在 M3 之前做视觉打磨（门禁：M3 完成前不谈视觉）。
+- M3 已完成，当前是 M4 视觉阶段：只做外壳、不回头改口径（AGENTS 8.1 跨阶段禁令）。
 - 不把原型 HTML 的 CSS 数值直接硬编码进 SwiftUI，先对照 `docs/design/spec/`。
 - 不引入 SwiftUI 之外的 UI 框架、图表库、格式化库。
 - 不在这里写业务逻辑：记账走 Service，算钱走 Math。
-- 不提前写未来里程碑的模型——schema 一次只加本里程碑要用的。M3 的 `DebtPlan` / `Installment` / `BillStatement` 属 M3，M2 阶段不预埋：旧库迁移还没在真机验过，此时加新表会让崩溃无法归因。
+- 不提前写未来里程碑的模型——schema 一次只加本里程碑要用的。（M2 阶段约束；M3 的 `Installment` / `InstallmentPeriod` / `BillStatement` 已于 M3 落地并真机复看通过，不再是「未来模型」。）

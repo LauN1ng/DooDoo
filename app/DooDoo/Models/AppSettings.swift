@@ -36,10 +36,21 @@ enum AccentStyle: String, Codable, CaseIterable, Sendable {
     /// 与该主色配套的浅底（选中态的 12% 透明度底），用十六进制直写。
     var hex: UInt32 {
         switch self {
-        case .ink: 0x1D1C1A
-        case .green: 0x2FB344
+        case .ink: 0x1D1D1F
+        case .green: 0x3ABF58
         case .blue: 0x4A6CF7
         case .orange: 0xE09B2D
+        }
+    }
+
+    /// 实底按钮用的加深版：上面四个原值的白字对比全部达不到 4.5:1。
+    /// 数值全部实测（`#FFFFFF` 为底，sRGB，WCAG 2.x 相对亮度）。
+    var fillHex: UInt32 {
+        switch self {
+        case .ink: 0x1D1D1F      // 16.83:1
+        case .green: 0x1B8230    // 4.90:1（原 #1E8A32 只有 4.43，不达标）
+        case .blue: 0x4364EE     // 4.89:1
+        case .orange: 0x9C5F0C   // 5.18:1（原 #A9680F 只有 4.49，临界不合格）
         }
     }
 }
@@ -75,7 +86,9 @@ final class AppSettings {
     /// 默认值必须写字面量：`@Model` 对属性默认值要求「完全限定的字面量」，
     /// 写成 `AccentStyle.ink.rawValue` 这类属性访问在部分 Xcode 版本上会报
     /// "A default value requires a fully qualified domain named value"（`Date.now` 踩过同样的坑）。
-    var accentId: String = "ink"
+    ///
+    /// 2026-11-16 默认从 `ink` 改为 `green`：用户反馈记一笔界面黑块太多。
+    var accentId: String = "green"
 
     var updatedAt: Date
 

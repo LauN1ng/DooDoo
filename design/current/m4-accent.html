@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DooDoo · M4 v2 灰白基底 + 主题色六版</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:#E6E6E9;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",sans-serif;color:#1D1D1F;padding:0 0 40px}
+.top{background:#F7F7F8;border-bottom:1px solid #DCDCDF;padding:20px 28px 18px}
+.top h1{font-size:19px;font-weight:650;margin:0 0 6px;letter-spacing:-.01em}
+.top p{font-size:12.5px;color:#5F5F66;margin:0;line-height:1.65}
+.top b{color:#1D1D1F;font-weight:600}
+.wrap{display:grid;grid-template-columns:repeat(3,330px);gap:20px;justify-content:center;padding:24px 20px 0}
+.panel{background:#FFFFFF;border:1px solid #DCDCDF;border-radius:16px;overflow:hidden}
+.ph{display:flex;align-items:baseline;gap:8px;padding:13px 16px 11px;border-bottom:1px solid #E4E4E8}
+.ph .k{font-size:20px;font-weight:700;line-height:1}
+.ph .n{font-size:13px;font-weight:600}
+.ph .hx{margin-left:auto;font-size:11px;color:#6E6E76;font-variant-numeric:tabular-nums}
+.stage{padding:14px 14px 10px;background:#EAEAED}
+.screen{--page:#F2F2F3;--card:#FFFFFF;--inset:#E9E9EC;--line:#E4E4E8;--slot:#E4E4E8;--ink:#1D1D1F;--ink2:#5F5F66;--sub:#6E6E76;background:var(--page);border-radius:20px;padding:10px 11px 13px;box-shadow:0 0 0 1px rgba(29,29,31,.10)}
+.status{display:flex;justify-content:space-between;align-items:center;height:20px;font-size:10px;font-weight:600;padding:0 5px;color:var(--ink)}
+.batt{display:inline-block;width:16px;height:8px;border:1px solid var(--ink);border-radius:2px;position:relative}
+.batt:after{content:"";position:absolute;inset:1px;background:var(--ink);border-radius:1px}
+.head{display:flex;align-items:center;justify-content:space-between;margin:8px 2px 10px}
+.logo{font-size:17px;font-weight:700;letter-spacing:-.02em;color:var(--ink)}
+.tab{width:100px;height:30px;border-radius:15px;background:var(--slot);display:flex;align-items:center;gap:1px;padding:2px}
+.tab i{flex:1;height:26px;border-radius:13px;display:grid;place-items:center;font-style:normal;font-size:11px;color:var(--ink2)}
+.tab i.on{background:var(--accent);color:#fff;box-shadow:0 1px 3px rgba(29,29,31,.14)}
+.card{background:var(--card);border-radius:18px;box-shadow:0 2px 12px rgba(29,29,31,.06);padding:11px 13px;margin-bottom:9px}
+.daytop{display:flex;justify-content:space-between;align-items:center}
+.day{font-size:14px;font-weight:600;color:var(--ink)}
+.wk{font-size:10.5px;color:var(--sub);margin-left:5px;font-weight:400}
+.today{font-size:9.5px;font-weight:600;color:var(--accent);background:var(--wash);padding:3px 7px;border-radius:6px}
+.tot{font-size:11px;color:var(--sub);margin-top:6px;text-align:right}
+.tot b{font-size:14px;color:#C0392B;font-weight:650;font-variant-numeric:tabular-nums}
+.hr{height:1px;background:var(--line);margin:9px 0 2px}
+.tx{display:flex;align-items:center;gap:9px;padding:7px 0}
+.ic{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;flex:0 0 34px;background:var(--inset)}
+.ic img{width:25px;height:25px;display:block}
+.tt{font-size:12.5px;font-weight:500;color:var(--ink)}
+.ts{font-size:10.5px;color:var(--sub);margin-top:2px}
+.am{margin-left:auto;font-size:12.5px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.chips{display:flex;gap:6px;margin-top:9px;align-items:center}
+.chip{font-size:10px;padding:5px 10px;border-radius:9px;background:var(--inset);color:var(--ink2)}
+.chip.on{background:var(--accent);color:#fff;font-weight:600}
+.grade{margin-left:auto;font-size:10px;font-weight:650;padding:5px 9px;border-radius:8px;background:var(--accent);color:#fff}
+.ovlbl{font-size:10.5px;color:var(--sub);margin-bottom:5px}
+.ovnums{display:flex;gap:16px;align-items:baseline;margin-bottom:6px}
+.ovnums div span{font-size:10px;color:var(--sub);display:block}
+.ovnums div b{font-size:15px;font-weight:650;font-variant-numeric:tabular-nums}
+.ovnums .mine b{color:#4C8DF6}
+.ovnums .owe b{color:#E8734A}
+.spark{width:100%;height:22px;display:block;margin-bottom:7px}
+.bar{height:6px;border-radius:3px;background:var(--inset);overflow:hidden}
+.bar i{display:block;height:100%;width:62%;border-radius:3px;background:var(--accent)}
+.debt{background:#2F6CB4;color:#fff;border-radius:13px;padding:9px 12px;margin-bottom:9px;display:flex;justify-content:space-between;align-items:center}
+.debt .bn{font-size:11.5px;font-weight:500;opacity:.9}
+.debt .bv{font-size:14px;font-weight:650;font-variant-numeric:tabular-nums}
+.cta{height:36px;border-radius:18px;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:12.5px;font-weight:600}
+.pf{padding:12px 16px 14px}
+.accrow{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.accsw{width:44px;height:26px;border-radius:6px;background:var(--accent);flex:0 0 44px;border:1px solid rgba(29,29,31,.08)}
+.accrow .hx{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
+.accrow .wsh{margin-left:auto;font-size:10px;color:#6E6E76;font-variant-numeric:tabular-nums}
+.metrics{display:flex;gap:6px;flex-wrap:wrap}
+.metrics span{font-size:10px;padding:3px 7px;border-radius:5px;background:#F2F2F3;color:#5F5F66;font-variant-numeric:tabular-nums}
+.metrics span.ok{background:#EAF6EC;color:#2E7D45}
+.metrics span.warn{background:#FBF3E6;color:#8A6212}
+.vd{margin-top:9px;font-size:11.5px;line-height:1.5;color:#5F5F66}
+.vd b{color:#1D1D1F;font-weight:600}
+.foot{max-width:1030px;margin:24px auto 0;background:#fff;border:1px solid #DCDCDF;border-radius:14px;padding:18px 22px}
+.foot h2{font-size:14px;font-weight:650;margin:0 0 10px}
+.foot h2:not(:first-child){margin-top:18px}
+.foot table{width:100%;border-collapse:collapse;font-size:12px}
+.foot td,.foot th{border-bottom:1px solid #E4E4E8;padding:6px 8px;text-align:left}
+.foot th{font-weight:600;color:#5F5F66;font-size:11px}
+.foot code{font-size:11px;background:#F2F2F3;padding:1px 5px;border-radius:4px}
+.rule{font-size:12px;line-height:1.75;color:#5F5F66;margin:8px 0 0}
+.rule b{color:#1D1D1F}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>M4 v2 · 灰白基底 + 主题色六版｜参考 Copilot Money 的配色纪律</h1>
+  <p><b>灰白基底六版共用且固定</b>：<code>page #F2F2F3</code>（你 11-08 选的浅冷灰）+ 5 级冷中性灰阶，卡内图标槽 / 标签底 / 分隔线全部 token 化。
+  <b>唯一变量是主题色</b>：只出现在 CTA、选中态、进度与激活图标，不出现在标题、金额、曲线、卡面。
+  白字对比度全部 ≥4.5:1（橙为 4.49 临界）。<b>状态：待定案，不得据此写代码。</b></p>
+</div>
+<div class="wrap" id="wrap"></div>
+<div class="foot">
+  <h2>灰白基底 token（六版共用）</h2>
+  <table>
+    <tr><th>键</th><th>值</th><th>实测</th></tr>
+    <tr><td>page / card</td><td><code>#F2F2F3</code> / <code>#FFFFFF</code></td><td>色差 11.1%，白卡浮起</td></tr>
+    <tr><td>inset（卡内槽、标签底）</td><td><code>#E9E9EC</code></td><td>vs 白卡 18.3%，不糊</td></tr>
+    <tr><td>line / slot（分隔线、tab 槽）</td><td><code>#E4E4E8</code></td><td>vs 页底 12.4%，满足 ≥5% 硬约束</td></tr>
+    <tr><td>ink / ink2 / sub</td><td><code>#1D1D1F</code> / <code>#5F5F66</code> / <code>#6E6E76</code></td><td>16.83 / 6.33 / 5.05:1 on 白卡；sub 在页底 4.52:1 也达标</td></tr>
+    <tr><td>shadow</td><td><code>0 2px 12px rgba(29,29,31,.06)</code></td><td>中性冷灰影，无暖调</td></tr>
+  </table>
+  <h2>Copilot Money 参考的是四条纪律，不是深色底</h2>
+  <p class="rule"><b>① 一个主色</b>只用于 CTA 与 active states，别处不出现；<b>② 彩色全部留给分类标签、emoji、卡面内容</b>（官网原文「Make every category your own with colors and emojis」，与 DooDoo 的 Fluent 3D emoji 同构）；<b>③ 层次靠明度不靠颜色</b>：中性底 + 白卡 + 极细分隔线；<b>④ 数字是主角</b>，大数字 + tabular-nums。<br>
+  项目 <code>design/archive/site-2026-11-03/prototype-v2.html:410</code> 早期就写过「<b>零彩色 UI，颜色只从 3D Emoji 来</b>」，与这条纪律能对上。</p>
+  <h2>核实边界（不编竞品）</h2>
+  <p class="rule">查到的是 Copilot <b>官网 / 落地页</b>：主体是近黑深蓝 <code>#000814</code> + 信号蓝 <code>#1C6CFF</code> CTA，中有一节浅色区 <code>≈#F2F6FB</code> + 白卡；<b>不是 App 内页截图</b>。设计拆解还明确「勿照抄 #1C6CFF 作为品牌主色」，故候选 3 用同源不同值 <code>#4364EE</code>。灰白按你 11-08 的 <code>#F2F2F3</code> 落地，<b>不照抄深色底</b>。本地 <code>ref-05-copilot.png</code> 是 Mobbin 网页抓图，不作依据；HeyCost 全仓无截图。</p>
+  <h2>与冻结物的关系</h2>
+  <p class="rule"><code>记一笔规格冻结-v1.0.md</code> 第九节「未锁定项 1：主色」允许「墨 / 绿 / 蓝 / 橙，<b>或新色</b>」，属 <b>1.x 可直接改</b>；<code>AppSettings.swift:21</code> 的 <code>AccentStyle</code> 已支持切换。本轮不改几何、不升 v2.0、不动口径与代码，只需定默认 <code>accentId</code>。技能：<code>ui-ux-pro-max --domain color</code> + <code>ios-hig-design</code>（4.5:1 / 44pt / 11pt）；Web 专属结论不采用。优先级 <b>AGENTS.md &gt; PRD &gt; 四份冻结规格 &gt; skill 通用建议</b>。</p>
+</div>
+<script>
+function wash(hex){var h=hex.slice(1),o='#';for(var i=0;i<6;i+=2){var v=parseInt(h.substr(i,2),16);o+=('0'+Math.round(v*.12+255*.88).toString(16)).slice(-2).toUpperCase()}return o}
+const V=[
+ {k:'1',n:'墨 · 现状默认',a:'#1D1C1A',cr:'17.03:1',ok:'ok',vd:'<b>规格默认值</b>。最克制，接近 11-03「零彩色 UI」；但主色几乎看不见，仍可能「一般般」。'},
+ {k:'2',n:'Copilot 信号蓝',a:'#1C6CFF',cr:'4.53:1',ok:'ok',vd:'<b>参考原色</b>。刚过 4.5:1；设计拆解明确「勿照抄品牌主色」，仅作基准。'},
+ {k:'3',n:'项目蓝 · 微调（推荐）',a:'#4364EE',cr:'4.89:1',ok:'ok',vd:'<b>推荐</b>：规格蓝 <code>#4A6CF7</code> 只有 4.39:1，微调后达标；同源不同值、不撞支出红 / 收入绿，与冷灰底最搭。'},
+ {k:'4',n:'绿 · 加深',a:'#197A2E',cr:'5.43:1',ok:'ok',vd:'原规格绿 <code>#2FB344</code> 仅 2.74:1 不可用；加深后达标，但与「收入绿 <code>#2E9E6B</code>」语义易混。'},
+ {k:'5',n:'橙 · 加深',a:'#A9680F',cr:'4.49:1',ok:'warn',vd:'原规格橙 <code>#E09B2D</code> 仅 2.36:1；加深后 <b>4.49 临界</b>，与冷灰底反差最大、偏暖。'},
+ {k:'6',n:'靛紫 · 新色',a:'#6C5CE7',cr:'4.86:1',ok:'ok',vd:'第九节允许「或新色」；贴近 Copilot 分类紫 <code>#9019E6</code> 但收敛，最跳、最不「财务感」。'}
+];
+const spark='<svg class="spark" viewBox="0 0 240 22" preserveAspectRatio="none"><polyline points="0,17 30,14 60,16 90,10 120,12 150,7 180,9 210,4 240,6" fill="none" stroke="#4C8DF6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><polyline points="0,7 30,9 60,6 90,11 120,9 150,14 180,12 210,16 240,14" fill="none" stroke="#E8734A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function screenHTML(v){return `
+<div class="screen" style="--accent:${v.a};--wash:${wash(v.a)}">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="head"><span class="logo">DooDoo</span>
+    <div class="tab"><i class="on">☰</i><i>▣</i><i>⚙</i></div>
+  </div>
+  <div class="card">
+    <div class="daytop"><div><span class="day">11月14日</span><span class="wk">星期五</span></div><span class="today">今天</span></div>
+    <div class="tot">支出 <b>¥128.50</b></div>
+    <div class="hr"></div>
+    <div class="tx"><div class="ic"><img src="../../assets/emoji/picked/CookedRice.png" alt=""></div><div><div class="tt">午饭</div><div class="ts">吃 › 正餐 · 12:20</div></div><div class="am">−38.00</div></div>
+    <div class="tx"><div class="ic"><img src="../../assets/emoji/picked/Bus.png" alt=""></div><div><div class="tt">地铁</div><div class="ts">行 › 公共交通 · 09:05</div></div><div class="am">−4.50</div></div>
+    <div class="chips"><span class="chip on">吃</span><span class="chip">行</span><span class="chip">乐</span><span class="grade">夯</span></div>
+  </div>
+  <div class="card" style="padding:10px 13px">
+    <div class="ovlbl">资产 · 近 30 天</div>
+    <div class="ovnums"><div class="mine"><span>我有</span><b>3,120.00</b></div><div class="owe"><span>我欠</span><b>48,466.00</b></div></div>
+    ${spark}
+    <div class="bar"><i></i></div>
+  </div>
+  <div class="debt"><span class="bn">招商银行 · 信用卡</span><span class="bv">22,772.69</span></div>
+  <div class="cta">＋ 记一笔</div>
+</div>`}
+document.getElementById('wrap').innerHTML=V.map(v=>`
+<div class="panel">
+  <div class="ph"><span class="k" style="color:${v.a}">${v.k}</span><span class="n">${v.n}</span><span class="hx">${v.a}</span></div>
+  <div class="stage">${screenHTML(v)}</div>
+  <div class="pf">
+    <div class="accrow"><span class="accsw" style="background:${v.a}"></span><span class="hx">${v.a}</span><span class="wsh">wash ${wash(v.a)}</span></div>
+    <div class="metrics">
+      <span class="${v.ok}">白字 ${v.cr}</span>
+      <span>基底 #F2F2F3</span>
+      <span>5 级灰阶</span>
+    </div>
+    <div class="vd">${v.vd}</div>
+  </div>
+</div>`).join('');
+</script>
+</body>
+</html>

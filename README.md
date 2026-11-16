@@ -1,7 +1,7 @@
 # DooDoo 记账 · 工作区
 
 > 一个只给自己用的 iOS 记账 App：随手记一笔，随时知道我有多少钱，清楚看到每个月要还多少。
-> 当前状态：**代码已到 M2b**（2026-11-10）。M0 工程搭建、M1 记一笔+流水、M2a 账户+资产页均已闭合；M2b 还款/转账的代码已过 CI，**待真机复判**；M3 分期未动工。进度只看 `PROGRESS.md`。
+> 当前状态：**M3 已全闭合，主线进入 M4 视觉**（2026-11-13 真机复看通过）。M0 / M1 / M2a / M2b / M3 全部完成，CI run **#74 全绿**（179 条单测）；M4 按 11-14 定案**先定整体配色与设计 token，再逐屏设计**。进度只看 `PROGRESS.md`。
 
 ---
 
@@ -33,7 +33,7 @@
 | `research/` | 竞品与灵感：mobbin 截图、小红书 UI、参考图、调研结论 | `research/README.md` | 只追加 |
 | `assets/` | 美术资源：Fluent 3D Emoji（精选 492 + 全量 1545）、16 品牌色、3 纹理 | `assets/index.html` | 可改，改动写交付记录 |
 | `tools/screenshot/` | 原型截图脚本（tabbit CLI 驱动） | `tools/README.md` | 可改 |
-| `app/` | **iOS 工程**（M2b，55 条单测，编译只能靠 CI） | `app/README.md` | 代码区；`project.yml` 入库，`.xcodeproj` 不入库 |
+| `app/` | **iOS 工程**（M3 全闭合 / CI #74 全绿 / 179 条单测，编译只能靠 CI） | `app/README.md` | 代码区；`project.yml` 入库，`.xcodeproj` 不入库 |
 | `.codebuddy/` `.workbuddy/` `.agents/` `skills-lock.json` | 工具私有（技能库、日志、缓存） | — | **不要删**，不进协作流程 |
 
 ---
@@ -44,7 +44,7 @@
 双击 `design/current/index.html`（浏览器直接开，无需服务器）。首页定稿是 `home-final.html`，资产页是 `account-stack.html`，记一笔 A 版是 `entry-a-optimize.html`。
 
 **我要开始写代码**
-读 `docs/product/PRD-v2.3.md` → 按 `PROGRESS.md` 的「下一步」→ 遵守 `AGENTS.md` 第七、八节。M3 完成前不谈视觉。
+读 `docs/product/PRD-v2.3.md` 与 `docs/design/spec/` 四份冻结规格 → 按 `PROGRESS.md` 的「下一步」→ 遵守 `AGENTS.md` 第七、八节。**当前是 M4 视觉阶段：先定配色与设计 token，再逐屏设计；只做外壳，不回头改口径。**
 
 **我换了 AI 工具**
 让它读 `README.md` + `AGENTS.md` + `PROGRESS.md`，然后按 `AGENTS.md` 第十一节做交接自检（4 个问题答得出才算接手成功）。

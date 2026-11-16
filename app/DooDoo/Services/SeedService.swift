@@ -81,11 +81,28 @@ enum SeedService {
 
     private static func ensureSettings(_ context: ModelContext) throws -> AppSettings {
         let all = try context.fetch(FetchDescriptor<AppSettings>())
-        if let first = all.first { return first }
+        if let first = all.first {
+            migrateAccentIfNeeded(first, context: context)
+            return first
+        }
         let settings = AppSettings(seedVersion: 0)
         context.insert(settings)
         try context.save()
         return settings
+    }
+
+    /// 一次性迁移：把旧默认主色 `ink` 换成 `green`（2026-11-16）。
+    ///
+    /// 用户在 M4 之前从没进设置页选过主色，`ink` 只是属性默认值被写进了库；
+    /// 而记一笔界面「黑色太多」正是这个默认值造成的。标记放 `UserDefaults`，
+    /// 幂等执行一次，之后用户若主动选回「墨」不会被再改。
+    private static func migrateAccentIfNeeded(_ settings: AppSettings, context: ModelContext) {
+        let key = "didMigrateAccentInkToGreen"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+        UserDefaults.standard.set(true, forKey: key)
+        guard settings.accentId == "ink" else { return }
+        settings.accentId = AccentStyle.green.rawValue
+        try? context.save()
     }
 
     private static func wipeDemoData(_ context: ModelContext) throws {
