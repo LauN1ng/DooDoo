@@ -806,8 +806,11 @@ struct EntryView: View {
     }
 
     private func finishGradeFrameExit() {
-        // 用无动画赋值：框已经不可见，再补一段过渡只会让它在回来的路上闪一下
-        var transaction = Transaction()
+        // 用无动画赋值：框已经不可见，再补一段过渡只会让它在回来的路上闪一下。
+        // 这里必须写 `Transaction(animation: nil)` 而不是 `Transaction()`——
+        // 后者在本项目的 SDK 上会解析到带 `backingData` 的内部构造器，报
+        // "missing argument for parameter 'backingData'"（CI run #84 即此）。
+        var transaction = Transaction(animation: nil)
         transaction.disablesAnimations = true
         withTransaction(transaction) {
             gradeFrameExiting = false
@@ -850,8 +853,9 @@ struct EntryView: View {
         }
         .padding(.leading, 16)
         .padding(.trailing, 14)
-        .padding(.vertical, 11)
-        .frame(minHeight: 64)
+        // 支出这一行要装 44pt 的评分点击区，高度按 64 走；其余类型保持原样（13 内距）。
+        .padding(.vertical, vm.type == .expense ? 11 : 13)
+        .frame(minHeight: vm.type == .expense ? 64 : nil)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(Palette.card)
