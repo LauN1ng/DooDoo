@@ -2,7 +2,7 @@ import SwiftUI
 
 /// 根视图：页头（顶部 tab）与三个页面容器。
 ///
-/// **M4 2026-11-16 落地**：按用户定案去掉左侧「DooDoo」字样，页头只留居中 tab；
+/// **M4 2026-11-16 落地**：按用户定案去掉左侧「DooDoo」字样，页头只留 tab 并靠右；
 /// 槽体视觉仍是 34 高胶囊（规格第二节 112×34 / 段 36×30 / 圆角 17），
 /// 但材质改走 `Palette.tabBed`、命中区扩到 40×44（36×30 低于 44pt 推荐触摸尺寸）。
 struct RootView: View {
@@ -19,7 +19,9 @@ struct RootView: View {
     }
 
     private var header: some View {
-        // 2026-11-16 用户定案：去掉左侧「DooDoo」字样，页头只留 tab，居中。
+        // 2026-11-16 用户定案：去掉左侧「DooDoo」字样，tab 仍靠右。
+        // 左侧留白是刻意的——原来那儿是字标，删掉字标后不留假占位，
+        // 让页头只有 tab 一件东西，靠右与卡片右边距 20 对齐成一条竖线。
         HStack(spacing: 0) {
             Spacer(minLength: 0)
 
@@ -56,8 +58,6 @@ struct RootView: View {
                     .fill(Palette.tabBed)
                     .frame(width: 120, height: 34)
             }
-
-            Spacer(minLength: 0)
         }
         .padding(.horizontal, 20)
         .padding(.top, 4)

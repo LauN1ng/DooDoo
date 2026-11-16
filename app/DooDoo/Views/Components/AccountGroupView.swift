@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// 资产页的一组：组头（名称 + N 个 · 合计 + ＋）+ 卡堆 + 右侧汇总 + 卡堆下方一行。
+/// 资产页的一组：组头（名称 + ＋）+ 卡堆 + 右侧汇总 + 卡堆下方一行。
 ///
 /// 几何照 `资产页规格冻结-v1.0.md` 2.3 / 2.4 / 2.5。
+/// 组头不放账户数量：卡堆右下角的胶囊徽章已经显示，重复。
 struct AccountGroupView: View {
     let title: String
     let totalLabel: String
@@ -37,12 +38,9 @@ struct AccountGroupView: View {
             Text(title)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(Palette.ink)
-            // 2026-11-16：原来这里是「3 个 · -23,623.69」，金额与右侧「欠款合计」
-            // 完全重复，用户点名多余。只留账户数量。
-            Text("\(accounts.count) 个")
-                .font(.system(size: 11))
-                .foregroundStyle(Palette.sub)
-                .lineLimit(1)
+            // 2026-11-16 用户第二次点名：组名旁边什么副标都不要。
+            // 先删了「3 个 · -23,623.69」里的金额（与右侧「欠款合计」重复），
+            // 再删「3 个」本身——卡堆右下角已有 count 胶囊徽章，同一屏说两遍。
             Spacer(minLength: 8)
             Button(action: onAdd) {
                 Image(systemName: "plus")
