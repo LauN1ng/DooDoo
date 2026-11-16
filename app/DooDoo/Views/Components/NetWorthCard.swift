@@ -1,8 +1,14 @@
 import SwiftUI
 
-/// 资产页顶部总览卡（规格 2.2）：我有 / 我欠 + 44pt 双折线 + 5 段区间。
+/// 资产页顶部总览卡（规格 2.2）：我有 / 我欠 + 56pt 双折线 + 5 段区间。
 ///
-/// 走势是「形状」不是「读数」——不放网格、坐标轴、刻度、图例、末端红点。
+/// 走势是「形状」不是「读数」——不放网格、坐标轴、刻度、图例、说明文案。
+///
+/// 2026-11-16：画法向账户详情页看齐（用户裁定"两页要是一种画法"）——
+/// 高度 44 → 56pt（规格 2.2 未锁定行预先授权"加粗或拉高到 56"），
+/// 折线由硬拐角改为 `TrendGeometry` 的平滑曲线，左右各留 6pt 内距、
+/// 底部加 1pt 基线、每条线末尾一个双圈末点。**面积填充不加**：
+/// 两条半透明面相交会糊成一块脏色，且会暗示"我有比我欠重要"。
 struct NetWorthCard: View {
     let mine: Decimal
     let owe: Decimal
@@ -19,7 +25,7 @@ struct NetWorthCard: View {
             }
 
             chart
-                .frame(height: 44)
+                .frame(height: 56)
                 .padding(.top, 8)
 
             ranges
@@ -58,33 +64,30 @@ struct NetWorthCard: View {
     private var chart: some View {
         GeometryReader { proxy in
             let size = proxy.size
-            ZStack {
-                line(values: points.map(\.mine), size: size, color: Palette.mine)
-                line(values: points.map(\.owe), size: size, color: Palette.owe)
-            }
-        }
-    }
+            let minePoints = TrendGeometry.positions(points.map { $0.mine.trendValue }, in: size)
+            let owePoints = TrendGeometry.positions(points.map { $0.owe.trendValue }, in: size)
 
-    private func line(values: [Decimal], size: CGSize, color: Color) -> some View {
-        let doubles = values.map { NSDecimalNumber(decimal: $0).doubleValue }
-        let minValue = doubles.min() ?? 0
-        let maxValue = doubles.max() ?? 0
-        let span = maxValue - minValue
+            ZStack(alignment: .bottom) {
+                // 基线：1pt、墨色 12%，与详情页同一条"地面"。
+                Rectangle()
+                    .fill(Palette.ink.opacity(0.12))
+                    .frame(height: 1)
 
-        return Path { path in
-            guard doubles.count > 1 else { return }
-            for (index, value) in doubles.enumerated() {
-                let x = size.width * CGFloat(index) / CGFloat(doubles.count - 1)
-                let ratio = span == 0 ? 0.5 : (value - minValue) / span
-                let y = size.height * (1 - CGFloat(ratio))
-                if index == 0 {
-                    path.move(to: CGPoint(x: x, y: y))
-                } else {
-                    path.addLine(to: CGPoint(x: x, y: y))
+                TrendGeometry.smoothPath(minePoints)
+                    .stroke(Palette.mine, style: TrendGeometry.strokeStyle)
+
+                TrendGeometry.smoothPath(owePoints)
+                    .stroke(Palette.owe, style: TrendGeometry.strokeStyle)
+
+                // 末点落在两条线各自的最后一个值上，颜色跟线走，一眼看到「现在在哪」。
+                if let last = minePoints.last {
+                    TrendGeometry.endpoint(at: last, color: Palette.mine, bed: Palette.card)
+                }
+                if let last = owePoints.last {
+                    TrendGeometry.endpoint(at: last, color: Palette.owe, bed: Palette.card)
                 }
             }
         }
-        .stroke(color, style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
     }
 
     private var ranges: some View {
