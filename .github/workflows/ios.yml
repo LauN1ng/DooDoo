@@ -67,7 +67,11 @@ jobs:
           fi
 
       - name: 单测（预启动模拟器，失败回传日志）
-        timeout-minutes: 12
+        # 正常 8 分钟（184 条串行）。原来卡 12 分钟太紧：2026-11-16 夜里
+        # hosted runner 被抢得厉害，同一步跑了 12m19s 直接撞超时，
+        # 报的是「has timed out」而不是断言失败，容易误判成代码问题。
+        # 放宽到 20（job 上限 30），真卡死也还有余量。
+        timeout-minutes: 20
         run: |
           set +e
           set +o pipefail
