@@ -36,16 +36,18 @@ struct InstallmentEntryView: View {
     @Query private var settingsList: [AppSettings]
 
     @State private var vm = InstallmentEntryViewModel()
-    @FocusState private var focus: Field?
+    /// 当前由自绘键盘编辑的数值字段（M4 第 5 条，与记一笔共用 `NumberPad`）。
+    @State private var activeField: NumericField = .due
+    /// 名称是文本，仍用系统键盘；它一聚焦就把自绘键盘收起。
+    @FocusState private var nameFocused: Bool
     /// 存完的短回执（「已录 · 还差 57 笔」）。非 nil 时挡住主按钮 1.1 秒，防连点记两笔。
     @State private var receipt: String?
     @State private var targetText = ""
     @State private var showingTargetEditor = false
 
-    private enum Field: Hashable {
-        case name, due, remaining, total, interest, last, rebate
-        /// 账单拆两栏时的那两格（M3-6）
-        case principal, interestPart
+    /// 面板里所有要用数字键盘的字段。名称不在其中。
+    private enum NumericField: Hashable {
+        case due, principal, interestPart, remaining, total, interest, last
     }
 
     private var accentStyle: AccentStyle { settingsList.first?.accent ?? .ink }
@@ -78,13 +80,15 @@ struct InstallmentEntryView: View {
             .scrollDismissesKeyboard(.interactively)
         }
         .background(Palette.page.ignoresSafeArea())
+        // 顺序即位置：页脚先挂，键盘再挂在外面 → 键盘在底，主按钮紧贴它上方。
         .safeAreaInset(edge: .bottom, spacing: 0) { footer }
+        .safeAreaInset(edge: .bottom, spacing: 0) { numberPadArea }
         .overlay(alignment: .top) { receiptBanner }
         .task {
             vm.load(context: context)
             if let preferredAccount { vm.selectAccount(preferredAccount) }
             // 第一个该填的是「剩余应还」——账单上最大的那个数。
-            focus = .due
+            activeField = .due
         }
         .alert("目标几笔？", isPresented: $showingTargetEditor) {
             TextField("58", text: $targetText)
@@ -96,6 +100,51 @@ struct InstallmentEntryView: View {
         } message: {
             Text("存量在读的分期一共多少笔。填 0 = 不显示进度。")
         }
+    }
+
+    // MARK: - 自绘键盘
+
+    /// 与记一笔共用的同一块键盘（`NumberPad`）。期数与「总共几期」只收整数，
+    /// 那边的小数点格留空。
+    @ViewBuilder
+    private var numberPadArea: some View {
+        if !nameFocused {
+            VStack(spacing: 0) {
+                Rectangle()
+                    .fill(Palette.line)
+                    .frame(height: 0.5)
+                NumberPad(
+                    text: activeBinding,
+                    accent: accent,
+                    accentWash: Palette.accentWash(accentStyle),
+                    allowsDecimal: activeField != .remaining && activeField != .total
+                )
+                .padding(.horizontal, 8)
+                .padding(.top, 8)
+                .padding(.bottom, 8)
+            }
+            .background(Palette.page)
+            .transition(.opacity)
+        }
+    }
+
+    /// 键盘当前在改哪个字段。这些都是 ViewModel 里的字符串缓冲，
+    /// 直接给 binding 即可——重算全在 ViewModel 的派生属性里做。
+    private var activeBinding: Binding<String> {
+        switch activeField {
+        case .due: return $vm.remainingDueText
+        case .principal: return $vm.principalText
+        case .interestPart: return $vm.interestPartText
+        case .remaining: return $vm.remainingText
+        case .total: return $vm.totalText
+        case .interest: return $vm.interestText
+        case .last: return $vm.lastPeriodText
+        }
+    }
+
+    private func activate(_ field: NumericField) {
+        if nameFocused { nameFocused = false }
+        activeField = field
     }
 
     // MARK: - 顶部
@@ -261,28 +310,31 @@ struct InstallmentEntryView: View {
                     .font(.system(size: 13))
                     .foregroundStyle(Palette.sub)
                 Spacer(minLength: 6)
-                TextField("9", text: $vm.remainingText)
-                    .keyboardType(.numberPad)
-                    .multilineTextAlignment(.trailing)
-                    .font(.system(size: 20, weight: .semibold))
-                    .monospacedDigit()
-                    .foregroundStyle(Palette.ink)
-                    .focused($focus, equals: .remaining)
-                    .frame(maxWidth: 70)
+                NumberValueText(
+                    text: vm.remainingText,
+                    placeholder: "9",
+                    size: 20,
+                    weight: .semibold,
+                    active: activeField == .remaining,
+                    accent: accent
+                )
+                .frame(maxWidth: 80, alignment: .trailing)
                 Text("期")
                     .font(.system(size: 12))
                     .foregroundStyle(Palette.sub)
             }
+            .contentShape(Rectangle())
+            .onTapGesture { activate(.remaining) }
 
             HStack(spacing: 6) {
                 ForEach(periodPresets, id: \.self) { value in
                     presetChip(String(value), selected: vm.remainingText == String(value)) {
                         vm.remainingText = String(value)
-                        focus = nil
+                        activeField = .remaining
                     }
                 }
                 presetChip("其他", selected: !periodPresets.map(String.init).contains(vm.remainingText) && !vm.remainingText.isEmpty) {
-                    focus = .remaining
+                    activate(.remaining)
                 }
                 Spacer(minLength: 0)
             }
@@ -324,15 +376,18 @@ struct InstallmentEntryView: View {
                 Text("¥")
                     .font(.system(size: 12))
                     .foregroundStyle(Palette.faint)
-                TextField("0.00", text: $vm.lastPeriodText)
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.trailing)
-                    .font(.system(size: 15, weight: .medium))
-                    .monospacedDigit()
-                    .foregroundStyle(Palette.ink)
-                    .focused($focus, equals: .last)
-                    .frame(maxWidth: 120)
+                NumberValueText(
+                    text: vm.lastPeriodText,
+                    placeholder: "0.00",
+                    size: 15,
+                    weight: .medium,
+                    active: activeField == .last,
+                    accent: accent
+                )
+                .frame(maxWidth: 130, alignment: .trailing)
             }
+            .contentShape(Rectangle())
+            .onTapGesture { activate(.last) }
             Text("账单最后一期的金额。各期金额不一样时才填——填了中间各期就按它反推，不用均价")
                 .font(.system(size: 10))
                 .foregroundStyle(Palette.faint)
@@ -353,15 +408,18 @@ struct InstallmentEntryView: View {
                 Text("¥")
                     .font(.system(size: 16, weight: .medium))
                     .foregroundStyle(Palette.faint)
-                TextField("0.00", text: $vm.remainingDueText)
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.trailing)
-                    .font(.system(size: 30, weight: .bold))
-                    .monospacedDigit()
-                    .foregroundStyle(Palette.ink)
-                    .focused($focus, equals: .due)
-                    .frame(maxWidth: 190)
+                NumberValueText(
+                    text: vm.remainingDueText,
+                    placeholder: "0.00",
+                    size: 30,
+                    weight: .bold,
+                    active: activeField == .due,
+                    accent: accent
+                )
+                .frame(maxWidth: 200, alignment: .trailing)
             }
+            .contentShape(Rectangle())
+            .onTapGesture { activate(.due) }
             Text("账单上「分期剩余应还」那一栏")
                 .font(.system(size: 10))
                 .foregroundStyle(Palette.faint)
@@ -375,8 +433,8 @@ struct InstallmentEntryView: View {
     /// 就取这里，省得用户在次卡里再抄一遍同一个数。
     private var splitDueFields: some View {
         VStack(alignment: .leading, spacing: 6) {
-            amountLine("本金", placeholder: "6670.93", text: $vm.principalText, field: .principal)
-            amountLine("利息", placeholder: "851.57", text: $vm.interestPartText, field: .interestPart)
+            amountLine("本金", placeholder: "6670.93", text: vm.principalText, field: .principal)
+            amountLine("利息", placeholder: "851.57", text: vm.interestPartText, field: .interestPart)
 
             Divider().overlay(Palette.line)
 
@@ -400,8 +458,8 @@ struct InstallmentEntryView: View {
     private func amountLine(
         _ title: String,
         placeholder: String,
-        text: Binding<String>,
-        field: Field
+        text: String,
+        field: NumericField
     ) -> some View {
         HStack(spacing: 6) {
             Text(title)
@@ -411,15 +469,18 @@ struct InstallmentEntryView: View {
             Text("¥")
                 .font(.system(size: 13))
                 .foregroundStyle(Palette.faint)
-            TextField(placeholder, text: text)
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.trailing)
-                .font(.system(size: 17, weight: .semibold))
-                .monospacedDigit()
-                .foregroundStyle(Palette.ink)
-                .focused($focus, equals: field)
-                .frame(maxWidth: 170)
+            NumberValueText(
+                text: text,
+                placeholder: placeholder,
+                size: 17,
+                weight: .semibold,
+                active: activeField == field,
+                accent: accent
+            )
+            .frame(maxWidth: 180, alignment: .trailing)
         }
+        .contentShape(Rectangle())
+        .onTapGesture { activate(field) }
     }
 
     /// 开关：账单是否把剩余应还拆成本金和利息两行。
@@ -493,7 +554,7 @@ struct InstallmentEntryView: View {
             TextField(vm.resolvedName, text: $vm.name)
                 .font(.system(size: 14))
                 .foregroundStyle(Palette.ink)
-                .focused($focus, equals: .name)
+                .focused($nameFocused)
 
             Divider().overlay(Palette.line)
 
@@ -503,18 +564,21 @@ struct InstallmentEntryView: View {
                     .font(.system(size: 13))
                     .foregroundStyle(Palette.sub)
                 Spacer(minLength: 6)
-                TextField("12", text: $vm.totalText)
-                    .keyboardType(.numberPad)
-                    .multilineTextAlignment(.trailing)
-                    .font(.system(size: 15, weight: .medium))
-                    .monospacedDigit()
-                    .foregroundStyle(Palette.ink)
-                    .focused($focus, equals: .total)
-                    .frame(maxWidth: 80)
+                NumberValueText(
+                    text: vm.totalText,
+                    placeholder: "12",
+                    size: 15,
+                    weight: .medium,
+                    active: activeField == .total,
+                    accent: accent
+                )
+                .frame(maxWidth: 90, alignment: .trailing)
                 Text("期")
                     .font(.system(size: 12))
                     .foregroundStyle(Palette.sub)
             }
+            .contentShape(Rectangle())
+            .onTapGesture { activate(.total) }
             // 只剩真正有信息量的那一行（第几期起、还剩几期）；
             // 原来填完之前还会显示一句解释「填了才能显示…」，属于用户点名的无关信息。
             if !periodBreakdown.isEmpty {
@@ -535,15 +599,18 @@ struct InstallmentEntryView: View {
                     Text("¥")
                         .font(.system(size: 12))
                         .foregroundStyle(Palette.faint)
-                    TextField("176.99", text: $vm.interestText)
-                        .keyboardType(.decimalPad)
-                        .multilineTextAlignment(.trailing)
-                        .font(.system(size: 15, weight: .medium))
-                        .monospacedDigit()
-                        .foregroundStyle(Palette.ink)
-                        .focused($focus, equals: .interest)
-                        .frame(maxWidth: 120)
+                    NumberValueText(
+                        text: vm.interestText,
+                        placeholder: "176.99",
+                        size: 15,
+                        weight: .medium,
+                        active: activeField == .interest,
+                        accent: accent
+                    )
+                    .frame(maxWidth: 130, alignment: .trailing)
                 }
+                .contentShape(Rectangle())
+                .onTapGesture { activate(.interest) }
             }
 
             Divider().overlay(Palette.line)
@@ -575,32 +642,8 @@ struct InstallmentEntryView: View {
     // 减免是已优惠掉的钱，记进来只会增加录入负担。
     // 数据模型 `Installment.totalRebate` 与 ViewModel 的 `rebateText` 保留不动：
     // 已存数据要能读出来，未来若要恢复也不必改 schema。
-
-    private func moneyRow(
-        _ title: String,
-        placeholder: String,
-        text: Binding<String>,
-        field: Field
-    ) -> some View {
-        HStack(spacing: 8) {
-            Text(title)
-                .font(.system(size: 12))
-                .foregroundStyle(Palette.sub)
-            Spacer(minLength: 8)
-            Text("¥")
-                .font(.system(size: 12))
-                .foregroundStyle(Palette.faint)
-            TextField(placeholder, text: text)
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.trailing)
-                .font(.system(size: 14, weight: .medium))
-                .monospacedDigit()
-                .foregroundStyle(Palette.ink)
-                .focused($focus, equals: field)
-                .frame(maxWidth: 150)
-        }
-        .padding(.vertical, 2)
-    }
+    // 同批删掉的是这块遗留下来的 `moneyRow` 辅助函数——它早已没有调用方，
+    // 只是因为还挂在旧 `Field` 枚举上才活着；枚举随自绘键盘一并改名，它也就该走了。
 
     // MARK: - 预览
 
@@ -731,7 +774,7 @@ struct InstallmentEntryView: View {
             }
 
             Button {
-                focus = nil
+                nameFocused = false
                 guard vm.save(in: context) else { return }
                 let remaining = vm.batchRemaining
                 let text = remaining > 0 ? "已录 · 还差 \(remaining) 笔" : "已录 · 目标已达成"
@@ -739,7 +782,7 @@ struct InstallmentEntryView: View {
                 Task {
                     try? await Task.sleep(for: .milliseconds(1100))
                     withAnimation(.easeOut(duration: 0.18)) { receipt = nil }
-                    focus = .due
+                    activeField = .due
                 }
             } label: {
                 Text(vm.primaryTitle)

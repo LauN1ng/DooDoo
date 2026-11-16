@@ -20,9 +20,19 @@ struct EntryView: View {
     @Query private var settingsList: [AppSettings]
 
     @State private var vm = EntryViewModel()
-    @FocusState private var amountFocused: Bool
+    /// 当前由自绘键盘编辑的数值字段（M4 第 5 条：系统键盘割裂，改自绘）。
+    /// 不是 `@FocusState`——这些字段已经不是 `TextField` 了，聚焦由我们自己管。
+    @State private var activeField: NumberField = .amount
+    /// 备注仍在用系统键盘（它是文本，不是数）。它一聚焦就把自绘键盘收起来，
+    /// 两块键盘同时在场会把输入区挤成一条缝。
+    @FocusState private var noteFocused: Bool
     /// 转账保存后的短回执。非 nil 时先显示 1.1 秒再关面板（真机反馈 #12）。
     @State private var receipt: String?
+
+    /// 面板里需要数字键盘的字段。备注不在其中。
+    private enum NumberField: Hashable {
+        case amount, received, fee, perPeriod
+    }
 
     init(initialType: TransactionKind = .expense, initialDate: Date = .now) {
         self.initialType = initialType
@@ -51,7 +61,9 @@ struct EntryView: View {
             .scrollDismissesKeyboard(.interactively)
         }
         .background(Palette.page.ignoresSafeArea())
+        // 顺序即位置：先挂页脚，再把键盘挂在它外面 → 键盘在底、主按钮在键盘正上方。
         .safeAreaInset(edge: .bottom, spacing: 0) { footer }
+        .safeAreaInset(edge: .bottom, spacing: 0) { numberPadArea }
         .overlay { receiptBanner }
         .task(id: receipt) {
             // 有回执就停一下再关，没有就由保存处直接 dismiss。
@@ -65,8 +77,56 @@ struct EntryView: View {
             // 今天用当前时刻，补记历史日把当前时分秒套到那一天。
             vm.date = DayMath.entryTimestamp(for: initialDate)
             vm.load(context: context)
-            amountFocused = true
+            activeField = .amount
         }
+    }
+
+    // MARK: - 自绘键盘
+
+    /// 键盘常驻底部。只在一个时机收起：用户点「备注」调起系统键盘时。
+    @ViewBuilder
+    private var numberPadArea: some View {
+        if !noteFocused {
+            VStack(spacing: 0) {
+                Rectangle()
+                    .fill(Palette.line)
+                    .frame(height: 0.5)
+                NumberPad(
+                    text: activeBinding,
+                    accent: accent,
+                    accentWash: accentWash
+                )
+                .padding(.horizontal, 8)
+                .padding(.top, 8)
+                .padding(.bottom, 8)
+            }
+            .background(Palette.page)
+            .transition(.opacity)
+        }
+    }
+
+    /// 键盘当前在改哪个字段。
+    ///
+    /// 每个 setter 都必须走 ViewModel 的方法而不是直接赋值：转账的三个数
+    /// 是联动的（改转出会带动到账或手续费），绕过 setter 会让联动断掉。
+    private var activeBinding: Binding<String> {
+        switch activeField {
+        case .amount:
+            return Binding(get: { vm.amountText }, set: { vm.setAmountText($0) })
+        case .received:
+            return Binding(get: { vm.receivedText }, set: { vm.setReceivedText($0) })
+        case .fee:
+            return Binding(get: { vm.feeText }, set: { vm.setFeeText($0) })
+        case .perPeriod:
+            return Binding(get: { vm.installmentPerPeriodText },
+                           set: { vm.installmentPerPeriodText = $0 })
+        }
+    }
+
+    /// 切换正在编辑的字段。备注键盘还在的话先收掉。
+    private func activate(_ field: NumberField) {
+        if noteFocused { noteFocused = false }
+        activeField = field
     }
 
     // MARK: - 保存回执
@@ -92,7 +152,9 @@ struct EntryView: View {
                         .fill(Palette.ink.opacity(0.92))
                 )
                 .padding(.horizontal, 24)
-                .padding(.bottom, 96)
+                // 自绘键盘（约 242）+ 页脚（约 80）都挂在底部，回执必须让开它们，
+                // 否则「已记下」会被键盘盖住——1.1 秒的确认窗口就白给了。
+                .padding(.bottom, 330)
                 .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
             .allowsHitTesting(false)
@@ -132,7 +194,7 @@ struct EntryView: View {
                 let selected = vm.type == kind
                 Button {
                     vm.setType(kind)
-                    amountFocused = true
+                    activate(.amount)
                 } label: {
                     Text(kind.title)
                         .font(.system(size: 13.5, weight: selected ? .semibold : .regular))
@@ -288,27 +350,34 @@ struct EntryView: View {
 
     // MARK: - 金额
 
+    /// 金额。46pt 是规格里的主角字号（第九节未锁定项 5：42~50 可调）。
+    ///
+    /// 自绘键盘上线后这里不再是 `TextField`：显示 `NumberValueText`，
+    /// 整行挂点击、点哪都算「我要改金额」（行高 70 远超 44pt 命中区下限）。
     private var amountRow: some View {
         HStack(alignment: .firstTextBaseline, spacing: 4) {
             Spacer(minLength: 0)
             Text("¥")
                 .font(.system(size: 20, weight: .medium))
                 .foregroundStyle(Palette.faint)
-            TextField("0.00", text: Binding(
-                get: { vm.amountText },
-                set: { vm.setAmountText($0) }
-            ))
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.trailing)
-                .font(.system(size: 46, weight: .bold))
-                .monospacedDigit()
-                .foregroundStyle(Palette.ink)
-                .focused($amountFocused)
-                .frame(maxWidth: 250)
-                .fixedSize(horizontal: false, vertical: true)
+            NumberValueText(
+                text: vm.amountText,
+                placeholder: "0.00",
+                size: 46,
+                weight: .bold,
+                active: activeField == .amount,
+                accent: accent
+            )
+            .frame(maxWidth: 260, alignment: .trailing)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
+        .contentShape(Rectangle())
+        .onTapGesture { activate(.amount) }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("金额")
+        .accessibilityValue(vm.amountText.isEmpty ? "未填写" : vm.amountText)
+        .accessibilityHint("用下方数字键盘输入")
     }
 
     // MARK: - 内联分期（M3-10，PRD 9.5.6）
@@ -410,14 +479,15 @@ struct EntryView: View {
             Text("¥")
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(Palette.faint)
-            TextField("自动 " + MoneyMath.money(vm.installmentAutoPerPeriod),
-                      text: $vm.installmentPerPeriodText)
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.trailing)
-                .font(.system(size: 17, weight: .semibold))
-                .monospacedDigit()
-                .foregroundStyle(Palette.ink)
-                .frame(maxWidth: 140)
+            NumberValueText(
+                text: vm.installmentPerPeriodText,
+                placeholder: "自动 " + MoneyMath.money(vm.installmentAutoPerPeriod),
+                size: 17,
+                weight: .semibold,
+                active: activeField == .perPeriod,
+                accent: accent
+            )
+            .frame(maxWidth: 150, alignment: .trailing)
             if !vm.installmentPerPeriodText.isEmpty {
                 Button {
                     vm.installmentPerPeriodText = ""
@@ -430,6 +500,8 @@ struct EntryView: View {
                 .accessibilityLabel("改回自动摊平")
             }
         }
+        .contentShape(Rectangle())
+        .onTapGesture { activate(.perPeriod) }
     }
 
     /// 首期还款日。默认按账户 `dueDay` 推下一个还款日，改过就按改的。
@@ -471,19 +543,20 @@ struct EntryView: View {
             Text("¥")
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(Palette.faint)
-            TextField("与转出相同", text: Binding(
-                get: { vm.receivedText },
-                set: { vm.setReceivedText($0) }
-            ))
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.trailing)
-                .font(.system(size: 26, weight: .semibold))
-                .monospacedDigit()
-                .foregroundStyle(Palette.ink2)
-                .frame(maxWidth: 200)
+            NumberValueText(
+                text: vm.receivedText,
+                placeholder: "与转出相同",
+                size: 26,
+                weight: .semibold,
+                active: activeField == .received,
+                accent: accent
+            )
+            .frame(maxWidth: 200, alignment: .trailing)
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 12)
+        .contentShape(Rectangle())
+        .onTapGesture { activate(.received) }
     }
 
     // MARK: - 评分（仅支出）
@@ -545,6 +618,7 @@ struct EntryView: View {
             TextField("备注", text: $vm.note)
                 .font(.system(size: 14))
                 .foregroundStyle(Palette.ink)
+                .focused($noteFocused)
             if !vm.note.isEmpty {
                 Button {
                     vm.note = ""
@@ -670,17 +744,18 @@ struct EntryView: View {
                 Text("¥")
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(Palette.faint)
-                TextField("0.00", text: Binding(
-                    get: { vm.feeText },
-                    set: { vm.setFeeText($0) }
-                ))
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.trailing)
-                    .font(.system(size: 17, weight: .semibold))
-                    .monospacedDigit()
-                    .foregroundStyle(Palette.ink)
-                    .frame(maxWidth: 160)
+                NumberValueText(
+                    text: vm.feeText,
+                    placeholder: "0.00",
+                    size: 17,
+                    weight: .semibold,
+                    active: activeField == .fee,
+                    accent: accent
+                )
+                .frame(maxWidth: 160, alignment: .trailing)
             }
+            .contentShape(Rectangle())
+            .onTapGesture { activate(.fee) }
             Text("填手续费或到账，另一边自动算（= 转出 − 到账）")
                 .font(.system(size: 10))
                 .foregroundStyle(Palette.faint)
@@ -786,7 +861,7 @@ struct EntryView: View {
             }
 
             Button {
-                amountFocused = false
+                noteFocused = false
                 let text = vm.receiptText
                 vm.save(in: context)
                 if vm.errorMessage == nil {
