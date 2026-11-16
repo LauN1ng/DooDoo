@@ -36,6 +36,12 @@ struct AccountCardStrip: View {
             .padding(.horizontal, sideInset)
             .padding(.vertical, 2)
         }
+        // **必须放开裁剪**（2026-11-16 第五轮真机反馈）。
+        // 选中卡是 `shadow(radius: 18, y: 10)`，向上要 8pt、向下要 28pt 空间，
+        // 而这里垂直内距只有 2pt——上下两半影子全被滚出视图的边界切掉，
+        // 只剩左右两侧那 16pt 内距里的部分活下来。用户看到的「阴影在左边」
+        // 就是这条切边，不是阴影方向错了。`CategoryPicker` 的一级行早就有这行。
+        .scrollClipDisabled()
     }
 
     private func card(_ account: Account) -> some View {

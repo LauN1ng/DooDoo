@@ -1,30 +1,33 @@
 import SwiftUI
 import UIKit
 
-/// 分类选择：一级贴纸行 + 二级浮层（记一笔规格冻结 **v2.2** 第六节）。
+/// 分类选择：一级贴纸行 + 二级浮层（记一笔规格冻结 **v2.4** 第六节）。
 ///
-/// 2026-11-16 第二次重画，四条改动：
-/// 1. **一级去掉 52pt 色槽**，图标 32 → 36 直接落在纸面上，带 `0 1 1.5 .10` 微影
-///    （贴纸要「放在纸上」，少了这层影就变成「印在纸上」的平面图标）。
-///    槽宽 44 仍保留为布局框与命中区，只是不再绘制。
-/// 2. **选中 = 抬起**：`scale 1.12` + 上移 2pt + 投影加重，另加一圈**弱档散射**
-///    （图标主色径向光晕 `.28`，色表见 `CategoryGlow`）。不用描边、不用主色底。
-/// 3. **选完二级后，一级行里被选中那一格直接换成二级的图标和名字**——
-///    选「咖啡」，「吃」这一格就显示咖啡图标 + 「咖啡」。原来那行「已选 吃 › 早餐」删掉，
-///    它是在替一个本可以直接呈现的结果做旁白。
-/// 4. 二级浮层去掉 42pt 圆底，图标 26 → 30，选中 `scale 1.16` + 标签转墨 600；
-///    行距 10 → 14（省下来的 14pt 还回行距，八个抽屉不挤在一起更好点）。
+/// 2026-11-16 第三次重画，三条改动：
+/// 1. **一级选中态换成「纯物理抬起」**（V1，用户当日从七版里选定）：
+///    `scale 1.22` + 上移 6pt + 投影加重到 `.26`，未选中图标压到 80% 不透明。
+///    去掉 v2.2 那圈「从图标平均色吸出来」的径向光晕——实测那张色表跟图标对不上
+///    （`吃` 是银紫餐具却给了紫光，叠上去整格发紫；`住` 给了黄绿 `#E1F77C`，
+///    在暖白 `#F7F5F1` 上几乎不可见），强度又只有 `.28`，等于白加。
+///    **一个彩色都不引入**：区分靠「谁被拿起来、谁还贴在纸上」。
+/// 2. **未选中也让一步**（80% 不透明）。只放大选中的那个推不动眼睛——
+///    同屏 8 个里只变一个，得逐个比大小；两头一起动，选中才跳出来。
+/// 3. **每格显示自己那一类记着的二级**（问题 3 方案 A）：`shownByTop` 由
+///    `EntryViewModel` 按大类分桶算好，选过「咖啡」的「吃」格切走再切回来还是咖啡。
+///    这里不再自己判断「只有当前选中才配显示二级」。
 ///
-/// 语言分工（为什么分类和账户不能共用一套选中态，见 `m4-selection-2026-11-16.html`）：
-/// - 分类：**光**——同屏只有一个选中，可以用光指示；
-/// - 账户：**层次**——卡面自带品牌色，再叠光会脏，改用亮度与前后关系；
-/// - 二级：**字**——同屏 8~10 个一起亮会像彩纸屑，所以只放大 + 加粗。
+/// 语言分工（为什么分类和账户不能共用一套选中态，见 `entry-selection-2026-11-16.html`）：
+/// - 分类：**物理抬起**——同屏只有一个选中，用高度表达；
+/// - 账户：**亮度与前后**——卡面自带品牌色，再叠光会脏，见 `AccountCardStrip`；
+/// - 二级：**字**——同屏 8~10 个一起放大会像彩纸屑，所以只放大 + 加粗、不抬起。
 struct CategoryPicker: View {
     let tops: [Category]
     let subs: [Category]
     let topKey: String
     let subKey: String?
     let showingSub: Bool
+    /// 每个一级 key → 该格当前该显示的分类（二级或大类自己）。见 `EntryViewModel.shownByTop`。
+    let shownByTop: [String: Category]
 
     let onSelectTop: (Category) -> Void
     let onSelectSub: (Category) -> Void
@@ -70,12 +73,6 @@ struct CategoryPicker: View {
         .zIndex(showingSub ? 5 : 0)
     }
 
-    /// 当前选中的二级。`subs` 已经是当前一级下的集合，所以查得到就必然属于这一格。
-    private var selectedSub: Category? {
-        guard let subKey else { return nil }
-        return subs.first { $0.key == subKey }
-    }
-
     // MARK: - 一级
 
     private var topRow: some View {
@@ -88,51 +85,36 @@ struct CategoryPicker: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 2)
         }
-        // 70pt 的散射光晕比 44pt 的格子大，默认会被滚动视图裁成一条边。
-        // 这里只放开裁剪、不动布局（iOS 17+），溢出的部分正是「光渗到纸面上」的效果。
+        // 抬起 6pt + 投影比 44pt 的格子大，默认会被滚动视图裁成一条边。
+        // 这里只放开裁剪、不动布局（iOS 17+），溢出的部分正是「贴纸浮起来」的影子。
         .scrollClipDisabled()
     }
 
     private func topItem(_ category: Category) -> some View {
+        // 选中态看「是不是当前这一族」，内容看「这一族自己记着什么」——
+        // 两件事分开，所以切走的大类仍显示它上次选的二级，但不显得被选中。
         let selected = category.key == topKey
-        // v2.2：选中的那一格显示二级结果；没选二级（或不是当前一级）就还显示大类自己。
-        let shown = (selected ? selectedSub : nil) ?? category
+        let shown = shownByTop[category.key] ?? category
 
         return VStack(spacing: 5) {
+            // ZStack 两层作用：一是让图标的 `id` 变化能触发 transition（直接放在
+            // VStack 里会硬切），二是换字时两版文字叠在同一格，不会把行高撑成 26。
             ZStack {
-                if selected {
-                    // 散射色取**一级**的 key，不取 shown——二级图标色相五花八门，
-                    // 跟着换会让同一格的光每次切二级就跳一次色。
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [
-                                    CategoryGlow.color(for: category.key).opacity(0.85),
-                                    CategoryGlow.color(for: category.key).opacity(0),
-                                ],
-                                center: .center,
-                                startRadius: 0,
-                                endRadius: CategoryGlow.fadeRadius
-                            )
-                        )
-                        .frame(width: CategoryGlow.diameter, height: CategoryGlow.diameter)
-                        .opacity(CategoryGlow.opacity)
-                        .transition(.opacity)
-                }
-
                 categoryIcon(shown, size: topIconSize)
                     .shadow(
-                        color: .black.opacity(selected ? 0.22 : 0.10),
+                        color: .black.opacity(selected ? 0.26 : 0.10),
                         radius: selected ? 4.5 : 0.75,
                         x: 0,
-                        y: selected ? 3 : 0.5
+                        y: selected ? 3.5 : 0.5
                     )
                     .id(shown.key)
                     .transition(.opacity.combined(with: .scale(scale: 0.82)))
             }
             .frame(width: topTile, height: topTile)
-            .scaleEffect(selected ? 1.12 : 1)
-            .offset(y: selected ? -2 : 0)
+            // 未选中让一步。只放大选中的那个推不动眼睛，两头一起动才跳得出来。
+            .opacity(selected ? 1 : 0.80)
+            .scaleEffect(selected ? 1.22 : 1)
+            .offset(y: selected ? -6 : 0)
             // 内容替换（大类 ⇄ 二级）单独走一条动画，不跟选中态的弹簧混在一起。
             .animation(.easeOut(duration: 0.20), value: shown.key)
 
@@ -151,7 +133,7 @@ struct CategoryPicker: View {
         .frame(width: topWidth)
         .contentShape(Rectangle())
         .onTapGesture { onSelectTop(category) }
-        .animation(.easeOut(duration: 0.18), value: selected)
+        .animation(.spring(response: 0.34, dampingFraction: 0.78), value: selected)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(selected ? [.isSelected] : [])
         // 读屏时把「属于哪一类」补回去——格子换字之后，视觉上靠位置记得住，读屏记不住。

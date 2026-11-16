@@ -39,8 +39,30 @@ final class EntryViewModel {
 
     /// 一级分类 key（如 `food`）。
     var topKey: String = ""
-    /// 二级分类 key（如 `food.coffee`），可为空 = 只记一级。
-    var subKey: String?
+
+    /// **每个一级各自记着上次选的二级**（2026-11-16 用户定案，方案 A）。
+    ///
+    /// 原来是全局单值 `subKey`：`selectTop` 切一次大类就把它清空，切回来那一格
+    /// 只能退回大类默认图标，用户看不清刚在那一类里选过什么。改成按大类分桶后，
+    /// `吃 › 咖啡` 一直留在「吃」那一格上，切到「穿」再切回来还是咖啡。
+    ///
+    /// 用字典不用数组：二级按 key 查是 O(1)，且与库里的 `sortOrder` 解耦
+    /// （排序只决定展示顺序，不该参与记忆）。
+    private(set) var subKeyByTop: [String: String] = [:]
+
+    /// 当前一级下选中的二级（如 `food.coffee`），可为空 = 只记一级。
+    ///
+    /// 读写都落到 `subKeyByTop[topKey]`——同一个数只存一份，
+    /// 不会出现「格子里显示咖啡、保存时却记成一级」这种两处分叉。
+    var subKey: String? {
+        get { topKey.isEmpty ? nil : subKeyByTop[topKey] }
+        set {
+            guard !topKey.isEmpty else { return }
+            if let newValue { subKeyByTop[topKey] = newValue }
+            else { subKeyByTop.removeValue(forKey: topKey) }
+        }
+    }
+
     /// 二级浮层是否展开。
     var showingSub = false
 
@@ -155,6 +177,24 @@ final class EntryViewModel {
         categories
             .filter { $0.parentKey == topKey }
             .sorted { $0.sortOrder < $1.sortOrder }
+    }
+
+    /// 每个一级格子当前该显示什么：这类选过二级就显示那个二级，没选过就是它自己。
+    ///
+    /// `subCategories` 只装当前大类的子类，拿它查不到「穿」格里该显示的「上衣」，
+    /// 所以这里回全量 `categories` 按桶查。方案 A 的呈现就靠这一份字典，
+    /// 视图不再自己拼「当前选中才算有二级」的规则。
+    var shownByTop: [String: Category] {
+        var result: [String: Category] = [:]
+        for top in topCategories {
+            if let key = subKeyByTop[top.key],
+               let sub = categories.first(where: { $0.key == key }) {
+                result[top.key] = sub
+            } else {
+                result[top.key] = top
+            }
+        }
+        return result
     }
 
     /// 最终落库的分类：选了二级用二级，否则用一级。
@@ -408,7 +448,9 @@ final class EntryViewModel {
     /// 切换类型或首次载入时，把默认值摆好（PRD 9.7：账户与分类都带上次的）。
     private func resetForType() {
         showingSub = false
-        subKey = nil
+        // 支出与收入是两套完全不同的分类树，切类型时整桶清掉；
+        // 同一类型内反复开面板则保留各自的二级记忆（PRD 9.7「分类带上次的」）。
+        subKeyByTop.removeAll()
         grade = nil
         errorMessage = nil
         receivedText = ""
@@ -455,12 +497,14 @@ final class EntryViewModel {
     }
 
     /// 选择一级分类：同类再点一次收起，异类直接打开二级。
+    ///
+    /// **不清 `subKeyByTop`**（方案 A）：切到别的类不该抹掉刚才那一类的选择，
+    /// 切回来还要接着显示。清空的只有 `resetForType`。
     func selectTop(_ category: Category) {
         if topKey == category.key {
             showingSub.toggle()
         } else {
             topKey = category.key
-            subKey = nil
             showingSub = true
         }
         grade = category.defaultGrade
