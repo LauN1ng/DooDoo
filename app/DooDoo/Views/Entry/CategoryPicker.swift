@@ -5,7 +5,7 @@ import UIKit
 ///
 /// 2026-11-16 第三次重画，三条改动：
 /// 1. **一级选中态换成「纯物理抬起」**（V1，用户当日从七版里选定）：
-///    `scale 1.22` + 上移 6pt + 投影加重到 `.26`，未选中图标压到 80% 不透明。
+///    `scale 1.30` + 上移 6pt + 投影加重到 `.26`，未选中图标压到 80% 不透明。
 ///    去掉 v2.2 那圈「从图标平均色吸出来」的径向光晕——实测那张色表跟图标对不上
 ///    （`吃` 是银紫餐具却给了紫光，叠上去整格发紫；`住` 给了黄绿 `#E1F77C`，
 ///    在暖白 `#F7F5F1` 上几乎不可见），强度又只有 `.28`，等于白加。
@@ -113,7 +113,7 @@ struct CategoryPicker: View {
             .frame(width: topTile, height: topTile)
             // 未选中让一步。只放大选中的那个推不动眼睛，两头一起动才跳得出来。
             .opacity(selected ? 1 : 0.80)
-            .scaleEffect(selected ? 1.22 : 1)
+            .scaleEffect(selected ? 1.30 : 1)
             .offset(y: selected ? -6 : 0)
             // 内容替换（大类 ⇄ 二级）单独走一条动画，不跟选中态的弹簧混在一起。
             .animation(.easeOut(duration: 0.20), value: shown.key)

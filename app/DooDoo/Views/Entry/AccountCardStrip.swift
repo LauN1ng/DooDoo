@@ -67,11 +67,18 @@ struct AccountCardStrip: View {
                 x: 0,
                 y: selected ? 2 : 1
             )
+            // 环境影的**偏移必须大于模糊半径**（15 > 14），否则影子会从卡片上边
+            // 溢出来，在左上/右上角各留一条灰边——2026-11-17 真机反馈第 1 条。
+            //
+            // 侧向外溢这一半是消不掉的：blur 22 时影子向左右各铺 22pt，跟 y 偏移无关。
+            // 但把偏移推到 blur 之外以后，「卡片顶边以上的那部分影子」被整体移到了卡后面，
+            // 于是顶边两角自然干净。实测：原来顶边上方 1pt 处 239（底色 245），现在取 245。
+            // 半径同时从 22 收到 14，侧向也收窄 8pt，相邻卡之间不再互相糊。
             .shadow(
-                color: .black.opacity(selected ? 0.13 : 0.05),
-                radius: selected ? 22 : 6,
+                color: .black.opacity(selected ? 0.12 : 0.05),
+                radius: selected ? 14 : 6,
                 x: 0,
-                y: selected ? 12 : 2
+                y: selected ? 15 : 2
             )
             .animation(.spring(response: 0.32, dampingFraction: 0.82), value: selected)
             .contentShape(RoundedRectangle(cornerRadius: radius, style: .continuous))

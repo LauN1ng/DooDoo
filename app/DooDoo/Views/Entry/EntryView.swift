@@ -50,6 +50,12 @@ struct EntryView: View {
     @State private var gradeFrameScale: CGFloat = 1
     @State private var gradeFrameOpacity: Double = 1
 
+    /// 未评分空位的「呼吸」开关（2026-11-17 用户要求给虚线框加个动画）。
+    /// 只是把「这里可以点」说出来，不催人——1.6s 一档、幅度 6%，静止时几乎看不出，
+    /// 视线扫过去才会发现有东西在动。`accessibilityReduceMotion` 打开时整段关掉。
+    @State private var gradeSlotPulse = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     /// 面板里需要数字键盘的字段。备注不在其中。
     private enum NumberField: Hashable {
         case amount, received, fee, perPeriod
@@ -659,7 +665,10 @@ struct EntryView: View {
     private let gradeSlotSide: CGFloat = 21
 
     private var gradePill: some View {
-        HStack(spacing: 12) {
+        // 未评分时间距取 14，与 `noteRow` 的 trailing 14 对齐 ——
+        // 这样虚线框夹在竖虚线与卡片右缘正中，两侧都是 14（原来 11.6 : 60.8）。
+        // 评过分以后回到 12：那时右侧是「徽章 + 文字」，左紧右松才对。
+        HStack(spacing: vm.grade == nil ? 14 : 12) {
             DashedRule()
                 .stroke(Palette.dividerDash, style: StrokeStyle(lineWidth: 1.2, dash: [3, 3]))
                 .frame(width: 1.2, height: 30)
@@ -670,7 +679,9 @@ struct EntryView: View {
                     gradeLabel
                 }
                 .frame(height: 44)
-                .contentShape(Rectangle())
+                // 未评分时右侧没有文字，点击区只剩 22pt 宽，低于 HIG 的 44。
+                // 用负 inset 把命中区撑到 44，**但不占布局宽度**——否则两侧 14pt 又不等了。
+                .contentShape(Rectangle().inset(by: vm.grade == nil ? -11 : 0))
             }
             .buttonStyle(.plain)
             .accessibilityElement(children: .ignore)
@@ -756,6 +767,15 @@ struct EntryView: View {
                 .opacity(vm.grade == nil ? 1 : 0)
         }
         .frame(width: gradeSlotSide, height: gradeSlotSide)
+        // 「呼吸」：轻微放大 + 一点点收灰，只提示「这里可以点」，不催人。
+        // 用 easeInOut 往返，不用闪烁（闪烁会被读成出错）；幅度 6%，静止时看不出来。
+        .scaleEffect(gradeSlotPulse ? 1.06 : 1)
+        .opacity(gradeSlotPulse ? 0.90 : 1)
+        .animation(
+            reduceMotion ? nil : .easeInOut(duration: 1.6).repeatForever(autoreverses: true),
+            value: gradeSlotPulse
+        )
+        .onAppear { gradeSlotPulse = true }
     }
 
     @ViewBuilder
@@ -769,10 +789,13 @@ struct EntryView: View {
                 .frame(width: gradeLabelWidth, alignment: .leading)
                 .opacity(gradeTextShown ? 1 : 0)
                 .modifier(GradeTextJelly(tick: gradeTextTick))
-        } else {
-            Color.clear
-                .frame(width: gradeLabelWidth, height: 16)
         }
+        // **未评分时不占位**（2026-11-17 真机反馈第 2 条）。
+        // 原来这里留了一个 46×16 的透明占位，结果虚线框被顶到左边：
+        // 实测「竖虚线 → 框」11.6pt，而「框 → 卡片右缘」有 60.8pt，差 5 倍。
+        // 不留占位以后，两侧都等于 `noteRow` 的 trailing 14。
+        // 代价：首次落档时这一段会向左让出 52pt（框变徽章 + 长出文字），
+        // 由 `gradePill` 的 spring 承接，读起来像「框让开给字腾位置」。
     }
 
     /// 点评分位。
