@@ -61,11 +61,31 @@ struct DeckView: View {
                     onAdd: { _ in onAdd(entry.day) }
                 )
                 .frame(height: cardHeight)
+                // **只向下的落地影**（2026-11-17 第三次真机反馈）。
+                // 原来是 `.shadow(0.08, radius 18, y 10)`：半径 18 就是朝左右各铺 18pt，
+                // 跟 y 偏移无关，暖白底上那两条宽灰带就是它。换成 `CardDropShadow` 后
+                // 影子只从卡片腰部往下落、左右各内缩 14，卡片上半段两侧彻底干净。
+                // 代价是顶边轮廓失去影子托着，改由 `DayCardView` 的 1pt 纸边描边定义。
+                .modifier(CardDropShadow(
+                    inset: 8,
+                    top: 0.86,
+                    blur: 4,
+                    drop: 4,
+                    opacity: 0.10,
+                    cornerRadius: 24
+                ))
+                .modifier(CardDropShadow(
+                    inset: 14,
+                    top: 0.42,
+                    blur: 18,
+                    drop: 10,
+                    opacity: 0.09,
+                    cornerRadius: 24
+                ))
                 .padding(.horizontal, DeckView.sideInset)
                 .padding(.bottom, frontBottom)
                 .offset(x: dragX)
                 .rotationEffect(.degrees(Double(dragX / 110)), anchor: .bottom)
-                .shadow(color: .black.opacity(0.08), radius: 18, x: 0, y: 10)
                 .zIndex(10)
             } else {
                 sheet

@@ -13,7 +13,7 @@ import SwiftData
 /// 而且这一排是**同一个东西的不同张**（都是卡），靠「谁站在前面」表达选中，
 /// 比靠「谁亮起来」更符合实物。所以这里一个彩色都不用：
 /// - 未选：`colorMultiply(0.90)` 压暗 + 缩到 0.94 + 下沉 3pt（压回堆里）；
-/// - 选中：原亮度 + 放大 1.04 + **双层投影**（贴地 `0 2 3 .22` + 环境 `0 12 22 .13`）。
+/// - 选中：原亮度 + 放大 1.04 + **双层落地影**（贴地 + 环境，两个都只向下，见 `CardDropShadow`）。
 ///
 /// 不用描边：卡面自带 0.5pt 白色高光边（`CardFace` 第一层），再加一圈线会和它打架。
 struct AccountCardStrip: View {
@@ -37,10 +37,9 @@ struct AccountCardStrip: View {
             .padding(.vertical, 2)
         }
         // **必须放开裁剪**（2026-11-16 第五轮真机反馈）。
-        // 选中卡的环境影是 `shadow(radius: 22, y: 12)`，向上要 10pt、向下要 34pt 空间，
-        // 而这里垂直内距只有 2pt——上下两半影子全被滚出视图的边界切掉，
-        // 只剩左右两侧那 16pt 内距里的部分活下来。用户看到的「阴影在左边」
-        // 就是这条切边，不是阴影方向错了。`CategoryPicker` 的一级行早就有这行。
+        // 落地影画在卡片的 `background` 里，向下要 11 + 14 ≈ 25pt 空间，
+        // 而这里垂直内距只有 2pt——不放开裁剪，影子会被滚出视图的边界切掉。
+        // `CategoryPicker` 的一级行早就有这行。
         .scrollClipDisabled()
     }
 
@@ -50,36 +49,35 @@ struct AccountCardStrip: View {
             .colorMultiply(selected ? .white : Color(white: 0.90))
             .scaleEffect(selected ? 1.04 : 0.94)
             .offset(y: selected ? 0 : 3)
-            // **两层影子，缺一层就浮不起来**（2026-11-16 第五轮真机反馈第 3 条：
-            // 「要想浮起来重点是下面那层的阴影」）。
+            // **两层落地影，都只向下**（2026-11-17 第三次反馈后从 `.shadow` 换成 `CardDropShadow`）。
             //
-            // 单层 `0 10 18 .22` 的问题实测过：从真机截图上量卡底边往下 1pt 处的亮度是 184
-            // （底色 230），到 8pt 就淡到 213——**只有一团散开的雾，底边没有一条贴地的实影**。
-            // 影子是从卡片「外扩」出去的，不是「落在下面的」，所以看着像印在纸上洇开，
-            // 不像离地。
+            // 为什么放弃 `.shadow`：它是各向同性模糊，半径多大就朝左右各铺多大，
+            // 跟 `y` 偏移毫无关系。上一版 `0 15 14` 靠「偏移 > 半径」压住了顶边，
+            // 但左右两侧照样各渗 14pt——暖白底上就是两条纵向灰雾，连看三轮。
+            // 参数怎么调都只会「灰雾淡一点」，不会消失，所以换机制：
+            // 影子做成卡片背后一块比卡片窄的形状、只保留下半段再 blur，
+            // 卡片上半部两侧**一个像素的影子都没有**，影子只从腰部往下落。
             //
-            // 两层分工：贴地那层小而硬（半径 3、只算卡片轮廓本身），负责勾出
-            // 「卡片边缘离开纸面」这条线；环境那层大而软（半径 22、偏移 12）负责距离感。
-            // 同一个对比页量到：加贴地层后底边 1pt 处 199 → 164，底边立刻有了硬边。
-            .shadow(
-                color: .black.opacity(selected ? 0.22 : 0.03),
-                radius: selected ? 3 : 2,
-                x: 0,
-                y: selected ? 2 : 1
-            )
-            // 环境影的**偏移必须大于模糊半径**（15 > 14），否则影子会从卡片上边
-            // 溢出来，在左上/右上角各留一条灰边——2026-11-17 真机反馈第 1 条。
+            // 卡面自带 0.5pt 白色高光边，轮廓不靠影子定义，所以这里敢把上半段清空。
             //
-            // 侧向外溢这一半是消不掉的：blur 22 时影子向左右各铺 22pt，跟 y 偏移无关。
-            // 但把偏移推到 blur 之外以后，「卡片顶边以上的那部分影子」被整体移到了卡后面，
-            // 于是顶边两角自然干净。实测：原来顶边上方 1pt 处 239（底色 245），现在取 245。
-            // 半径同时从 22 收到 14，侧向也收窄 8pt，相邻卡之间不再互相糊。
-            .shadow(
-                color: .black.opacity(selected ? 0.12 : 0.05),
-                radius: selected ? 14 : 6,
-                x: 0,
-                y: selected ? 15 : 2
-            )
+            // 两层分工不变：**贴地那层小而硬**勾出「卡片离开纸面」这条线；
+            // **环境层大而软**负责距离感。后加的那层画在更下面，所以先贴地、后环境。
+            .modifier(CardDropShadow(
+                inset: 4,
+                top: 0.80,
+                blur: 3,
+                drop: 3,
+                opacity: selected ? 0.16 : 0,
+                cornerRadius: radius
+            ))
+            .modifier(CardDropShadow(
+                inset: selected ? 9 : 7,
+                top: selected ? 0.46 : 0.60,
+                blur: selected ? 14 : 6,
+                drop: selected ? 11 : 3,
+                opacity: selected ? 0.13 : 0.05,
+                cornerRadius: radius
+            ))
             .animation(.spring(response: 0.32, dampingFraction: 0.82), value: selected)
             .contentShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
             .onTapGesture { selection = account }

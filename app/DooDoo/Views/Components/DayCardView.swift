@@ -49,6 +49,14 @@ struct DayCardView: View {
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(Palette.card)
+                .overlay(
+                    // **纸的边**（2026-11-17 第三次真机反馈）：落地影改成只从腰部往下以后，
+                    // 卡顶与左右上角不再有影子托着；白卡压暖白底只有 1.04:1 的亮度差，
+                    // 没有这条线轮廓就发虚。用 `Palette.line`（#ECE7DE）而不是 ink 透明度——
+                    // 它是暖调的纸边、与页底同族，不会在卡顶画出一个框。
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .strokeBorder(Palette.line, lineWidth: 1)
+                )
         )
     }
 
