@@ -10,15 +10,22 @@ import SwiftData
 /// 老库会在启动时清空重建（M1 期间用户没有任何录入入口，重建是安全的）。
 @MainActor
 enum SeedService {
+    /// v4：**不再写入演示流水**（2026-11-17）。
+    ///
+    /// 用户原话「单独给我一版没有测试数据的包，我用几天就知道了」。库里那些
+    /// 好利来 / 星巴克 / 滴滴是 M1 为了看卡片效果铺的样板，不是他的账。
+    /// 账户保留：`seedAccounts` 本来就是照他真实持有的卡设的，余额按真实账单的目标值，
+    /// 省掉 18 次手工录入。分类不在这里建——`ensureBuiltInCategories` 在 `prepare` 后面会补齐 51 个。
+    ///
     /// v3：分类改两级（一级 10 + 二级 51），流水挂到二级。
-    static let currentSeedVersion = 3
+    static let currentSeedVersion = 4
 
     /// 首页与资产页启动时调这一个：版本迁移 → 补图标 → 补缺失分类 → 重算余额。
     static func prepare(context: ModelContext, calendar: Calendar = .current) throws {
         let settings = try ensureSettings(context)
         if settings.seedVersion < currentSeedVersion {
             try wipeDemoData(context)
-            try seedV3(context, calendar: calendar)
+            try seedV4(context)
             settings.seedVersion = currentSeedVersion
             settings.updatedAt = .now
             try context.save()
@@ -106,7 +113,12 @@ enum SeedService {
     }
 
     private static func wipeDemoData(_ context: ModelContext) throws {
-        // 先删流水再删账户，避免关系悬空
+        // 依赖方先删：分期期表 → 分期 → 账单 → 流水 → 分类 → 账户。
+        // v4 起清理范围补上了分期与账单——旧版只删后三个，库里若有分期计划会
+        // 留下指向已删账户的悬空关系。
+        try context.delete(model: InstallmentPeriod.self)
+        try context.delete(model: Installment.self)
+        try context.delete(model: BillStatement.self)
         try context.delete(model: Transaction.self)
         try context.delete(model: Category.self)
         try context.delete(model: Account.self)
@@ -157,34 +169,18 @@ enum SeedService {
         .init(name: "父母借款", shortName: "父母借款", brand: "loan-personal", variant: 0, last4: "", kind: .loan, target: "-20000.00", limit: nil, originalLimit: nil, cycleStart: nil, cycleEnd: nil, dueDay: nil, platform: nil),
     ]
 
-    // MARK: - 流水
+    // MARK: - 建账户
 
-    /// (天数偏移, 时, 分, 商户, 分类 key, 账户短名对应的账户名, 金额, 图标)
-    /// 分类 key 是**二级**（`food.coffee`）——流水挂二级，一级由 `parentKey` 反查。
-    private typealias SeedTx = (Int, Int, Int, String, String, String, String, String)
-
-    private static let seedTransactions: [SeedTx] = [
-        (0, 12, 10, "好利来", "food.snack", "花呗", "32.00", "Croissant"),
-        (0, 12, 40, "地铁", "transport.metro", "建设银行储蓄卡 5044", "4.00", "Metro"),
-        (0, 13, 5, "麦富迪猫粮", "social.pet", "京东白条", "129.00", "CatFace"),
-        (0, 8, 20, "星巴克", "food.coffee", "花呗", "28.00", "HotBeverage"),
-        (0, 18, 30, "滴滴", "transport.taxi", "招商银行信用卡 8857", "19.50", "Taxi"),
-        (0, 12, 0, "工作午餐", "food.lunch", "微信余额", "26.00", "CookedRice"),
-        (0, 20, 15, "日用补货", "wear.top", "余额宝", "63.00", "TShirt"),
-        (0, 21, 40, "手游充值", "fun.game", "花呗", "30.00", "Joystick"),
-        (1, 9, 5, "星巴克", "food.coffee", "花呗", "28.00", "HotBeverage"),
-        (1, 19, 20, "滴滴", "transport.taxi", "招商银行信用卡 8857", "19.50", "Taxi"),
-        (2, 15, 45, "麦富迪猫粮", "social.pet", "京东白条", "129.00", "CatFace"),
-        (3, 10, 30, "好利来", "food.breakfast", "花呗", "26.00", "Bread"),
-        (3, 8, 50, "地铁", "transport.metro", "建设银行储蓄卡 5044", "4.00", "Metro"),
-        (5, 18, 0, "朋友聚餐", "food.dinner", "微信余额", "186.00", "SteamingBowl"),
-        (5, 20, 30, "电影票", "fun.movie", "花呗", "76.00", "FilmFrames"),
-        (6, 22, 10, "打车回家", "transport.taxi", "支付宝余额", "33.00", "Taxi"),
-    ]
-
-    private static func seedV3(_ context: ModelContext, calendar: Calendar) throws {
-        let categories = makeCategories(context: context)
-
+    /// v4：**只建账户，不写演示流水**（2026-11-17）。
+    ///
+    /// 用户要求「一版没有测试数据的包」——库里那些好利来 / 星巴克 / 滴滴是 M1
+    /// 为看卡片效果铺的样板，不是他的账。账户保留：`seedAccounts` 本来就是照
+    /// 他真实持有的卡设的（建行 5044、招行 8857、花呗、白条、e招贷、父母借款…），
+    /// 余额也按真实账单的目标值，省掉 18 次手工录入。
+    ///
+    /// 分类不在这里建——`ensureBuiltInCategories` 在 `prepare` 里排在后面，会补齐 51 个。
+    /// `sortOrder` 用数组下标，保证资产页分组顺序与原型一致。
+    private static func seedV4(_ context: ModelContext) throws {
         var accounts: [String: Account] = [:]
         for (index, spec) in seedAccounts.enumerated() {
             let account = Account(
@@ -209,23 +205,8 @@ enum SeedService {
         }
         try context.save()
 
-        let today = calendar.startOfDay(for: .now)
-        for row in seedTransactions {
-            let day = calendar.date(byAdding: .day, value: -row.0, to: today) ?? today
-            let date = calendar.date(bySettingHour: row.1, minute: row.2, second: 0, of: day) ?? day
-            try LedgerService.insert(
-                amount: decimal(row.6),
-                kind: .expense,
-                date: date,
-                note: row.3,
-                account: accounts[row.5],
-                category: categories[row.4],
-                iconName: row.7,
-                in: context
-            )
-        }
-
-        // 用目标余额反推 initialBalance——顺带把 recalculateAll 当断言跑一遍
+        // 一条流水都没有，所以 `initialBalance` 直接就是目标余额。
+        // 仍然走 `adjustAccountBalance`：余额是派生值，只能由 `LedgerService` 写（AGENTS 3）。
         for spec in seedAccounts {
             guard let account = accounts[spec.name] else { continue }
             try LedgerService.adjustAccountBalance(account, to: decimal(spec.target), in: context)
@@ -238,26 +219,6 @@ enum SeedService {
     /// `Decimal(string:)` 比 `Decimal(Double)` 精确：后者会把 19.5 变成 19.499999…
     private static func decimal(_ text: String) -> Decimal {
         Decimal(string: text, locale: Locale(identifier: "en_US_POSIX")) ?? 0
-    }
-
-    /// 建内置分类，返回 `key → Category`（父与子一次建完，顺序即 `builtIn` 数组顺序）。
-    private static func makeCategories(context: ModelContext) -> [String: Category] {
-        var map: [String: Category] = [:]
-        for (index, item) in Category.builtIn.enumerated() {
-            let category = Category(
-                key: item.key,
-                parentKey: item.parentKey,
-                name: item.name,
-                iconName: item.icon,
-                emoji: item.emoji,
-                sortOrder: index,
-                isIncome: item.isIncome,
-                tintHex: item.tint
-            )
-            context.insert(category)
-            map[item.key] = category
-        }
-        return map
     }
 
     /// 老库补齐：分类缺 key / 图标时按内置规格回填；流水缺图标时按商户名或分类回填。
@@ -322,7 +283,7 @@ enum SeedService {
     /// 清空全部流水与账户。M2b 起用户已在真机记真实账目，重建会丢账。
     /// 这里只按 `key` 补缺失项，幂等，重复调用无副作用。
     ///
-    /// `sortOrder` 取 `builtIn` 下标（与 `makeCategories` 同一口径），
+    /// `sortOrder` 取 `builtIn` 下标（与 `Category.builtIn` 的顺序一致），
     /// 保证补进去的分类落在正确位置，而不是排到父类末尾。
     ///
     /// 顺序约束：必须在 `backfillIcons` **之后**调用。M1 老库的分类没有 `key`，
