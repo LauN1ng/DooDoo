@@ -89,6 +89,20 @@ final class InstallmentEntryViewModel {
     /// 下一期还款日（必填，但由账户 `dueDay` 自动带出）。
     var dueDate: Date = .now
 
+    /// 这笔债是否**已经在账户现有欠款里**（2026-11-17 新增）。
+    ///
+    /// 为什么需要这个开关：建卡时填的「欠款」是账单上的**总额**，
+    /// 里面本来就有未还的分期。存量补录如果还按「新增一笔债」入账，
+    /// 9,000 就会变成 12,000（用户 11-17 真机事故原形）。
+    ///
+    /// 默认 `true`（当账户已有欠款时）：这个面板的名字叫「存量分期」，
+    /// 它回答的是「账单上已经欠着的那些分期分成几期」，不是「今天又借了一笔」。
+    /// 今天新发生的分期走记一笔的分期开关（`createdFromEntry`），那是另一条路。
+    ///
+    /// 关掉它 = 承认这笔债还没进账本（比如新借的一笔），此时会生成一条
+    /// 「分期登记」流水把欠款加上去。
+    var debtAlreadyInBalance = true
+
     /// 挂在哪张卡上。分期必然属于信用/借款账户。
     var account: Account?
 
@@ -366,6 +380,9 @@ final class InstallmentEntryViewModel {
         }
         if let account {
             dueDate = InstallmentIntake.defaultDueDate(dueDay: account.dueDay)
+            // 账户已经有欠款 → 默认「这笔债已在里面」（存量补录的主路径）。
+            // 全新卡（欠款 0）→ 默认关，录进去的就是新增的债。
+            debtAlreadyInBalance = account.currentBalance < 0
         }
     }
 
@@ -373,6 +390,7 @@ final class InstallmentEntryViewModel {
     func selectAccount(_ newAccount: Account) {
         account = newAccount
         dueDate = InstallmentIntake.defaultDueDate(dueDay: newAccount.dueDay)
+        debtAlreadyInBalance = newAccount.currentBalance < 0
     }
 
     func setTarget(_ value: Int) {
@@ -420,6 +438,7 @@ final class InstallmentEntryViewModel {
                 remainingInterest: splitsInterest ? resolvedInterest : nil,
                 totalRebate: Self.optionalDecimal(rebateText),
                 nextDueDate: dueDate,
+                debtAlreadyInBalance: debtAlreadyInBalance,
                 in: context
             )
             doneCount = (try? InstallmentService.count(in: context)) ?? (doneCount + 1)

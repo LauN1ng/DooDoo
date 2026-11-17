@@ -334,6 +334,10 @@ struct InstallmentEntryView: View {
 
             Divider().overlay(Palette.line)
 
+            debtIncludedToggle
+
+            Divider().overlay(Palette.line)
+
             // 剩余期数
             HStack(spacing: 6) {
                 Text("剩余期数")
@@ -342,7 +346,7 @@ struct InstallmentEntryView: View {
                 Spacer(minLength: 6)
                 NumberValueText(
                     text: vm.remainingText,
-                    placeholder: "9",
+                    placeholder: "如 9",
                     size: 20,
                     weight: .semibold,
                     active: padOpen && activeField == .remaining,
@@ -464,8 +468,8 @@ struct InstallmentEntryView: View {
     /// 就取这里，省得用户在次卡里再抄一遍同一个数。
     private var splitDueFields: some View {
         VStack(alignment: .leading, spacing: 6) {
-            amountLine("本金", placeholder: "6670.93", text: vm.principalText, field: .principal)
-            amountLine("利息", placeholder: "851.57", text: vm.interestPartText, field: .interestPart)
+            amountLine("本金", placeholder: "如 6670.93", text: vm.principalText, field: .principal)
+            amountLine("利息", placeholder: "如 851.57", text: vm.interestPartText, field: .interestPart)
 
             Divider().overlay(Palette.line)
 
@@ -528,6 +532,31 @@ struct InstallmentEntryView: View {
                 Text(vm.splitsInterest ? "填「本金 + 利息」，合计自动算" : "只有一个合计，直接填上面")
                     .font(.system(size: 10))
                     .foregroundStyle(Palette.faint)
+            }
+        }
+        .toggleStyle(.switch)
+        .tint(accent)
+    }
+
+    /// 开关：这笔债是不是已经在账户欠款里了（2026-11-17 新增）。
+    ///
+    /// 这是「9,000 变 12,000」的直接补丁。建卡时填的欠款是账单总额，
+    /// 里面本来就有未还的分期；存量补录再入一次就是双计。
+    ///
+    /// 默认值由 ViewModel 按账户决定（已有欠款 → 已含），
+    /// 所以正常流程下用户不用碰它；只有「新借的一笔」才需要关掉。
+    private var debtIncludedToggle: some View {
+        Toggle(isOn: $vm.debtAlreadyInBalance) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text("这笔债已经在欠款里了")
+                    .font(.system(size: 12.5))
+                    .foregroundStyle(Palette.ink2)
+                Text(vm.debtAlreadyInBalance
+                     ? "只记期表，不加欠款——账单上已经欠着的那些选这个"
+                     : "会往这张卡加 ¥\(MoneyMath.money(vm.remainingDue))，欠款随之变多")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Palette.faint)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .toggleStyle(.switch)
@@ -597,7 +626,7 @@ struct InstallmentEntryView: View {
                 Spacer(minLength: 6)
                 NumberValueText(
                     text: vm.totalText,
-                    placeholder: "12",
+                    placeholder: "如 12",
                     size: 15,
                     weight: .medium,
                     active: padOpen && activeField == .total,
@@ -632,7 +661,7 @@ struct InstallmentEntryView: View {
                         .foregroundStyle(Palette.faint)
                     NumberValueText(
                         text: vm.interestText,
-                        placeholder: "176.99",
+                        placeholder: "0.00",
                         size: 15,
                         weight: .medium,
                         active: padOpen && activeField == .interest,

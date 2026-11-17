@@ -44,16 +44,38 @@ struct FlowView: View {
             // 首次启动铺演示数据（已有分类就跳过），并给老数据补 Fluent3D 图标
             try? SeedService.prepare(context: context)
         }
+        // 卡数会随「今天第一笔流水 / 删空某一天」变化，索引必须跟着收，
+        // 否则 `DeckView` 会拿着越界的 index 渲染一张空卡。
+        .onChange(of: cards.count) { _, count in
+            if index > max(count - 1, 0) { index = max(count - 1, 0) }
+        }
     }
 
-    /// 窗口内的天（新的在前）。空账本时只留今天一张空卡（规格 3.1「首用只有 1 张」）。
+    /// 窗口内的天（新的在前）。
+    ///
+    /// **只让「有流水的天」和「今天」成卡**（2026-11-17 修）。
+    /// 旧实现是「窗口内只要有任意一天有流水，就返回整个 7 天窗口」，
+    /// 于是记下第一笔的瞬间，首页从 1 张卡跳成 7 张（前卡 + 3 层纸边，
+    /// 左右滑还有 6 个完全空白的日卡）——用户原话「原本只有一张卡片的首页
+    /// 记一笔之后就变成了卡片堆」。空白天没有内容可看，不成卡。
+    ///
+    /// 今天永远留一张：那是「记一笔」的入口，空着也要在。
     private var cards: [(day: Date, items: [Transaction])] {
-        let window = DayMath.windowed(transactions, days: 7, dateOf: { $0.date })
+        let window = DayMath.windowed(rows, days: 7, dateOf: { $0.date })
         guard !window.isEmpty else { return [] }
-        if window.contains(where: { !$0.items.isEmpty }) {
-            return window
-        }
-        return Array(window.prefix(1))
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: .now)
+        let kept = window.filter { !$0.items.isEmpty || calendar.isDate($0.day, inSameDayAs: today) }
+        return kept.isEmpty ? Array(window.prefix(1)) : kept
+    }
+
+    /// 日卡里只放真正的流水。
+    ///
+    /// 分期债务登记（`.adjustment`，如「分期登记 · 京东白条」）不是「今天花了什么」，
+    /// 它在账户详情里看构成——AGENTS 的第一条底线是「首页第一眼是今天的流水」，
+    /// 把一笔账本调整混进去会让日卡的支出合计与行长对不上。
+    private var rows: [Transaction] {
+        transactions.filter { $0.kind != .adjustment }
     }
 }
 

@@ -648,7 +648,9 @@ struct AccountDetailView: View {
         let ledger = AccountLedger(
             kind: account.kind,
             initial: account.initialBalance,
-            entries: entries
+            entries: entries,
+            // 同资产页：创建日之前该账户不存在，欠款记 0（2026-11-17 折线起点修正）
+            createdAt: account.createdAt
         )
         return DebtTrend.points(ledger: ledger, at: NetWorthSeries.dates(for: trendRange))
     }

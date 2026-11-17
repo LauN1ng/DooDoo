@@ -10,7 +10,8 @@
 | `LedgerService.insert(...)` | 唯一写入入口。支持 `toAccount` / `receivedAmount` / `grade`；写完整额后走**增量重算**，不再全表扫描 |
 | `LedgerService.effect(of:)` | 单边视图（= `flow.from`），给「按账户查流水」「净值曲线」用 |
 | `SeedService.prepare(context:)` | `seedVersion` 迁移 → 补图标 → 重算。首页与资产页启动时都调 |
-| `InstallmentService.insert(...)` | 建分期计划 + `generateFuturePeriods` 展开未来逐期 + **按 `remainingDue` 入账一次**（2026-11-13 起）。它为什么要动余额：欠款只读余额（`CreditDebt`），计划若只登记不入账，期表里的债在「我欠」里彻底消失。`createdFromEntry` 标记「这笔债已由那条全额消费入过账」，据此跳过入账。另有 `backfillDebtBaseline` 把库里已有计划一次性补入账（`UserDefaults` 幂等） |
+| `InstallmentService.insert(...)` | 建分期计划 + `generateFuturePeriods` 展开未来逐期 + **按 `remainingDue` 入账一次**（2026-11-13 起，2026-11-17 改法）。它为什么要动余额：欠款只读余额（`CreditDebt`），计划若只登记不入账，期表里的债在「我欠」里彻底消失。**入账方式是一条款式可见的 `.adjustment` 流水**（`note` 带「分期登记 · 」前缀、`installmentKey` 指回计划），不再用 `adjustAccountBalance` 反推 `initialBalance`——否则会和建卡时填的欠款叠加，且变化没有时间点。三个跳过条件：`createdFromEntry`（全额消费已入账）/ `debtAlreadyInBalance`（用户勾了「这笔债已在欠款里」）/ 金额非正 |
+| `InstallmentService.migrateDebtToRows(in:)` | 把 11-13 版减进 `initialBalance` 的分期债拆成流水。`initial += due` 与新增的 `−due` 流水抵消，**余额净变化为 0**；只拆构成、不去重（去重由用户重填「欠款」完成）。幂等（`UserDefaults` + 逐计划查流水） |
 | `InstallmentService.generateFuturePeriods(for:in:)` | 按剩余期数/每期金额/下一期还款日重建期表，`isManualOverride` 的那几期保留不动 |
 | `InstallmentService.count(in:)` / `mostRecentAccount(in:)` | 连录用：已录笔数与「上一笔挂的卡」 |
 | `InstallmentService.migrateLegacyRemainingPrincipal(in:)` | M3-3 修数据：老计划把「剩余应还」误存在 `remainingPrincipal` 里，搬到 `remainingDue` 并清掉历史首期，重建期表。幂等，`SeedService.prepare` 末尾调用 |

@@ -6,15 +6,29 @@ import SwiftData
 /// **它动余额**（2026-11-13 口径统一起）。计划里的债必须进 `currentBalance`——
 /// 余额是唯一真相，分期不再靠第二套派生去补金额，否则「我欠」永远看不见这笔债。
 ///
-/// 唯一例外是 `createdFromEntry`：那种计划由「记一笔」的全额 `expense` 入账，
-/// 这里再入一次就是双份。
+/// **怎么动：2026-11-17 起改成落一条可见的债务流水**（`.adjustment`）。
 ///
-/// 仍然遵守 AGENTS 7.2：改余额一律走 `LedgerService`，本文件不直接赋值。
+/// 之前是 `LedgerService.adjustAccountBalance(to: currentBalance - due)`，
+/// 也就是**反推 `initialBalance`**。这条路有两个致命问题，用户 11-17 真机撞上了：
 ///
-/// 建计划时顺手把未来每一期落库（PRD 9.5.4）：已还的历史只存汇总，
-/// 未来逐期存，因为任意一期都可能被账单改正（9.5.5）。
+/// 1. **和「建卡时填的欠款」叠加**。用户在新建账户里填的 9,000 是「这张卡现在一共欠多少」，
+///    那 9,000 里本来就已经包含未还的分期；再录分期又把 3,000 减一次 → 12,000。
+///    两个入口写同一个数，却互不知情。
+/// 2. **变化没有时间点**。改 `initialBalance` 等于「从开天辟地起就欠这么多」，
+///    所以走势曲线原地下移（看不出今天多了 3,000），也无法回答「这 12,000 怎么来的」。
+///
+/// 改成流水之后：余额 = 期初 + Σ流水 恒成立；每一笔债在账户详情里能找到出处；
+/// 录错了能删那一条；删计划能级联删流水。
+///
+/// 三条跳过入账的情形（都意味着「这笔债已经在我账上了」）：
+/// - `createdFromEntry`：记一笔里建的，那条全额 `expense` 已入账（PRD 9.5.6）
+/// - `debtAlreadyInBalance`：用户勾了「这笔债已在账户欠款里」——存量补录的主路径
+/// - `remainingDue` 为 nil 或 ≤ 0：没有金额可入
 @MainActor
 enum InstallmentService {
+
+    /// 债务登记流水的备注前缀。账户详情据此把这批流水标成「分期登记」。
+    static let debtNotePrefix = "分期登记 · "
 
     /// 建一张分期计划，并展开未来逐期。
     ///
@@ -30,6 +44,9 @@ enum InstallmentService {
     /// - `createdFromEntry`：这张计划是不是在「记一笔」里跟消费一起建的（M3-10）。
     ///   那种计划的消费已按全额记了 `expense`，**所以这里不再重复入账**。
     ///   语义在 2026-11-13 口径统一时反转：从「我欠别算我」变成「我已经入过账了」
+    /// - `debtAlreadyInBalance`：用户明确表示**这笔债已经包含在账户现有欠款里**了
+    ///   （2026-11-17 新增）。存量补录的主路径：建卡时填的「欠款」是账单上的总额，
+    ///   里面本来就有未还分期，再入一次就是双计。勾了它 = 只登记计划、不碰余额。
     /// - `iconName`：列表展示用，默认 `Receipt`（bundle 里的 Fluent3D PNG 名）
     ///
     /// 边界：`remaining <= 0` 时仍建计划但**不生成期表**（已还清的历史分期，
@@ -49,6 +66,7 @@ enum InstallmentService {
         totalRebate: Decimal? = nil,
         nextDueDate: Date,
         createdFromEntry: Bool = false,
+        debtAlreadyInBalance: Bool = false,
         iconName: String = "Receipt",
         calendar: Calendar = .current,
         in context: ModelContext
@@ -73,17 +91,23 @@ enum InstallmentService {
         context.insert(plan)
         try generateFuturePeriods(for: plan, calendar: calendar, in: context)
 
-        // 债务入账（2026-11-13）：把「剩余应还」写进账户余额。
+        // 债务入账（2026-11-17 改：落一条可见流水，不再反推 initialBalance）
         //
         // 为什么必须有这一步：欠款 = max(0, −余额)，分期若只登记不入账，
-        // 详情页看得见 3,852.15 的期表，资产页却说欠 0。
+        // 详情页看得见期表，资产页却说欠 0。
         //
-        // 为什么 `createdFromEntry` 跳过：那种消费已按 PRD 9.5.6 记了**全额** `expense`，
-        // 余额里已经有了；再入一次会让 1,440.39 变成 2,880.78。
-        if !createdFromEntry, let account, let due = plan.remainingDue, due > 0 {
-            try LedgerService.adjustAccountBalance(
-                account,
-                to: account.currentBalance - due,
+        // 为什么是 `.adjustment` 而不是改 initialBalance：余额是派生值，
+        // 任何改动都必须有一条流水作为出处，否则「我欠」的构成无从回溯、
+        // 走势曲线也没有时间点（见本文件顶部注释里的两条真机事故）。
+        if !createdFromEntry, !debtAlreadyInBalance,
+           let account, let due = plan.remainingDue, due > 0 {
+            try LedgerService.insert(
+                amount: due,
+                kind: .adjustment,
+                date: plan.createdAt,
+                note: debtNotePrefix + plan.name,
+                account: account,
+                installmentKey: plan.key,
                 in: context
             )
         }
@@ -92,43 +116,69 @@ enum InstallmentService {
         return plan
     }
 
-    /// 把库里已存在、但从未入账的分期计划一次性计入余额（2026-11-13 口径切换的迁移）。
+    /// 把 2026-11-13 那一版「分期入账」从 `initialBalance` 里拆出来，改记成流水。
     ///
-    /// 切换前分期只记「欠多少、什么时候还」，金额靠 `CardDebt` 事后补；切换后欠款只读余额，
-    /// 所以这批计划必须补一次入账，否则它们成为僵尸数据——期表在，金额不在。
+    /// **为什么必须迁移**：11-13 版把 `remainingDue` 直接减进 `initialBalance`，
+    /// 等于「从开天辟地起这张卡就多欠这么多」。迁到流水之后：
+    /// - 余额**不变**（`initial += due` 与新增的 −due 流水正好抵消，用户不会看到数字跳）
+    /// - 但构成变得可解释：期初欠款 + 分期登记，各占一行
+    /// - 走势曲线也终于有时间点了
     ///
-    /// - 幂等：跑完在 `UserDefaults` 写标记，重复调用直接返回 0。
-    /// - `createdFromEntry` 跳过（消费全额已在余额里）。
-    /// - 同卡多笔计划先求和再一次入账，避免每笔都触发一次全表重算。
+    /// **它不负责去重**。如果那笔债本来就在用户填的期初欠款里（本次真机事故的形态），
+    /// 拆出来之后总额仍然是「期初 + 分期」——只是现在用户能看见这两块，
+    /// 由他自己判断期初该填多少（重填一次「欠款」就会把差额吸收回 `initialBalance`）。
+    /// 自动去重就是猜，猜错等于替他改账。
     ///
-    /// 返回受影响的账户数。
+    /// 幂等：`UserDefaults` 标记 + 逐计划检查是否已有对应流水（双保险，
+    /// 因为标记一旦被清掉就会重复加 `initialBalance`）。
+    ///
+    /// 返回被迁移的计划数。
     @discardableResult
-    static func backfillDebtBaseline(in context: ModelContext) throws -> Int {
-        let flag = "doodoo.creditDebt.backfill.v1"
+    static func migrateDebtToRows(in context: ModelContext) throws -> Int {
+        let flag = "doodoo.installmentDebt.rows.v1"
         guard !UserDefaults.standard.bool(forKey: flag) else { return 0 }
 
         let plans = try context.fetch(FetchDescriptor<Installment>())
-        var owedByAccount: [PersistentIdentifier: Decimal] = [:]
+        guard !plans.isEmpty else {
+            UserDefaults.standard.set(true, forKey: flag)
+            return 0
+        }
+
+        // 已经带债务流水的计划不再动（新装的库走 `insert` 写的就是流水）。
+        let booked = Set(
+            try context.fetch(FetchDescriptor<Transaction>())
+                .filter { $0.deletedAt == nil && $0.kind == .adjustment }
+                .compactMap(\.installmentKey)
+        )
+
+        var migrated = 0
         for plan in plans where !plan.createdFromEntry {
+            guard !booked.contains(plan.key) else { continue }
             guard plan.remainingDue != nil, plan.remainingTotal > 0 else { continue }
             guard let account = plan.account else { continue }
-            owedByAccount[account.persistentModelID, default: 0] += plan.remainingTotal
-        }
 
-        var affected = 0
-        for account in try context.fetch(FetchDescriptor<Account>()) {
-            guard let owed = owedByAccount[account.persistentModelID], owed > 0 else { continue }
-            try LedgerService.adjustAccountBalance(
-                account,
-                to: account.currentBalance - owed,
+            let amount = plan.remainingTotal
+            // 还回旧版误减进期初的那一份，再补一条等额的流水：余额净变化为 0。
+            account.initialBalance += amount
+            try LedgerService.insert(
+                amount: amount,
+                kind: .adjustment,
+                date: plan.createdAt,
+                note: debtNotePrefix + plan.name,
+                account: account,
+                installmentKey: plan.key,
                 in: context
             )
-            affected += 1
+            migrated += 1
         }
 
+        // `initialBalance` 被直接改过，必须整体重算一次，
+        // 否则 `currentBalance` 与「期初 + Σ流水」会分叉。
+        if migrated > 0 {
+            try LedgerService.recalculateAll(in: context)
+        }
         UserDefaults.standard.set(true, forKey: flag)
-        if affected > 0 { try context.save() }
-        return affected
+        return migrated
     }
 
     /// 给「记一笔里跟消费一起建」的分期补上 `Transaction.installmentKey`。

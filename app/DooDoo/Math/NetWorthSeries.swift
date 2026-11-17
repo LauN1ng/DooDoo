@@ -11,6 +11,24 @@ struct AccountLedger: Sendable {
     let kind: AccountKind
     let initial: Decimal
     let entries: [LedgerPoint]
+
+    /// 账户创建日（`Account.createdAt`）。**早于这一天的时点，这个账户还不存在。**
+    ///
+    /// 2026-11-17 修「初始化折线起点不对」时加的。此前 `initial` 被无条件算进
+    /// 每一个历史采样点，于是「今天刚建的卡、今天填的欠款 25,148」在走势图上
+    /// 表现为「一周前就已经欠着 25,148」——曲线是一条平线，起点是当前值。
+    /// 更糟的是分期入账走 `adjustAccountBalance` 改的也是 `initial`，
+    /// 所以录完分期整条曲线**原地下移**，看不出任何变化。
+    ///
+    /// `nil` 表示调用方没给（单测构造），退化成旧行为——不锚定创建日。
+    let createdAt: Date?
+
+    init(kind: AccountKind, initial: Decimal, entries: [LedgerPoint], createdAt: Date? = nil) {
+        self.kind = kind
+        self.initial = initial
+        self.entries = entries
+        self.createdAt = createdAt
+    }
 }
 
 /// 走势图上的一个点。
@@ -48,8 +66,23 @@ enum NetWorthRange: String, CaseIterable, Sendable, Identifiable {
 /// 任一时点的值 = 当前值 − 该时点之后所有流水的影响，这样不会和余额算法打架。
 enum NetWorthSeries {
     /// 某账户在 `date` 时点的余额。
-    static func balance(of ledger: AccountLedger, at date: Date) -> Decimal {
-        ledger.entries.reduce(ledger.initial) { partial, point in
+    ///
+    /// **创建日之前返回 0**（2026-11-17 修）：账户在 `createdAt` 那天才存在，
+    /// 它的期初余额不该被搬到更早的日期上。没有这一条，走势图会把今天才填的
+    /// 25,148.82 画成「一周前就欠着」，起点就错了。
+    ///
+    /// 比较用 `startOfDay(createdAt)`：创建**当天**整天都算已存在（余额 = 期初 + 当天流水），
+    /// 否则今天上午建的卡要到明天才出现在曲线上。
+    static func balance(
+        of ledger: AccountLedger,
+        at date: Date,
+        calendar: Calendar = .current
+    ) -> Decimal {
+        if let createdAt = ledger.createdAt,
+           date < calendar.startOfDay(for: createdAt) {
+            return 0
+        }
+        return ledger.entries.reduce(ledger.initial) { partial, point in
             point.date <= date ? partial + point.delta : partial
         }
     }

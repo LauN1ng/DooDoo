@@ -100,6 +100,42 @@ struct NetWorthSeriesTests {
         #expect(NetWorthSeries.balance(of: ledger, at: date(7)) == 950)
     }
 
+    @Test("账户创建日之前该账户不存在：期初余额不会被搬到更早的时点")
+    func initialAnchoredToCreatedAt() {
+        // 2026-11-17 真机事故：今天建的卡、今天填的欠款 25,148，
+        // 走势图却画成「一周前就已经欠着 25,148」，整条曲线是平的、起点是当前值。
+        let owed = Decimal(string: "-25148.82", locale: Locale(identifier: "en_US_POSIX"))!
+        let ledger = AccountLedger(
+            kind: .credit,
+            initial: owed,
+            entries: [],
+            createdAt: date(10)
+        )
+        #expect(NetWorthSeries.balance(of: ledger, at: date(3)) == 0)
+        #expect(NetWorthSeries.balance(of: ledger, at: date(9)) == 0)
+        // 创建**当天**整天都算已存在，否则上午建的卡要到明天才上曲线。
+        #expect(NetWorthSeries.balance(of: ledger, at: date(10)) == owed)
+        #expect(NetWorthSeries.balance(of: ledger, at: date(12)) == owed)
+    }
+
+    @Test("没给创建日时退化成旧行为（单测构造不受影响）")
+    func missingCreatedAtKeepsOldBehavior() {
+        let ledger = AccountLedger(kind: .credit, initial: -500, entries: [])
+        #expect(NetWorthSeries.balance(of: ledger, at: date(1)) == -500)
+    }
+
+    @Test("创建日之后的流水照常叠加")
+    func entriesStillApplyAfterCreatedAt() {
+        let ledger = AccountLedger(
+            kind: .savings,
+            initial: 1000,
+            entries: [LedgerPoint(date: date(11), delta: -200)],
+            createdAt: date(10)
+        )
+        #expect(NetWorthSeries.balance(of: ledger, at: date(10)) == 1000)
+        #expect(NetWorthSeries.balance(of: ledger, at: date(11)) == 800)
+    }
+
     @Test("每个采样点都给出「我有 / 我欠」")
     func points() {
         let ledgers = [

@@ -34,13 +34,14 @@ enum SeedService {
         try ensureBuiltInCategories(context: context)
         try LedgerService.recalculateAll(in: context)
         // M3-3：老分期把「剩余应还」误存在「剩余本金」里，搬回来。
-        // **必须排在 backfill 之前**——2026-11-13 起分期要入账，而 backfill 只认
-        // `remainingDue`；先搬字段，才有东西可入。
+        // **必须排在债务迁移之前**——迁移按 `remainingDue` 算金额；
+        // 先搬字段，才有数可迁。
         try InstallmentService.migrateLegacyRemainingPrincipal(calendar: calendar, in: context)
-        // 2026-11-13 口径切换：库里已存在的分期一次性计入余额。
-        // 排在符号归一之前——入账后这些卡余额变负，`normalizeLiabilitySigns`
-        // 就不会把它们当成「正余额异常」再翻一次符号。幂等标记在方法内部。
-        try InstallmentService.backfillDebtBaseline(in: context)
+        // 2026-11-17：11-13 版把分期债直接减进 `initialBalance`，与建卡时填的欠款叠加、
+        // 且没有时间点。这里把它拆成可见的「分期登记」流水（余额净变化为 0）。
+        // 排在符号归一之前——迁移后这些卡余额仍是负的，`normalizeLiabilitySigns`
+        // 不会把它们当成「正余额异常」再翻一次符号。幂等标记在方法内部。
+        try InstallmentService.migrateDebtToRows(in: context)
         try normalizeLiabilitySigns(context: context)
         // M3-10 遗留：记一笔建的分期没把 key 写回那条全额消费流水，
         // 「本期消费」因此把分期本金全额也算进去了（白条 5,999）。

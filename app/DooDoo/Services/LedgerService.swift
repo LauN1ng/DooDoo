@@ -38,7 +38,8 @@ enum LedgerService {
     ///
     /// - `toAccount`：还款的被还信用卡 / 转账的转入账户；
     /// - `receivedAmount`：转账的实际到账（`nil` 视为等于 `amount`，即无手续费）；
-    /// - `grade`：消费评分，只有 `.expense` 会被记录（PRD 9.13）。
+    /// - `grade`：消费评分，只有 `.expense` 会被记录（PRD 9.13）；
+    /// - `installmentKey`：这笔流水属于哪张分期计划（`.adjustment` 的债务登记用）。
     @discardableResult
     static func insert(
         amount: Decimal,
@@ -51,6 +52,7 @@ enum LedgerService {
         category: Category? = nil,
         iconName: String? = nil,
         grade: SpendGrade? = nil,
+        installmentKey: String? = nil,
         in context: ModelContext
     ) throws -> Transaction {
         let received: Decimal? = kind == .transfer ? (receivedAmount ?? amount) : nil
@@ -74,6 +76,7 @@ enum LedgerService {
             category: category,
             iconName: iconName,
             grade: kind == .expense ? grade : nil,
+            installmentKey: installmentKey,
             groupID: group
         )
         context.insert(tx)
@@ -138,7 +141,10 @@ enum LedgerService {
     /// - `.income`：收款账户 +amount
     /// - `.repayment`：扣款账户 −amount，被还信用卡 +amount（欠款变少）
     /// - `.transfer`：转出 −到账额，转入 +到账额（**两边等额**）；手续费由独立流水记录
-    /// - `.adjustment`：余额校准不靠流水实现（见 `adjustAccountBalance`），返回 zero
+    /// - `.adjustment`：付款账户 −amount（2026-11-17 起。此前返回 zero，
+    ///   所以这个类型一直是死代码：余额校准走 `adjustAccountBalance` 改 `initialBalance`，
+    ///   分期入账也走那条路——**于是余额变化没有时间点、也看不见**
+    ///   （「我欠」的构成无法回溯、走势曲线原地下移）
     static func flow(of transaction: Transaction) -> AccountFlow {
         guard transaction.deletedAt == nil else { return .zero }
         switch transaction.kind {
@@ -160,7 +166,9 @@ enum LedgerService {
             let received = transaction.receivedAmount ?? transaction.amount
             return AccountFlow(from: -received, to: received)
         case .adjustment:
-            return .zero
+            // 「这笔债进了账本」= 账户少了这么多钱，与支出一致是同号。
+            // 不生成 `to`：调整是单边的，没有对手账户。
+            return AccountFlow(from: -transaction.amount, to: 0)
         }
     }
 

@@ -67,8 +67,12 @@ struct AccountEditor: View {
                                 .multilineTextAlignment(.trailing)
                         }
                     }
+                    // 2026-11-17 改口径说明：这个框是「当前一共欠多少」，不是「期初」。
+                    // 用户填的是账单上的总额（里面本来就有未还分期），保存时
+                    // `adjustAccountBalance` 会把「总额 − 已记流水」的差额吸收进 `initialBalance`。
+                    // 所以修账目、改错数都只需要在这里重填一次真实总额。
                     Text(kind.isLiability
-                         ? "欠款填正数（欠 600 就填 600）。余额是派生值：保存后会按流水重算，当前输入作为校准目标。"
+                         ? "填正数。这是这张卡**现在一共欠多少**（含已经登记的分期），保存后按流水重算，差额记进期初。"
                          : "余额是派生值：保存后会按流水重算，当前输入作为校准目标。")
                         .font(.footnote)
                         .foregroundStyle(.secondary)

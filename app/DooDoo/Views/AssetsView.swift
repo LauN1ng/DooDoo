@@ -275,7 +275,10 @@ struct AssetsView: View {
         return AccountLedger(
             kind: account.kind,
             initial: account.initialBalance,
-            entries: entries
+            entries: entries,
+            // 锚定创建日：早于这一天的采样点该账户余额记 0，
+            // 否则今天填的期初欠款会被画到一周前（折线起点错）。
+            createdAt: account.createdAt
         )
     }
 }
