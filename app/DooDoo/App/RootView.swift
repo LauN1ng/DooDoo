@@ -38,6 +38,9 @@ struct RootView: View {
                 }
             }
         }
+        // 2026-11-18 D 方案：全 App 没有主题色，系统 tint 一并收到墨。
+        // 开关、链接、日期选择器会跟着这一行自动统一，不用逐个改。
+        .tint(Palette.ink)
     }
 
     private var header: some View {

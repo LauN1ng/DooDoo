@@ -88,7 +88,9 @@ final class AppSettings {
     /// "A default value requires a fully qualified domain named value"（`Date.now` 踩过同样的坑）。
     ///
     /// 2026-11-16 默认从 `ink` 改为 `green`：用户反馈记一笔界面黑块太多。
-    var accentId: String = "green"
+    /// 2026-11-18 D 方案：默认收到「墨」。界面层不再有主题色，
+    /// `accent` 只用于键盘光标与按压态，蓝绿橙三档保留但不再被默认选中。
+    var accentId: String = "ink"
 
     var updatedAt: Date
 

@@ -115,6 +115,8 @@ struct DetailTrendBlock: View {
     let caption: String
     let points: [DebtTrendPoint]
     @Binding var range: NetWorthRange
+    /// 曲线主色：储蓄绿 / 信用与借款红（2026-11-18 D 方案）。
+    var tone: Color = Palette.ink
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -131,7 +133,7 @@ struct DetailTrendBlock: View {
             if points.isEmpty {
                 DetailEmptyRow(text: "流水还不够画出一条线")
             } else {
-                DebtTrendChart(points: points)
+                DebtTrendChart(points: points, tone: tone)
             }
 
             Text(caption)

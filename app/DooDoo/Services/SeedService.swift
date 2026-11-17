@@ -105,11 +105,13 @@ enum SeedService {
     /// 而记一笔界面「黑色太多」正是这个默认值造成的。标记放 `UserDefaults`，
     /// 幂等执行一次，之后用户若主动选回「墨」不会被再改。
     private static func migrateAccentIfNeeded(_ settings: AppSettings, context: ModelContext) {
-        let key = "didMigrateAccentInkToGreen"
+        // 2026-11-18 D 方案：界面层不再有主题色，主色统一收到「墨」。
+        // 与上一版（ink → green）**方向相反**，所以要换 key，否则已经跑过旧迁移的库不会被执行。
+        let key = "didMigrateAccentToInkForMonochrome"
         guard !UserDefaults.standard.bool(forKey: key) else { return }
         UserDefaults.standard.set(true, forKey: key)
-        guard settings.accentId == "ink" else { return }
-        settings.accentId = AccentStyle.green.rawValue
+        guard settings.accentId != AccentStyle.ink.rawValue else { return }
+        settings.accentId = AccentStyle.ink.rawValue
         try? context.save()
     }
 

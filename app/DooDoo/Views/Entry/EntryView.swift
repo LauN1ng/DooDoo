@@ -97,7 +97,9 @@ struct EntryView: View {
             .scrollIndicators(.hidden)
             .scrollDismissesKeyboard(.interactively)
         }
-        .background(Palette.page.ignoresSafeArea())
+        // 2026-11-18：面板改走暖白磨砂 sheet，这里不能再铺不透明页底色，
+        // 否则玻璃被盖住，材质白做。
+        .background(Color.clear)
         // 顺序即位置：先挂页脚，再把键盘挂在它外面 → 键盘在底、主按钮在键盘正上方。
         .safeAreaInset(edge: .bottom, spacing: 0) { footer }
         .safeAreaInset(edge: .bottom, spacing: 0) { numberPadArea }
@@ -220,13 +222,12 @@ struct EntryView: View {
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                .foregroundStyle(.white)
+                // 2026-11-18：回执从"墨实底 + 白字"改成暖白磨砂 + 墨字，
+                // 既报"已记入"，又不遮住底下刚记的那一笔。
+                .foregroundStyle(Palette.ink)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Palette.ink.opacity(0.92))
-                )
+                .glassPanel(RoundedRectangle(cornerRadius: 14, style: .continuous), strength: 0.55)
                 .padding(.horizontal, 24)
                 // 回执必须让开底部那两块：键盘展开时 = 坞 254（抓条 20 + 键盘 226 + 下内距 8）
                 // + 页脚 72；收起时只剩坞 44 + 页脚 72。写死一个值必然有一边被盖住。
@@ -435,12 +436,12 @@ struct EntryView: View {
                     .font(.system(size: 7, weight: .bold))
             }
         }
-        .foregroundStyle(Palette.mine)
+        .foregroundStyle(Palette.ink)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(
             RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(Palette.mine.opacity(0.10))
+                .fill(Palette.paper)
         )
     }
 
@@ -550,11 +551,11 @@ struct EntryView: View {
                 } label: {
                     Text("\(count) 期")
                         .font(.system(size: 11.5, weight: selected ? .semibold : .regular))
-                        .foregroundStyle(selected ? Palette.card : Palette.ink2)
+                        .foregroundStyle(selected ? Palette.ink : Palette.ink2)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
                         .background(
-                            Capsule().fill(selected ? Palette.accentFill(accentStyle) : Palette.tabBed)
+                            Capsule().fill(selected ? Palette.paper : Palette.tabBed)
                         )
                 }
                 .buttonStyle(.plain)
@@ -590,7 +591,7 @@ struct EntryView: View {
                 } label: {
                     Text("自动")
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Palette.mine)
+                        .foregroundStyle(Palette.ink)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("改回自动摊平")
@@ -1242,14 +1243,21 @@ struct EntryView: View {
                 }
             } label: {
                 Text(vm.primaryTitle)
-                    .font(.system(size: 15.5, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .font(.system(size: 15.5, weight: .bold))
+                    .foregroundStyle(Palette.ink)
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
-                    .background(
+                    // D 方案：全 App 按钮一律白底 + 描边 + 墨字，不填任何色。
+                    // 主按钮用 1.5pt 深边 + 字重 700 + 微影，与「备注」那张白卡区分开。
+                    .background {
                         RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(Palette.accentFill(accentStyle))
-                    )
+                            .fill(Palette.card)
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    .stroke(Palette.btnEdgeStrong, lineWidth: 1.5)
+                            }
+                            .shadow(color: Palette.ink.opacity(0.10), radius: 5, x: 0, y: 3)
+                    }
             }
             .buttonStyle(.plain)
             // 回执停留的那 1.1 秒里必须挡住主按钮，否则手快会连点记成两笔。
@@ -1260,7 +1268,6 @@ struct EntryView: View {
         .padding(.horizontal, 16)
         .padding(.top, 10)
         .padding(.bottom, 8)
-        .background(Palette.page)
     }
 }
 

@@ -70,6 +70,7 @@ struct SettingsView: View {
                 .presentationDetents([.large])
                 .presentationCornerRadius(28)
                 .presentationDragIndicator(.visible)
+                .glassSheet()
         }
     }
 

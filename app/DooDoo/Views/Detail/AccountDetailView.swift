@@ -79,14 +79,18 @@ struct AccountDetailView: View {
             switch route {
             case .billEntry:
                 BillEntrySheet(account: account)
+                    .glassSheet()
             case .periods(let installment):
                 PeriodEditorSheet(installment: installment)
+                    .glassSheet()
             case .newInstallment:
                 InstallmentEntryView(preferredAccount: account)
+                    .glassSheet()
             }
         }
         .sheet(item: $editingAccount) { account in
             AccountEditor(account: account, defaultKind: account.kind)
+                .glassSheet()
         }
         .confirmationDialog("从哪里扣款？", isPresented: $showingRepayPicker, titleVisibility: .visible) {
             ForEach(payerAccounts) { payer in
@@ -288,7 +292,8 @@ struct AccountDetailView: View {
             title: "欠款走势",
             caption: "按流水折算的月末欠款。分期与账单不在曲线上——顶部欠款 = 曲线末点 + 未记账单与分期。",
             points: trendPoints,
-            range: $trendRange
+            range: $trendRange,
+            tone: Palette.owe
         )
         .reveal(revealed, index: 2)
         pastBillsSection
@@ -326,7 +331,8 @@ struct AccountDetailView: View {
             title: "欠款走势",
             caption: "按流水折算的月末欠款余额。借入会让曲线升高，还款会让它下降。",
             points: trendPoints,
-            range: $trendRange
+            range: $trendRange,
+            tone: Palette.owe
         )
         .reveal(revealed, index: 2)
     }
@@ -349,7 +355,8 @@ struct AccountDetailView: View {
             title: "余额走势",
             caption: "按流水折算的月末余额，含转入、收款与还款。",
             points: trendPoints,
-            range: $trendRange
+            range: $trendRange,
+            tone: Palette.mine
         )
         .reveal(revealed, index: 3)
         flowBlock(
@@ -533,17 +540,24 @@ struct AccountDetailView: View {
                 // 还款是**卡片级**动作：一次还清本月到期的所有分期。
                 // 真实账单就是 11/25 还 368.70，不是一笔笔还。
                 if repayAmount > 0 {
+                    // D 方案：所有按钮都是白底 + 描边 + 墨字，不填色。
                     Button("还款") { showingRepayPicker = true }
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Palette.card)
+                        .foregroundStyle(Palette.ink)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background(Capsule().fill(Palette.ink))
+                        .background {
+                            Capsule()
+                                .fill(Palette.card)
+                                .overlay { Capsule().stroke(Palette.btnEdge, lineWidth: 1) }
+                        }
                         .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 11)
+            // 这里**保持白卡，不用玻璃**：它压的是暖白页底，背后没有内容可透，
+            // 玻璃会与页底同色，整条"消失"。玻璃留给盖在卡面/内容上的层（sheet、回执、浮层）。
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(Palette.card)

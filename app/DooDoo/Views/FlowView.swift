@@ -39,6 +39,8 @@ struct FlowView: View {
                 .presentationDetents([.large])
                 .presentationCornerRadius(28)
                 .presentationDragIndicator(.visible)
+                // 2026-11-18：录入面板改用暖白磨砂，能看穿到下面那张日卡。
+                .glassSheet()
         }
         .task {
             // 首次启动铺演示数据（已有分类就跳过），并给老数据补 Fluent3D 图标

@@ -23,8 +23,8 @@ enum Palette {
     static let line = Color(hex: 0xECE7DE)
     /// 列表 / 卡片内部的 1px 分隔。比 `line` 淡，避免每行都像一道刻痕。
     static let hairline = Color(hex: 0x1D1C1A).opacity(0.06)
-    static let expense = Color(hex: 0xC0392B)
-    static let income = Color(hex: 0x2E9E6B)
+    static let expense = Color(hex: 0xA8332B)
+    static let income = Color(hex: 0x1F7A52)
     static let tabBed = Color(hex: 0xEDE9E1)
 
     /// **不再是图标槽底色**（2026-11-16 第二次定案：贴纸不垫纸）。
@@ -32,13 +32,25 @@ enum Palette {
     static let slot = Color(hex: 0xF0EDE6)
 
     // 资产页
-    static let pillOn = Color(hex: 0xF0EDE6)
-    static let mine = Color(hex: 0x4C8DF6)   // 「我有」曲线
-    static let owe = Color(hex: 0xE8734A)    // 「我欠」曲线
-    static let mineDot = Color(hex: 0x3A9E6B)
-    static let oweDot = Color(hex: 0xE8734A)
-    static let overdraft = Color(hex: 0xA32D2D)
+    static let pillOn = Color(hex: 0xE9E4D9)
+    // 2026-11-18 配色终版（D 方案）：界面层不再有主题色，蓝/橙退场——
+    // 「我有」曲线改绿、「我欠」曲线改红，与数据层同一支；两条都是实线。
+    static let mine = Color(hex: 0x1F7A52)   // 「我有」曲线
+    static let owe = Color(hex: 0xA8332B)    // 「我欠」曲线
+    static let mineDot = Color(hex: 0x1F7A52)
+    static let oweDot = Color(hex: 0xA8332B)
+    /// 逾期专用亮红（D-a）：比数据红 `expense` 更亮一档，一屏只允许它出现。
+    static let overdraft = Color(hex: 0xD03A2E)
     static let overdraftBed = Color(hex: 0xFDECEC)
+
+    // MARK: - D 方案的纸与边（2026-11-18）
+
+    /// 选中态 / 内嵌块的纸底。不是新色——它就是原来 `pillOn` 的暖米。
+    static let paper = Color(hex: 0xE9E4D9)
+    /// 次按钮描边。
+    static let btnEdge = Color(hex: 0xD6CFC0)
+    /// 主按钮描边：比次按钮深一档、粗一档（1.5pt）。
+    static let btnEdgeStrong = Color(hex: 0xC9C0AE)
 
     // MARK: - 消费评分四档
 

@@ -96,7 +96,9 @@ struct InstallmentEntryView: View {
             .scrollIndicators(.hidden)
             .scrollDismissesKeyboard(.interactively)
         }
-        .background(Palette.page.ignoresSafeArea())
+        // 2026-11-18：面板改走暖白磨砂 sheet，这里不能再铺不透明页底色，
+        // 否则玻璃被盖住，材质白做。
+        .background(Color.clear)
         // 顺序即位置：页脚先挂，键盘再挂在外面 → 键盘在底，主按钮紧贴它上方。
         .safeAreaInset(edge: .bottom, spacing: 0) { footer }
         .safeAreaInset(edge: .bottom, spacing: 0) { numberPadArea }
@@ -247,7 +249,7 @@ struct InstallmentEntryView: View {
                     ZStack(alignment: .leading) {
                         Capsule().fill(Palette.tabBed)
                         Capsule()
-                            .fill(accent)
+                            .fill(Palette.ink)
                             .frame(width: max(2, geo.size.width * ratio))
                     }
                 }
@@ -594,13 +596,13 @@ struct InstallmentEntryView: View {
         Button(action: onTap) {
             Text(title)
                 .font(.system(size: 12, weight: selected ? .semibold : .regular))
-                .foregroundStyle(selected ? Palette.card : Palette.ink2)
+                .foregroundStyle(selected ? Palette.ink : Palette.ink2)
                 .frame(minWidth: 38)
                 .padding(.vertical, 6)
                 .padding(.horizontal, 6)
                 .background(
                     RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .fill(selected ? accent : Palette.tabBed)
+                        .fill(selected ? Palette.paper : Palette.tabBed)
                 )
         }
         .buttonStyle(.plain)
@@ -757,7 +759,7 @@ struct InstallmentEntryView: View {
                 Text(MoneyMath.percent(vm.previewAnnualRate))
                     .font(.system(size: 13, weight: .semibold))
                     .monospacedDigit()
-                    .foregroundStyle(vm.previewAnnualRate == nil ? Palette.faint : Palette.owe)
+                    .foregroundStyle(vm.previewAnnualRate == nil ? Palette.faint : Palette.ink)
             }
 
             if let hint = vm.annualRateHint {
@@ -875,7 +877,6 @@ struct InstallmentEntryView: View {
         .padding(.horizontal, 16)
         .padding(.top, 10)
         .padding(.bottom, 6)
-        .background(Palette.page)
     }
 
     // MARK: - 卡片容器

@@ -20,8 +20,8 @@ struct NetWorthCard: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(alignment: .top, spacing: 14) {
-                column(title: "我有", dot: Palette.mineDot, value: mine, delta: mineDelta)
-                column(title: "我欠", dot: Palette.oweDot, value: owe, delta: oweDelta)
+                column(title: "我有", dot: Palette.mineDot, value: mine, delta: mineDelta, tone: Palette.mine)
+                column(title: "我欠", dot: Palette.oweDot, value: owe, delta: oweDelta, tone: Palette.owe)
             }
 
             chart
@@ -39,7 +39,7 @@ struct NetWorthCard: View {
         )
     }
 
-    private func column(title: String, dot: Color, value: Decimal, delta: Decimal?) -> some View {
+    private func column(title: String, dot: Color, value: Decimal, delta: Decimal?, tone: Color) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 5) {
                 Circle().fill(dot).frame(width: 6, height: 6)
@@ -51,12 +51,14 @@ struct NetWorthCard: View {
             Text(MoneyMath.money(value))
                 .font(.system(size: 20, weight: .semibold))
                 .monospacedDigit()
-                .foregroundStyle(Palette.ink)
+                // D 方案：数字直接着色 —— 绿 = 我的钱，红 = 欠的钱。
+                .foregroundStyle(tone)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
+            // 涨跌去色（2026-11-18）：只留箭头与灰字，颜色名额让给主体数字。
             Text(AccountDelta.text(delta))
                 .font(.system(size: 11))
-                .foregroundStyle(color(for: AccountDelta.classify(delta)))
+                .foregroundStyle(Palette.sub)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

@@ -136,6 +136,7 @@ struct AssetsView: View {
         // 卡面靠 `matchedGeometryEffect` 长到屏幕顶部。这里只剩「新建账户」还弹面板。
         .sheet(item: $creatingGroup) { group in
             AccountEditor(account: nil, defaultKind: group.defaultKind)
+                .glassSheet()
         }
     }
 

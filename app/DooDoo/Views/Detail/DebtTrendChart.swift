@@ -18,6 +18,9 @@ import SwiftUI
 /// 这件详情页独有的事。
 struct DebtTrendChart: View {
     let points: [DebtTrendPoint]
+    /// 线 / 面积 / 末点的主色。**由账户类型决定**：储蓄与现金走绿（我有），
+    /// 信用与借款走红（我欠）。2026-11-18 起不再用墨色——用户定案「折线不是黑的」。
+    var tone: Color = Palette.ink
 
     var body: some View {
         GeometryReader { geo in
@@ -29,7 +32,7 @@ struct DebtTrendChart: View {
                 TrendGeometry.areaPath(positions, height: geo.size.height)
                     .fill(
                         LinearGradient(
-                            colors: [Palette.ink.opacity(0.085), Palette.ink.opacity(0)],
+                            colors: [tone.opacity(0.10), tone.opacity(0)],
                             startPoint: .top,
                             endPoint: .bottom
                         )
@@ -41,10 +44,10 @@ struct DebtTrendChart: View {
                     .frame(height: 1)
 
                 TrendGeometry.smoothPath(positions)
-                    .stroke(Palette.ink, style: TrendGeometry.strokeStyle)
+                    .stroke(tone, style: TrendGeometry.strokeStyle)
 
                 if let last = positions.last {
-                    TrendGeometry.endpoint(at: last, color: Palette.ink, bed: Palette.card)
+                    TrendGeometry.endpoint(at: last, color: tone, bed: Palette.card)
                 }
             }
         }
