@@ -665,23 +665,33 @@ struct EntryView: View {
     private let gradeSlotSide: CGFloat = 21
 
     private var gradePill: some View {
-        // 未评分时间距取 14，与 `noteRow` 的 trailing 14 对齐 ——
-        // 这样虚线框夹在竖虚线与卡片右缘正中，两侧都是 14（原来 11.6 : 60.8）。
-        // 评过分以后回到 12：那时右侧是「徽章 + 文字」，左紧右松才对。
-        HStack(spacing: vm.grade == nil ? 14 : 12) {
+        HStack(spacing: 12) {
             DashedRule()
                 .stroke(Palette.dividerDash, style: StrokeStyle(lineWidth: 1.2, dash: [3, 3]))
                 .frame(width: 1.2, height: 30)
 
             Button(action: tapGrade) {
-                HStack(spacing: 6) {
-                    gradeBadge
-                    gradeLabel
+                Group {
+                    if vm.grade == nil {
+                        // 未评分：**空位在「徽章 22 + 间距 6 + 文字 46」这块 74pt 区域的正中间**。
+                        //
+                        // 为什么不是把两边都收到 14（v2.6 干过，更糟）：那样整条评分位会贴着
+                        // 卡片右缘，竖虚线也被推到右边，备注后面空出一大片。
+                        // 竖虚线的位置和那 46pt 文字位都必须留在原处——**只把框往里挪**。
+                        // 74 居中后：竖虚线 → 框 38.5、框 → 卡片右缘 40.5，视觉上才对得齐。
+                        gradeBadge
+                            .frame(width: gradeBadgeSide + 6 + gradeLabelWidth)
+                    } else {
+                        HStack(spacing: 6) {
+                            gradeBadge
+                            gradeLabel
+                        }
+                    }
                 }
                 .frame(height: 44)
-                // 未评分时右侧没有文字，点击区只剩 22pt 宽，低于 HIG 的 44。
-                // 用负 inset 把命中区撑到 44，**但不占布局宽度**——否则两侧 14pt 又不等了。
-                .contentShape(Rectangle().inset(by: vm.grade == nil ? -11 : 0))
+                // 未评分那一版本身就占了 74pt，点击区绰绰有余；
+                // 评过分后是「徽章 + 文字」，同样是 74，不需要再撑。
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityElement(children: .ignore)
@@ -790,12 +800,8 @@ struct EntryView: View {
                 .opacity(gradeTextShown ? 1 : 0)
                 .modifier(GradeTextJelly(tick: gradeTextTick))
         }
-        // **未评分时不占位**（2026-11-17 真机反馈第 2 条）。
-        // 原来这里留了一个 46×16 的透明占位，结果虚线框被顶到左边：
-        // 实测「竖虚线 → 框」11.6pt，而「框 → 卡片右缘」有 60.8pt，差 5 倍。
-        // 不留占位以后，两侧都等于 `noteRow` 的 trailing 14。
-        // 代价：首次落档时这一段会向左让出 52pt（框变徽章 + 长出文字），
-        // 由 `gradePill` 的 spring 承接，读起来像「框让开给字腾位置」。
+        // 未评分时这里不渲染文字，但那 46pt 的宽度由 `gradePill` 的定宽 frame 留着——
+        // 竖虚线与文字位都不动，只让空位在中间（2026-11-17 第二轮真机反馈）。
     }
 
     /// 点评分位。
