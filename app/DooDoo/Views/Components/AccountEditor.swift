@@ -21,6 +21,9 @@ struct AccountEditor: View {
     @State private var limitText = ""
     @State private var balanceText = "0"
     @State private var dueDay = 0
+    /// 账单周期起（出账日）。0 = 未设，写入时转 nil。周期止由 `BillCycleMath` 推导，
+    /// 用户只填这一个数字（M4 账单区单入口，2026-11-18）。
+    @State private var billStartDay = 0
     @State private var showingDeleteConfirm = false
     @State private var errorMessage: String?
 
@@ -80,6 +83,14 @@ struct AccountEditor: View {
 
                 if kind == .credit {
                     Section("账单") {
+                        Stepper(value: $billStartDay, in: 0...31) {
+                            Text(billStartDay == 0 ? "出账日：未设" : "出账日：每月 \(billStartDay) 日")
+                        }
+                        if let caption = BillCycleMath.cycleRangeCaption(startDay: billStartDay == 0 ? nil : billStartDay) {
+                            Text(caption)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
                         Stepper(value: $dueDay, in: 0...31) {
                             Text(dueDay == 0 ? "还款日：未设" : "还款日：每月 \(dueDay) 日")
                         }
@@ -143,11 +154,17 @@ struct AccountEditor: View {
         let shown = account.kind.isLiability && balance < 0 ? -balance : balance
         balanceText = MoneyMath.money(shown)
         dueDay = account.dueDay ?? 0
+        // 单入口以出账日为准；周期止不单独读，保存时由它推导。
+        billStartDay = account.billCycleStart ?? 0
     }
 
     private func save() {
         let parsed = Decimal(string: balanceText.replacingOccurrences(of: ",", with: ""),
                              locale: Locale(identifier: "en_US_POSIX")) ?? 0
+        // 出账日单入口：起填了才写周期，周期止推导得出；未设（或中途切走信用类型）
+        // 则两个字段都清空，让 BillCycleMath 退回「发生日所在月」，不留半套周期误导归属。
+        let cycleStart = kind == .credit && billStartDay != 0 ? billStartDay : nil
+        let cycleEnd = BillCycleMath.cycleEndDay(from: cycleStart)
         // 2026-11-09 真机反馈 #8：用户按「欠 600」填 600，首版直接存成 +600，
         // 导致还款页 maxDebt = 0、金额带出 0.00、主按钮禁用。
         // Account.currentBalance 的语义是「信用/借款欠款为负」，这里统一取负。
@@ -171,6 +188,8 @@ struct AccountEditor: View {
                 account.networkLabel = BrandPalette.style(brandId).network
                 account.creditLimit = limit
                 account.dueDay = dueDay == 0 ? nil : dueDay
+                account.billCycleStart = cycleStart
+                account.billCycleEnd = cycleEnd
             } else {
                 let created = Account(
                     name: name.trimmingCharacters(in: .whitespaces),
@@ -182,6 +201,8 @@ struct AccountEditor: View {
                     shortName: shortName.trimmingCharacters(in: .whitespaces),
                     creditLimit: limit,
                     dueDay: dueDay == 0 ? nil : dueDay,
+                    billCycleStart: cycleStart,
+                    billCycleEnd: cycleEnd,
                     sortOrder: 999
                 )
                 context.insert(created)

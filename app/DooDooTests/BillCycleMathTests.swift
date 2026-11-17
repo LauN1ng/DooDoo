@@ -30,6 +30,40 @@ struct BillCycleMathTests {
         )
     }
 
+    // MARK: - 单入口推导（账户编辑器只填出账日）
+
+    @Test("出账日推导周期止：起 15 → 止 14，花呗口径")
+    func endDayFromStart() {
+        #expect(BillCycleMath.cycleEndDay(from: 15) == 14)
+        #expect(BillCycleMath.cycleEndDay(from: 25) == 24)
+        #expect(BillCycleMath.cycleEndDay(from: 31) == 30)
+    }
+
+    @Test("出账日 1 号：周期止推到上月最后一天，用 31 表达")
+    func endDayAtFirst() {
+        #expect(BillCycleMath.cycleEndDay(from: 1) == 31)
+        // 关键：31 交给 cycle 后，2 月要 clamp 到月末，不溢出到下月
+        let feb = cycle(day(2026, 2, 20), start: 1, end: BillCycleMath.cycleEndDay(from: 1), due: 25)
+        #expect(feb.start == day(2026, 2, 1))
+        #expect(feb.end == day(2026, 2, 28))
+        #expect(feb.period == "2026-02")
+    }
+
+    @Test("未设出账日：起止都为 nil，账期退回自然月")
+    func endDayUnset() {
+        #expect(BillCycleMath.cycleEndDay(from: nil) == nil)
+        #expect(BillCycleMath.cycleEndDay(from: 0) == nil)
+        #expect(BillCycleMath.cycleEndDay(from: 32) == nil)
+    }
+
+    @Test("单入口推导的说明文案")
+    func rangeCaption() {
+        #expect(BillCycleMath.cycleRangeCaption(startDay: 15) == "每月 15 日出账 · 至次月 14 日")
+        #expect(BillCycleMath.cycleRangeCaption(startDay: 1) == "每月 1 日出账 · 至当月最后一天")
+        #expect(BillCycleMath.cycleRangeCaption(startDay: nil) == nil)
+        #expect(BillCycleMath.cycleRangeCaption(startDay: 0) == nil)
+    }
+
     // MARK: - 周期归属
 
     @Test("花呗 11/05 的消费算进 2026-11（周期 10/15–11/14）")

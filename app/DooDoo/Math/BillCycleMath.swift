@@ -65,6 +65,28 @@ enum BillCycleMath {
         return periodText(for: moved, calendar: calendar)
     }
 
+    // MARK: - 单入口推导（账户编辑器）
+
+    /// 用户只选「出账日」（周期起），周期止 = 起 − 1。
+    ///
+    /// 起 1 时周期止是上月最后一天，用日号 31 表达——`day(inMonthOf:day:)` 在
+    /// 当月不足 31 天时会 clamp 到月末，不会溢出到下月。
+    static func cycleEndDay(from startDay: Int?) -> Int? {
+        guard let startDay, (1...31).contains(startDay) else { return nil }
+        return startDay == 1 ? 31 : startDay - 1
+    }
+
+    /// 账户编辑器里给用户看的推导说明：让「只填一个数字」的结果可见，
+    /// 不然用户不知道周期止被推到了哪一天。
+    static func cycleRangeCaption(startDay: Int?) -> String? {
+        guard let startDay, (1...31).contains(startDay) else { return nil }
+        let end = cycleEndDay(from: startDay)!
+        if startDay == 1 {
+            return "每月 1 日出账 · 至当月最后一天"
+        }
+        return "每月 \(startDay) 日出账 · 至次月 \(end) 日"
+    }
+
     // MARK: - 周期归属
 
     /// 发生日 → 它属于哪一期账单。
