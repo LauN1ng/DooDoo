@@ -55,10 +55,11 @@ struct NetWorthCard: View {
                 .foregroundStyle(tone)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
-            // 涨跌去色（2026-11-18）：只留箭头与灰字，颜色名额让给主体数字。
+            // 涨跌**保留颜色**（2026-11-18 用户纠正）：它本身是一处颜色来源，
+            // 不该被"去色"。涨红跌绿沿用数据红绿，与主体数字同源。
             Text(AccountDelta.text(delta))
                 .font(.system(size: 11))
-                .foregroundStyle(Palette.sub)
+                .foregroundStyle(color(for: AccountDelta.classify(delta)))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
