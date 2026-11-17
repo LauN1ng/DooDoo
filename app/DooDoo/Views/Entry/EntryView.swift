@@ -302,11 +302,32 @@ struct EntryView: View {
 
     // MARK: - 字段
 
+    /// 支出 / 收入的付款账户横滑。
+    ///
+    /// **一个账户都没有时给一行说明**（2026-11-17，种子数据下线后补）：
+    /// 空库第一次点「记一笔」时，横滑区是空白、主按钮灰着，而 `validationMessage`
+    /// 在这版界面里并没有渲染出来——用户只会觉得 App 坏了。
+    /// 这里不用跳转按钮：`EntryView` 是独立呈现的，跳资产页要穿透到 tab 层，
+    /// 成本远大于收益，一行字把他指过去就够。
+    @ViewBuilder
+    private var payerStrip: some View {
+        if vm.payerCandidates.isEmpty {
+            Text("还没有账户，先去「资产」建一张卡或一个钱包")
+                .font(.system(size: 12))
+                .foregroundStyle(Palette.sub)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+        } else {
+            AccountCardStrip(accounts: vm.payerCandidates, selection: $vm.payer)
+        }
+    }
+
     @ViewBuilder
     private var fields: some View {
         switch vm.type {
         case .expense, .income:
-            AccountCardStrip(accounts: vm.payerCandidates, selection: $vm.payer)
+            payerStrip
             attribution(paying: vm.type == .expense ? "从" : "存进", account: vm.payer)
             amountRow
             installmentBlock
