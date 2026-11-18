@@ -26,19 +26,24 @@ enum TrendGeometry {
 
     /// 把一列数值摊成点位（整数索引等距，不按日期加权）。
     ///
-    /// - 每条序列**各自**按自身 min/max 归一到满高：走势图看的是"形状"，
-    ///   小波动也要看得出方向，所以资产页的「我有 / 我欠」两条线不共用纵轴。
-    /// - 全平（max == min）时所有点落 0.5，即垂直居中。
+    /// - 单条曲线（详情页走势）传 `domain: nil`，按自身 min/max 归一到满高：
+    ///   走势图看的是"形状"，小波动也要看得出方向。
+    /// - **多条曲线同屏（资产页「我有 / 我欠」）必须传同一个 `domain`**。
+    ///   2026-11-18 修：原先两条线各自归一化，导致两个完全不同量级（5,968 vs 7,681）
+    ///   都被拉成"贴底 + 末端翘起"，形状几乎一致、完全重叠，后画的红色盖住绿色，
+    ///   真机上看只剩一条线。共用纵轴后两条线才会各就各位。
+    /// - 全平（hi == lo）时所有点落 0.5，即垂直居中。
     static func positions(
         _ values: [CGFloat],
         in size: CGSize,
         horizontalInset: CGFloat = 6,
-        verticalInset: CGFloat = 8
+        verticalInset: CGFloat = 8,
+        domain: ClosedRange<CGFloat>? = nil
     ) -> [CGPoint] {
         guard values.count > 1 else { return [] }
 
-        let maxValue = values.max() ?? 0
-        let minValue = values.min() ?? 0
+        let maxValue = domain?.upperBound ?? (values.max() ?? 0)
+        let minValue = domain?.lowerBound ?? (values.min() ?? 0)
         let isFlat = maxValue == minValue
         let span = isFlat ? 1 : (maxValue - minValue)
 

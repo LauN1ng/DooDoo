@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// 一天的日卡。尺寸与字号取自 `home-v1.0.html` 快照：
 /// 圆角 24、内距 20/18/16、日期 32pt、行 42×42 + 14pt/11.5pt。
@@ -68,8 +69,11 @@ struct DayCardView: View {
                     .tracking(0.9)
                     .foregroundStyle(Palette.sub)
 
+                // 2026-11-18 权重归位：日期 32 → 22。
+                // 真机实测日期字高 24pt、今日支出只有 12.3pt（16pt）——
+                // 一个记账 App 里「几号」的字号是「今天花了多少钱」的两倍。
                 Text(String(format: "%02d", components.day ?? 1))
-                    .font(.system(size: 32, weight: .semibold))
+                    .font(.system(size: 22, weight: .semibold))
                     .foregroundStyle(Palette.ink)
                     .monospacedDigit()
 
@@ -86,7 +90,8 @@ struct DayCardView: View {
                         .font(.system(size: 11))
                         .foregroundStyle(Palette.sub)
                     Text("−¥" + MoneyMath.money(expenseTotal))
-                        .font(.system(size: 16, weight: .semibold))
+                        // 16 → 22：与日期同档。首页是门面，钱不能是全 App 最小的字。
+                        .font(.system(size: 22, weight: .semibold))
                         .monospacedDigit()
                         .foregroundStyle(Palette.expense)
                 }
@@ -94,30 +99,86 @@ struct DayCardView: View {
         }
     }
 
-    /// 记账行（B2 空分类位）：42 空位 + 「记一笔」，与流水行同构。
+    /// 记账行（B2 空分类位）：卡**内部**的行内按钮。
     ///
-    /// 2026-11-16：**去掉了 42pt 浅色方块**。有内容的那一行是「贴纸落在纸上」，
-    /// 空位如果画一块灰底，就成了「纸上贴了一张纸」——两行不是同一种物质。
-    /// 现在靠 42pt 的列宽维持左对齐节奏，空位感由 ＋ 本身表达。
+    /// 2026-11-16：去掉过 42pt 浅色方块，理由是有内容的那一行是「贴纸落在纸上」，
+    /// 空位画灰底就成了「纸上贴一张纸」。
+    /// **2026-11-18 修正**：真机实测这一行是白底 90.2%、非白仅 2.5%、上下边缘无描边——
+    /// 也就是**根本不像能点**，是整屏唯一动作却最没有示能。
+    ///
+    /// 这里推翻 11-16 那条"纸上贴纸"的顾虑：当时担心的是 42pt 小方块像"一张小纸"，
+    /// 而现在做的是一条**整宽的浅纸轨**（`paperInset`），它读作卡片底部的操作条，
+    /// 不是第二张纸——iOS 列表里的 "Add row" 就是这个形态。
+    /// 示能优先于材质洁癖：这条是整屏唯一的动作，用户必须先看见它。
     private var addRow: some View {
         Button { onAdd(day) } label: {
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 Text("＋")
-                    .font(.system(size: 19, weight: .regular))
-                    .foregroundStyle(Palette.sub)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Palette.ink)
                     .frame(width: 42, height: 42)
 
                 Text("记一笔")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Palette.ink2)
+                    .font(.system(size: 14.5, weight: .semibold))
+                    .foregroundStyle(Palette.ink)
 
-                Spacer(minLength: 0)
+                Spacer(minLength: 8)
             }
-            .padding(.vertical, 9)
-            .contentShape(Rectangle())
+            .padding(.vertical, 5)
+            .padding(.trailing, 14)
+            .paperInsetButton(cornerRadius: 14)
+            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
+        .padding(.top, 6)
         .accessibilityLabel("记一笔")
+    }
+
+    /// 空态（2026-11-18 用户「首页没有流水看着太空」）。
+    ///
+    /// 原先只有两行 11.5 / 13.5pt 灰字居中、撑满整张卡——而卡高由 `DeckView` 的
+    /// `proxy.height - frontBottom` 决定（真机实测 ≈ 703.7pt），于是上下各空出约 280pt，
+    /// 空态读起来像「一张没印东西的白纸」。
+    ///
+    /// 现在给空态一枚 3D emoji 当视觉重心（`Resources/Emoji/Cat.png`，卷毛猫——
+    /// 品牌资产此前全 App 出现 0 次），主句升到 15.5pt semibold，副句解释"空"的含义，
+    /// 底部留一条手势提示。emoji / 墨字 / 浅纸按钮三种材质各占一段，
+    /// 剩下的留白才是呼吸，而不是空白。
+    ///
+    /// 顺手修了一处方向错误：原文案是「左滑可以看更早的」，而 `DeckView` 的手势是
+    /// **右滑 = 翻到更早**、左滑 = 回今天。
+    private var emptyState: some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 12)
+
+            if let cat = UIImage(named: "Cat") {
+                Image(uiImage: cat)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 86, height: 86)
+                    .padding(.bottom, 16)
+                    .accessibilityHidden(true)
+            }
+
+            Text("没花钱的一天")
+                .font(.system(size: 15.5, weight: .semibold))
+                .foregroundStyle(Palette.ink2)
+
+            Text("这天没有支出，也没有收入")
+                .font(.system(size: 12))
+                .foregroundStyle(Palette.faint)
+                .padding(.top, 5)
+
+            // 手势提示跟这组内容一起居中，不钉在卡底。
+            // 钉在底部会让"内容—提示"之间出现一段无意义的大空白，等于换了个地方继续空。
+            Text("右滑可以看更早的日子")
+                .font(.system(size: 11))
+                .foregroundStyle(Palette.faint)
+                .padding(.top, 22)
+
+            Spacer(minLength: 12)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var dayLabel: String {
@@ -129,15 +190,7 @@ struct DayCardView: View {
     @ViewBuilder
     private var content: some View {
         if items.isEmpty {
-            VStack(spacing: 6) {
-                Text("没花钱的一天 :)")
-                    .font(.system(size: 13.5))
-                    .foregroundStyle(Palette.faint)
-                Text("左滑可以看更早的")
-                    .font(.system(size: 11.5))
-                    .foregroundStyle(Palette.faint)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            emptyState
         } else {
             // 先算一次行合并，别在 ForEach 里反复走 O(n)。
             let rows = self.rows

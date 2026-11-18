@@ -540,17 +540,14 @@ struct AccountDetailView: View {
                 // 还款是**卡片级**动作：一次还清本月到期的所有分期。
                 // 真实账单就是 11/25 还 368.70，不是一笔笔还。
                 if repayAmount > 0 {
-                    // D 方案：所有按钮都是白底 + 描边 + 墨字，不填色。
+                    // 2026-11-18：与主按钮同一套材质（微凸纸片），但走次一级（strong: false），
+                    // 因为它贴在卡面下方、不该比卡面更跳。
                     Button("还款") { showingRepayPicker = true }
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Palette.ink)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background {
-                            Capsule()
-                                .fill(Palette.card)
-                                .overlay { Capsule().stroke(Palette.btnEdge, lineWidth: 1) }
-                        }
+                        .padding(.horizontal, 13)
+                        .padding(.vertical, 7)
+                        .paperButton(cornerRadius: 12, strong: false)
                         .buttonStyle(.plain)
                 }
             }

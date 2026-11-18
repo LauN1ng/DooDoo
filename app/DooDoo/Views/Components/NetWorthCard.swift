@@ -49,7 +49,9 @@ struct NetWorthCard: View {
                     .foregroundStyle(Palette.sub)
             }
             Text(MoneyMath.money(value))
-                .font(.system(size: 20, weight: .semibold))
+                // 20 → 24（2026-11-18 权重表）：组头合计是 22pt，
+                // 总览比组头还小就是倒挂。总览是两个数并排的上限，再大就换行。
+                .font(.system(size: 24, weight: .semibold))
                 .monospacedDigit()
                 // D 方案：数字直接着色 —— 绿 = 我的钱，红 = 欠的钱。
                 .foregroundStyle(tone)
@@ -67,8 +69,18 @@ struct NetWorthCard: View {
     private var chart: some View {
         GeometryReader { proxy in
             let size = proxy.size
-            let minePoints = TrendGeometry.positions(points.map { $0.mine.trendValue }, in: size)
-            let owePoints = TrendGeometry.positions(points.map { $0.owe.trendValue }, in: size)
+            // 两条线**共用同一条纵轴**（2026-11-18 修重叠）。
+            // 各自归一化会把 5,968 与 7,681 都拉成"贴底 + 末端翘起"，
+            // 形状重合 → 红盖绿 → 真机只剩一根线。
+            let mineValues = points.map { $0.mine.trendValue }
+            let oweValues = points.map { $0.owe.trendValue }
+            let allValues = mineValues + oweValues
+            let lo = allValues.min() ?? 0
+            let hi = allValues.max() ?? 0
+            let domain = lo...max(hi, lo + 1)
+
+            let minePoints = TrendGeometry.positions(mineValues, in: size, domain: domain)
+            let owePoints = TrendGeometry.positions(oweValues, in: size, domain: domain)
 
             ZStack(alignment: .bottom) {
                 // 基线：1pt、墨色 12%，与详情页同一条"地面"。

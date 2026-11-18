@@ -61,9 +61,13 @@ struct AccountGroupView: View {
                 .font(.system(size: 10.5))
                 .foregroundStyle(Palette.sub)
             Text(MoneyMath.money(total))
-                .font(.system(size: 22, weight: .semibold))
+                // 22 → 20：组头是"这组多少"，比总览低一档。
+                .font(.system(size: 20, weight: .semibold))
                 .monospacedDigit()
-                .foregroundStyle(isLiability ? Palette.expense : Palette.ink)
+                // 2026-11-18 修 P15：原先资产组用 ink，而顶部「我有」用绿——
+                // 同一个 5,968.84 在同一屏是两种颜色。现在两处同源：
+                // 欠的钱红、我的钱绿。
+                .foregroundStyle(isLiability ? Palette.expense : Palette.mine)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
             if let detail {

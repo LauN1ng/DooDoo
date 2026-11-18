@@ -158,7 +158,7 @@ struct TxRowView: View {
             Spacer(minLength: 8)
 
             Text(amountText)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 15, weight: .semibold))
                 .monospacedDigit()
                 .foregroundStyle(amountColor)
                 .lineLimit(1)

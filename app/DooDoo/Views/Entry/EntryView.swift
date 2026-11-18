@@ -1247,17 +1247,9 @@ struct EntryView: View {
                     .foregroundStyle(Palette.ink)
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
-                    // D 方案：全 App 按钮一律白底 + 描边 + 墨字，不填任何色。
-                    // 主按钮用 1.5pt 深边 + 字重 700 + 微影，与「备注」那张白卡区分开。
-                    .background {
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(Palette.card)
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                    .stroke(Palette.btnEdgeStrong, lineWidth: 1.5)
-                            }
-                            .shadow(color: Palette.ink.opacity(0.10), radius: 5, x: 0, y: 3)
-                    }
+                    // 2026-11-18 用户「按钮材质不对」：实色描边会被读成输入框。
+                    // 改用「微凸纸片」——顶白底灰渐变边 + 贴地影 + 环境影，不带颜色。
+                    .paperButton(cornerRadius: 18)
             }
             .buttonStyle(.plain)
             // 回执停留的那 1.1 秒里必须挡住主按钮，否则手快会连点记成两笔。

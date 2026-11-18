@@ -848,15 +848,15 @@ struct InstallmentEntryView: View {
                 }
             } label: {
                 Text(vm.primaryTitle)
-                    .font(.system(size: 15.5, weight: .semibold))
+                    .font(.system(size: 15.5, weight: .bold))
                     .monospacedDigit()
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Palette.ink)
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
-                    .background(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(accent)
-                    )
+                    // 2026-11-18：这里原本还是 `fill(accent)` 实底 + 白字，
+                    // 是 D 方案落地时**唯一漏掉**的主按钮（全库 grep `fill(accent)` 只剩这一处）。
+                    // 现在与记一笔的「保存」同构：微凸纸片 + 墨字。
+                    .paperButton(cornerRadius: 18)
             }
             .buttonStyle(.plain)
             // 回执停留的 1.1 秒里挡住主按钮，否则手快会连点记成两笔（同记一笔的处理）。

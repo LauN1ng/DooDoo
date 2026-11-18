@@ -51,6 +51,9 @@ enum Palette {
     static let btnEdge = Color(hex: 0xD6CFC0)
     /// 主按钮描边：比次按钮深一档、粗一档（1.5pt）。
     static let btnEdgeStrong = Color(hex: 0xC9C0AE)
+    /// 卡**内部**行内按钮的填充底（记一笔入口等）。
+    /// 比白卡 L* 低 7.2，在白卡上看得见；比 `paper` 淡一档，不跟选中态抢。
+    static let paperInset = Color(hex: 0xEDE9E1)
 
     // MARK: - 消费评分四档
 
