@@ -200,9 +200,9 @@ struct AccountEditor: View {
                     networkLabel: BrandPalette.style(brandId).network,
                     shortName: shortName.trimmingCharacters(in: .whitespaces),
                     creditLimit: limit,
-                    dueDay: dueDay == 0 ? nil : dueDay,
                     billCycleStart: cycleStart,
                     billCycleEnd: cycleEnd,
+                    dueDay: dueDay == 0 ? nil : dueDay,
                     sortOrder: 999
                 )
                 context.insert(created)
