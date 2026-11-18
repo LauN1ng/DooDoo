@@ -51,7 +51,7 @@ struct InstallmentEntryView: View {
 
     /// 面板里所有要用数字键盘的字段。名称不在其中。
     private enum NumericField: Hashable {
-        case due, principal, interestPart, remaining, total, interest, last
+        case due, principal, interestPart, remaining, total, totalAmount, interest, last
 
         /// 收起时提示「上滑输入 ×」用的名字，与界面上那一行标签一致。
         var title: String {
@@ -61,6 +61,7 @@ struct InstallmentEntryView: View {
             case .interestPart: return "利息"
             case .remaining: return "剩余期数"
             case .total: return "总共几期"
+            case .totalAmount: return "分期总额"
             case .interest: return "含利息"
             case .last: return "末期金额"
             }
@@ -165,6 +166,7 @@ struct InstallmentEntryView: View {
         case .interestPart: return $vm.interestPartText
         case .remaining: return $vm.remainingText
         case .total: return $vm.totalText
+        case .totalAmount: return $vm.totalAmountText
         case .interest: return $vm.interestText
         case .last: return $vm.lastPeriodText
         }
@@ -649,6 +651,48 @@ struct InstallmentEntryView: View {
                     .foregroundStyle(Palette.faint)
             }
 
+            // 分期总额（2026-11-18，选填）：只在**已还过**的分期上露面。
+            // 一期没还时整笔就等于剩余应还，多一格纯负担（58 笔连录尤其）；
+            // 已还过的那些必须给入口，否则「整笔」永远只能标「约」——
+            // 已还那几期各是多少，从剩余应还 / 期数里推不出来（欠定）。
+            if vm.needsTotalAmount {
+                Divider().overlay(Palette.line)
+
+                HStack(spacing: 6) {
+                    Text("分期总额")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Palette.sub)
+                    Text("选填")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(Palette.faint)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1.5)
+                        .background(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .fill(Palette.tabBed)
+                        )
+                    Spacer(minLength: 6)
+                    Text("¥")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Palette.faint)
+                    NumberValueText(
+                        text: vm.totalAmountText,
+                        placeholder: "0.00",
+                        size: 15,
+                        weight: .medium,
+                        active: padOpen && activeField == .totalAmount,
+                        accent: accent
+                    )
+                    .frame(maxWidth: 130, alignment: .trailing)
+                }
+                .contentShape(Rectangle())
+                .onTapGesture { activate(.totalAmount) }
+                Text("账单上的「分期总额」。填了整笔精确到分；不填按「已还 × 每期」推算，差几分")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Palette.faint)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             Divider().overlay(Palette.line)
 
             // 含利息 —— 年化的唯一输入。拆两栏时它已经在上面的「利息」格里，不重复问
@@ -736,14 +780,16 @@ struct InstallmentEntryView: View {
             // 整笔总额。存量录入的一大半是「已经还了几期」的老分期，
             // 用户真正想知道的是「这笔当初一共多少 / 我一共要还多少」——
             // 只给剩余额等于只回答了一半。
-            if let grand = vm.previewGrandTotal, let total = vm.totalPeriods {
+            if let grand = vm.grandTotal, let total = vm.totalPeriods {
                 HStack(spacing: 6) {
                     Text(grandTotalLabel(total: total))
                         .font(.system(size: 11.5))
                         .foregroundStyle(Palette.sub)
                         .lineLimit(1)
                     Spacer(minLength: 8)
-                    Text("约 ¥\(MoneyMath.money(grand))")
+                    // 填了「分期总额」就是账单真值，不再加「约」——
+                    // 用户抄进去的数跟账单逐字一致时，多一个「约」反而像我们算的。
+                    Text((grand.isExact ? "共 ¥" : "约 ¥") + MoneyMath.money(grand.value))
                         .font(.system(size: 13, weight: .semibold))
                         .monospacedDigit()
                         .foregroundStyle(Palette.ink2)
@@ -792,10 +838,18 @@ struct InstallmentEntryView: View {
         return "剩 \(vm.periods.remaining) 期 × ¥\(MoneyMath.money(vm.perPeriodAmount))"
     }
 
-    /// 「整笔 12 期 · 已还 1 期」。没还过就不写「已还 0 期」，那是废话。
+    /// 「整笔 12 期 · 已还 2 期 · ¥240.09」。
+    ///
+    /// 填了「分期总额」才挂得上已还金额（= 总额 − 剩余应还，精确）；
+    /// 没填时只说期数——拿「已还 × 每期」估会少几分，宁可不显示。
+    /// 一期没还就不写「已还 0 期」，那是废话。
     private func grandTotalLabel(total: Int) -> String {
         let paid = vm.periods.paid
-        return paid > 0 ? "整笔 \(total) 期 · 已还 \(paid) 期" : "整笔 \(total) 期"
+        guard paid > 0 else { return "整笔 \(total) 期" }
+        if let paidAmount = vm.paidAmount {
+            return "整笔 \(total) 期 · 已还 \(paid) 期 · ¥\(MoneyMath.money(paidAmount))"
+        }
+        return "整笔 \(total) 期 · 已还 \(paid) 期"
     }
 
     // MARK: - 回执

@@ -37,6 +37,9 @@ enum InstallmentService {
     /// - `totalPeriods` / `paidPeriods`：由 `InstallmentIntake.periods(remaining:total:)` 得来
     /// - `remainingDue`：账单上的「分期剩余应还」，**金额的权威来源**。给了它，
     ///   期表按它摊平、余数落首期
+    /// - `totalAmount`：账单上的「分期总额」（花呗 1,440.39）。选填——给了它，
+    ///   「整笔」与「已还」就是账单真值；不给则按「每期 × 已还 + 剩余应还」推算并标「约」
+    ///   （首期有零头时会差几分，推不出来）
     /// - `lastPeriodAmount`：账单最后一期的金额（选填）。给了它，期表改走
     ///   `splitEndingAt` 反推中间各期，末期用真值——末期抵了减免的账单只有这条路算得准
     /// - `remainingInterest`：账单把利息单列时的**剩余期**利息（e招贷 851.57）。
@@ -61,6 +64,7 @@ enum InstallmentService {
         firstPeriodAmount: Decimal? = nil,
         lastPeriodAmount: Decimal? = nil,
         remainingDue: Decimal? = nil,
+        totalAmount: Decimal? = nil,
         totalInterest: Decimal? = nil,
         remainingInterest: Decimal? = nil,
         totalRebate: Decimal? = nil,
@@ -81,6 +85,7 @@ enum InstallmentService {
             firstPeriodAmount: firstPeriodAmount,
             lastPeriodAmount: lastPeriodAmount,
             remainingDue: remainingDue,
+            totalAmount: totalAmount,
             totalInterest: totalInterest,
             remainingInterest: remainingInterest,
             totalRebate: totalRebate,

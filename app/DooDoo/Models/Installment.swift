@@ -73,6 +73,17 @@ final class Installment {
     /// 保留字段只为老库自动迁移不做破坏性动作，新数据一律不写。
     var remainingPrincipal: Decimal?
 
+    /// 单位：元。**分期总额**——账单上「分期总额」那一栏（花呗 1,440.39），整笔口径的真值。
+    ///
+    /// 2026-11-18 新增，起因是花呗那笔：App 推算「整笔 12 期 · 已还 2 期」给出 1,440.36，
+    /// 账单是 1,440.39，差 3 分。差的来源是**首期 120.06 比标准额 120.03 多 3 分**，
+    /// 而已还那几期各是多少，从「剩余应还 / 剩余期数 / 总期数」里推不出来（欠定）。
+    /// 账单上「分期总额」是明写的，抄一个数就精确——与 `lastPeriodAmount`（末期金额）
+    /// 同一原则：**账单给真值的地方，就不要让算法去猜。**
+    ///
+    /// 可选、默认 `nil`（不填退回「约」值）。老库自动迁移安全。
+    var totalAmount: Decimal?
+
     /// 单位：元。总利息（账单上的「含利息」，如 176.99）。
     /// 年化反算的唯一输入：现值 = 每期金额 × 总期数 − 总利息。
     var totalInterest: Decimal?
@@ -127,6 +138,7 @@ final class Installment {
         lastPeriodAmount: Decimal? = nil,
         remainingDue: Decimal? = nil,
         remainingPrincipal: Decimal? = nil,
+        totalAmount: Decimal? = nil,
         totalInterest: Decimal? = nil,
         remainingInterest: Decimal? = nil,
         totalRebate: Decimal? = nil,
@@ -145,6 +157,7 @@ final class Installment {
         self.lastPeriodAmount = lastPeriodAmount
         self.remainingDue = remainingDue
         self.remainingPrincipal = remainingPrincipal
+        self.totalAmount = totalAmount
         self.totalInterest = totalInterest
         self.remainingInterest = remainingInterest
         self.totalRebate = totalRebate
@@ -174,6 +187,31 @@ extension Installment {
             lastPeriodAmount: lastPeriodAmount,
             remainingDue: remainingDue
         )
+    }
+
+    /// 整笔总额（这笔当初一共多少钱）。
+    ///
+    /// 填过「分期总额」就是账单真值（`isExact == true`），否则按
+    /// `每期 × 已还 + 剩余应还` 推算并标「约」。口径在 `InstallmentMath.grandTotal`。
+    var grandTotal: InstallmentMath.GrandTotal? {
+        InstallmentMath.grandTotal(
+            totalPeriods: totalPeriods,
+            paidPeriods: paidPeriods,
+            perPeriodAmount: perPeriodAmount,
+            remainingTotal: remainingTotal,
+            totalAmount: totalAmount
+        )
+    }
+
+    /// 已还部分的金额。
+    ///
+    /// 有「分期总额」时 = 总额 − 剩余应还，**这是精确值**（花呗 1,440.39 − 1,200.30 = 240.09，
+    /// 正好是 120.06 + 120.03）；没有时返回 `nil`，界面只说「已还 N 期」不就金额——
+    /// 「已还 2 期 × 120.03」会算出 240.06，比真实少 3 分，那是在编一个数。
+    var paidAmount: Decimal? {
+        guard let totalAmount, totalAmount > 0 else { return nil }
+        let paid = totalAmount - remainingTotal
+        return paid > 0 ? paid : nil
     }
 
     /// 未来每一期（含日期与金额）。口径在 `InstallmentMath.futurePeriods`；
@@ -243,6 +281,17 @@ extension Installment {
         }
         guard let totalInterest, totalInterest > 0, totalPeriods > 1 else {
             return nil
+        }
+        // 填过「分期总额」（2026-11-18）：现值直接用账单真值减利息，
+        // 不再用「每期 × 总期数 − 利息」自乘出来——后者在首期有零头时会差几分
+        // （花呗 120.03 × 12 = 1,440.36，账单是 1,440.39），虽然对年化影响极小，
+        // 但既然真值就在手里，没有理由再算一个近似值。
+        if let totalAmount, totalAmount > 0 {
+            return InstallmentMath.impliedAnnualRate(
+                periods: totalPeriods,
+                perPeriodAmount: perPeriodForAnnualRate,
+                presentValue: totalAmount - totalInterest
+            )
         }
         return InstallmentMath.impliedAnnualRate(
             periods: totalPeriods,

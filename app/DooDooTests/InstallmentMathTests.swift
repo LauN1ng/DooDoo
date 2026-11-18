@@ -350,4 +350,82 @@ struct InstallmentMathTests {
         )
         #expect(periods.allSatisfy { $0.amount == dec("100") })
     }
+
+    // MARK: - 整笔总额（2026-11-18，花呗 1,440.39 那笔）
+
+    /// 真实账单：花呗 12 期、首期 120.06、2–12 期均 120.03、剩余应还 1,200.30、
+    /// 分期总额 1,440.39。用户看到 App 显示「约 1,440.36」，差 3 分（首期多那 3 分）。
+    private let huabei = (
+        totalPeriods: 12,
+        paidPeriods: 2,
+        perPeriod: "120.03",
+        remaining: "1200.30",
+        totalAmount: "1440.39"
+    )
+
+    @Test("填了「分期总额」：原样用账单真值，标精确")
+    func grandTotalUsesBillValue() throws {
+        let result = try #require(InstallmentMath.grandTotal(
+            totalPeriods: huabei.totalPeriods,
+            paidPeriods: huabei.paidPeriods,
+            perPeriodAmount: dec(huabei.perPeriod),
+            remainingTotal: dec(huabei.remaining),
+            totalAmount: dec(huabei.totalAmount)
+        ))
+        #expect(result.value == dec("1440.39"))
+        #expect(result.isExact, "账单上明写的数就是真值，界面不该再标「约」")
+    }
+
+    @Test("不填「分期总额」：推算 1,440.36 并标约（差的就是首期那 3 分）")
+    func grandTotalFallsBackToEstimate() throws {
+        let result = try #require(InstallmentMath.grandTotal(
+            totalPeriods: huabei.totalPeriods,
+            paidPeriods: huabei.paidPeriods,
+            perPeriodAmount: dec(huabei.perPeriod),
+            remainingTotal: dec(huabei.remaining),
+            totalAmount: nil
+        ))
+        #expect(result.value == dec("1440.36"))
+        #expect(result.isExact == false)
+        // 差值必须来自「首期 120.06 比标准额多 3 分」，不是算式写错
+        #expect(dec("1440.39") - result.value == dec("0.03"))
+    }
+
+    @Test("一期没还：整笔 = 剩余应还，填不填总额都一样")
+    func grandTotalWithNothingPaid() throws {
+        let result = try #require(InstallmentMath.grandTotal(
+            totalPeriods: 12,
+            paidPeriods: 0,
+            perPeriodAmount: dec("120.03"),
+            remainingTotal: dec("1440.39"),
+            totalAmount: nil
+        ))
+        #expect(result.value == dec("1440.39"))
+    }
+
+    @Test("总额为 0 或负数视为没填，退回推算")
+    func grandTotalIgnoresNonPositiveTotal() throws {
+        let result = try #require(InstallmentMath.grandTotal(
+            totalPeriods: 12,
+            paidPeriods: 2,
+            perPeriodAmount: dec("120.03"),
+            remainingTotal: dec("1200.30"),
+            totalAmount: 0
+        ))
+        #expect(result.value == dec("1440.36"))
+        #expect(result.isExact == false)
+    }
+
+    @Test("没给总期数（只有一期）也没给总额：算不出来，返回 nil")
+    func grandTotalWithoutDenominator() {
+        let result = InstallmentMath.grandTotal(
+            totalPeriods: 1,
+            paidPeriods: 0,
+            perPeriodAmount: dec("120.03"),
+            remainingTotal: dec("120.03"),
+            totalAmount: nil
+        )
+        // GrandTotal 是 Equatable 结构体，可以直接跟 nil 比
+        #expect(result == nil)
+    }
 }

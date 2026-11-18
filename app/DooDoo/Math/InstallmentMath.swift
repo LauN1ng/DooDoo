@@ -222,6 +222,48 @@ enum InstallmentMath {
         return total
     }
 
+    /// 整笔总额的结果。
+    ///
+    /// 用结构体而不是元组：调用方要判空（`== nil`），元组不满足 `Equatable`
+    /// 会让可选比较编不过；而且 `isExact` 这个名字值得被点出来。
+    struct GrandTotal: Equatable, Sendable {
+        /// 单位：元。整笔一共多少钱。
+        let value: Decimal
+        /// 是否是账单真值。`false` 表示按「已还 × 每期 + 剩余应还」推算，界面标「约」。
+        let isExact: Bool
+    }
+
+    /// 整笔总额（这笔分期当初一共多少钱）。
+    ///
+    /// 两条路，**先真值再推算**（2026-11-18，花呗 1,440.39 那笔）：
+    ///
+    /// 1. `totalAmount` 给了就用它——账单上「分期总额」那一栏是明写的真值。
+    ///    这是唯一能**精确**回答「我一共要还多少」的输入，`isExact = true`。
+    /// 2. 没给就按 `每期 × 已还 + 剩余应还` 推算，`isExact = false`，界面标「约」。
+    ///
+    /// **为什么推算必然差几分**：已还的那几期各自是多少，从
+    /// 「剩余应还 / 剩余期数 / 总期数」三个数里**数学上推不出来**——
+    /// 花呗那笔的 1,200.30 既可能来自 (120.06, 120.03)，也可能来自
+    /// (120.045, 120.045)。实际首期是 120.06，比标准额多 3 分，
+    /// 于是推算值 1,440.36 比账单 1,440.39 少 0.03。这不是算式写错，
+    /// 是输入欠定；解法只能是让用户抄一个账单上明写的数（同 `splitEndingAt` 的思路）。
+    ///
+    /// 边界：`totalPeriods <= 1` 且没给总额 → `nil`（没有分母，也不该「约」）。
+    static func grandTotal(
+        totalPeriods: Int,
+        paidPeriods: Int,
+        perPeriodAmount: Decimal,
+        remainingTotal: Decimal,
+        totalAmount: Decimal? = nil
+    ) -> GrandTotal? {
+        if let totalAmount, totalAmount > 0 {
+            return GrandTotal(value: totalAmount, isExact: true)
+        }
+        guard totalPeriods > 1, perPeriodAmount > 0 else { return nil }
+        let paid = Decimal(max(0, paidPeriods))
+        return GrandTotal(value: perPeriodAmount * paid + remainingTotal, isExact: false)
+    }
+
     // MARK: - 年化反算
 
     /// 反算真实年化（估算，PRD 9.5.3）——**已知现值**的版本。

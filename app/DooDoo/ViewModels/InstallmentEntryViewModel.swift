@@ -58,6 +58,16 @@ final class InstallmentEntryViewModel {
     /// 账单上的「含利息」，如 176.99。年化的唯一输入，不填就没有年化。
     var interestText: String = ""
 
+    /// 账单上的「分期总额」，如 1,440.39（2026-11-18 新增，选填）。
+    ///
+    /// 为什么需要它：整笔总额靠「每期 × 已还 + 剩余应还」推算是**欠定**的——
+    /// 已还那几期各是多少，三个输入推不出来。花呗那笔首期 120.06 比标准额多 3 分，
+    /// 推算值 1,440.36 就比账单 1,440.39 少 3 分（用户 11-18 回传）。
+    /// 账单上「分期总额」明写着，抄进来就精确 —— 与「末期金额」同一原则。
+    ///
+    /// 一期都没还的（`paid == 0`）整笔就等于剩余应还，不需要填。
+    var totalAmountText: String = ""
+
     /// 账单最后一期的金额（选填）。
     ///
     /// 末期跟其他期不一样，只有一种成因：**退款 / 贴息抵在最后一期**（花呗就是这么抵的）。
@@ -222,19 +232,41 @@ final class InstallmentEntryViewModel {
         )
     }
 
-    /// 整笔总额（约）= 已还部分 + 剩余应还。
+    /// 整笔总额（这笔当初一共多少钱）。
     ///
-    /// 只在**显式填了**「总共几期」时给——没填就没有分母，拿剩余期数乘出来
-    /// 等于「假设这是一笔全新分期」，跟用户手上那张已经还了几期的账单差很远。
-    ///
-    /// 为什么是「已还 × 每期 + 剩余应还」而不是「每期 × 总期数」：后者会把
-    /// 剩余应还里那个首期零头摊掉（1830.17 ÷ 9 的首期是 203.37，乘回去只剩 203.35）。
-    /// 前者**一期都没还时等于剩余应还本身，跟账单逐字一致**；已还过的情况下，
-    /// 差的也只是历史那几期的几分钱零头，所以标「约」。
-    var previewGrandTotal: Decimal? {
-        guard let total = totalPeriods, total > 1, perPeriodAmount > 0 else { return nil }
-        return perPeriodAmount * Decimal(periods.paid) + previewRemainingTotal
+    /// - 填了「分期总额」→ 账单真值，`isExact = true`，界面显示「共 ¥1,440.39」
+    /// - 没填 → `每期 × 已还 + 剩余应还` 推算，界面显示「约」，并在有已还期数时
+    ///   多挂一个选填框（一期没还时整笔就等于剩余应还，这个框没意义）
+    var grandTotal: InstallmentMath.GrandTotal? {
+        guard let total = totalPeriods else { return nil }
+        return InstallmentMath.grandTotal(
+            totalPeriods: total,
+            paidPeriods: periods.paid,
+            perPeriodAmount: perPeriodAmount,
+            remainingTotal: previewRemainingTotal,
+            totalAmount: totalAmountInput
+        )
     }
+
+    /// 用户填的「分期总额」。空或非正数为 `nil`。
+    var totalAmountInput: Decimal? {
+        guard let value = Self.optionalDecimal(totalAmountText), value > 0 else { return nil }
+        return value
+    }
+
+    /// 已还部分的金额。只有填了「分期总额」才算得准（总额 − 剩余应还），
+    /// 否则返回 `nil`——拿「已还 × 每期」估一个数会少几分钱，界面就不显示。
+    var paidAmount: Decimal? {
+        guard let total = totalAmountInput, total > previewRemainingTotal else { return nil }
+        return total - previewRemainingTotal
+    }
+
+    /// 这个面板要不要露出「分期总额」那一格。
+    ///
+    /// 只在**有已还期数**时露：一期没还的整笔就等于剩余应还，多一格纯负担
+    /// （用户 11-11 说过录入累，58 笔连录尤其）。已还过的那些必须给这个入口，
+    /// 否则整笔永远只能显示「约」。
+    var needsTotalAmount: Bool { periods.paid > 0 }
 
     /// 年化用的每期金额。
     ///
@@ -276,6 +308,14 @@ final class InstallmentEntryViewModel {
         }
         guard let total = totalPeriods, total > 1 else { return nil }
         guard let interest = resolvedInterest, interest > 0 else { return nil }
+        // 填了「分期总额」→ 现值用账单真值减利息（同 `Installment.estimatedAnnualRate`）
+        if let amount = totalAmountInput, amount > interest {
+            return InstallmentMath.impliedAnnualRate(
+                periods: total,
+                perPeriodAmount: perPeriodForRate,
+                presentValue: amount - interest
+            )
+        }
         return InstallmentMath.impliedAnnualRate(
             periods: total,
             perPeriodAmount: perPeriodForRate,
@@ -338,6 +378,16 @@ final class InstallmentEntryViewModel {
             }
         }
         if perPeriodAmount <= 0 { return "算不出每期金额，检查剩余应还和期数" }
+        // 分期总额是选填，但填了就必须自洽：比剩余应还小说明抄错了栏
+        // （「剩余应还 1,200.30 / 总额 1,440.39」才是对的）。
+        if let amount = totalAmountInput {
+            if amount < remainingDue {
+                return "分期总额 ¥\(MoneyMath.money(amount)) 比剩余应还 ¥\(MoneyMath.money(remainingDue)) 还小，检查一下"
+            }
+            if let interest = resolvedInterest, interest > 0, amount <= interest {
+                return "分期总额要不小于含利息，检查一下"
+            }
+        }
         if let interest = resolvedInterest, interest < 0 { return "含利息不能是负数" }
         if let rebate = Self.optionalDecimal(rebateText), rebate < 0 { return "减免不能是负数" }
         return nil
@@ -434,6 +484,7 @@ final class InstallmentEntryViewModel {
                 perPeriodAmount: perPeriodAmount,
                 lastPeriodAmount: lastPeriodInput,
                 remainingDue: remainingDue,
+                totalAmount: totalAmountInput,
                 totalInterest: splitsInterest ? nil : (hasTotalPeriods ? resolvedInterest : nil),
                 remainingInterest: splitsInterest ? resolvedInterest : nil,
                 totalRebate: Self.optionalDecimal(rebateText),
@@ -462,6 +513,7 @@ final class InstallmentEntryViewModel {
         remainingText = ""
         totalText = ""
         interestText = ""
+        totalAmountText = ""
         lastPeriodText = ""
         rebateText = ""
         showingAdvanced = false
